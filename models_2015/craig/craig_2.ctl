@@ -8,7 +8,7 @@
 ##  -4 gamma             (p1=alpha,p2=beta)                                   ##
 ## —————————————————————————————————————————————————————————————————————————— ##
 ## init   lower   upper    est  prior
-## valu   bound   bound    phz   type     p1    p2   # PARAMETER                               ##
+## valu   bound   bound    phz   type     p1    p2   # PARAMETER              ##
 ## —————————————————————————————————————————————————————————————————————————— ##
   -1.05   -6.79    1.00      2      1    0.2  0.05   # log_natural_mortality
    7.50   -6.00   12.00      1      0      0     0   # log_rinit
