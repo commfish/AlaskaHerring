@@ -1,0 +1,193 @@
+---
+title: Herring Assessment Model (Input/Output for Sitka)
+author: Sea State Inc
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    fig_caption: true
+    code_folding: show
+---
+----
+
+# Overview
+The following output is based on the R-scripts in ham.R, and references therein.  This document is produced using RMarkdown, where code chunks are directly embedded, and the document is dynamic in the sense that if the data, model, code, or parameter in the model changes, these figures, tables and summaries are automatically updated.
+
+
+----
+# Directory Structure
+
+The main root directory for this project is called HAM (short for Herring Age Model).
+
+	HAM
+		- archive
+			-org.src
+		-docs
+		- models_2015
+			- craig
+			- seymour
+			- sitka
+			- tenakee
+		- src
+			- build
+				- release
+				- debug
+			ham.tpl
+			Makefile
+		- R
+		ReadMe.md
+		Makefile
+
+
+
+
+# Input Data
+The following is an annotated description of the input data file.  First, the R-script *ham.R* is sourced, and I use the results of the report file to read the input data into R.  The input data file starts with first defining the model dimensions. 
+
+## Model dimensions
+The first six elements in the following code snippet shows the first and last years of data (**dat_syr, dat_nyr**), the first and last years of the population dynamics model (**mod_syr, mod_nyr**), and the youngest age-class (**sage**) and the oldest age class (**nage**). Note that the oldest age-class is modelled as a plus group.
+
+```{r,message=FALSE,warning=FALSE}
+	source("ham.R")
+	t(D[1:6])
+```
+
+## Fecundity-at-age
+The next section of the data file is the Fecundity and regression coefficients for computing the year- age-specific fecundity.
+
+
+```{r,message=FALSE,warning=FALSE}
+	D[7:10]
+```
+
+## Total Annual Catch
+The units of the catch can be specified in the control file, but see the section on Understanding Model Units.
+```{r,message=FALSE,warning=FALSE}
+	colnames(D[['data_ct_raw']]) <- c("Year","Catch","log.se")
+	head(D$data_ct_raw)
+```
+The time series plot in Fig. 1 shows the catch before any scaling factors have been apllied. The model output, however, provides the scaled catch data (i.e., conversion from short tons to metric tons).
+
+```{r,message=FALSE,warning=FALSE,fig.cap="Catch time series and input standard deviation.",fig.height=3}
+	print(d1)
+```
+
+## Empirical Weight-at-age
+The weight-at-age data have the units of grams.  There are two input weight-at-age matrixes, the first is for the observed spawning weight-at-age, and the second is the observed commercial catch weight-at-age.  The row dimensions of each matrix are from dat_syr -- dat_nyr.
+```{r,message=FALSE,warning=FALSE}
+	colnames(D[['data_sp_waa']]) <- c("Year",paste(D$sage:D$nage))
+	head(D$data_sp_waa)
+```
+
+
+```{r,message=FALSE,warning=FALSE,fig.cap="Empirical weight-at-age data versus year, where each line represents a specific cohort over time.  Note that the terminal age is a plus group.",fig.height=5}
+	print(d2)
+```
+
+
+The commercial weight-at-age data entry has the same units and dimensions of the empirical spawning weight-at-age data.  Note that weight-at-age data must be specifed for all -- as in no missing -- data years.
+
+
+## Catch Composition
+The next two blocks of data input correspond to the Commercial age composition and spawn--sample age composition data, respectively.  A row must be specified for each year, and if there are no data for a given year, the entry is simply -9.  For example, see the missing data in 1977 in the example below. 
+
+```{r,message=FALSE,warning=FALSE}
+	colnames(D[['data_cm_comp']]) <- c("Year",paste(D$sage:D$nage))
+	head(D$data_cm_comp, 10)
+```
+```{r,message=FALSE,warning=FALSE,fig.cap="Commercial age-proportions where the area of each circle is proportional to the proportion-at-age in a given year and the colors are unique to each cohort.",fig.height=3}
+	print(d4)
+```
+
+
+## Egg Deposition Data
+The egg deposition data follows the spawn--sample age composition data. This is a 3 column matrix with row dimensions specified for each *data year*. The index value for years with no survey data are set equal to -9.  
+```{r,message=FALSE,warning=FALSE}
+		colnames(D[['data_egg_dep']]) <- c("Year","Index","log.se")
+		head(D$data_egg_dep, 10)
+
+```
+
+## Mile-Days of Milt
+The last of the fisheries independent data is just before the *end of file marker* (#EOF 999).  This data structure has the same dimensions as the previous table.  There must be a row for each *data year*, and missing data is substituded with a -9 for the index value.
+```{r,message=FALSE,warning=FALSE}
+		colnames(D[['data_mileday']]) <- c("Year","Index","log.se")
+		head(D$data_mileday, 10)
+
+```
+
+
+
+# Model Output
+
+All of the model output is contained in the *ham.rep* file. There is an R-script with a function called *read.admb(fileBaseName)* that will 
+
+## Estimated parameters
+```{r}
+	parameters <- data.frame(Parameter=D$fit$names,MLE=D$fit$est,StDev=D$fit$std)
+	head(parameters,8)
+```
+
+## Fits to time series data
+Time series outputs include spawning stock biomass (Fig. 4) and fits to the egg deposition survey data (Fig. 5), and fits to the milt-mile data.
+```{r,message=FALSE,warning=FALSE,fig.cap="Spawning stock biomass.",fig.height=3.5}
+	plot.ssb(D)
+```
+```{r,message=FALSE,warning=FALSE,fig.cap="Fit to the survey egg deposition data.",fig.height=3.5}
+	plot.datafit(D,sfx="egg_dep")
+```
+
+## Residuals
+
+The residual fits to the data are available using the *plot.resd* function, where the argments for the function are the Model object **D**, and the name space.  For example,
+```{r,message=FALSE,warning=FALSE,fig.cap="Residual fit to the egg deposition data.",fig.height=3.5}
+	 plot.resd(D,nm="resd_egg_dep") 
+```
+
+Residual deviations from the average recruitment are also available.
+```{r,message=FALSE,warning=FALSE,fig.cap="Residual fit to the egg deposition data.",fig.height=3.5}
+	 plot.resd(D,nm="resd_rec") +geom_point(color="red")
+```
+
+
+The age-composition residuals are available using *plot.resd* with the commercial composition name `resd_cm_comp':
+```{r,message=FALSE,warning=FALSE,fig.cap="Residual fit to the commercial catch composition data.",fig.height=3.5}
+	 plot.resd(D,nm="resd_cm_comp")
+```
+
+```{r,message=FALSE,warning=FALSE,fig.cap="Residual fit to the commercial catch data.",fig.height=3.5}
+	 plot.resd(D,nm="resd_catch")
+```
+
+
+
+
+
+
+# Understanding Model Units
+(@) The units for annual catch is specified in the model as metric tons. Therefore, if you input short tons in the data file, you must specify the conversion factor (e.g., 0.90718     # - Catch Scaler (convert from short tons to metric tons)) in the control file under Miscellaneous Controls.
+(@) Numbers-at-age are in millions, assuming that weight-at-age is specified in grams.
+(@) Egg survey numbers are scaled to trillions.  For example, and entry of 1.0 corresponds to one trillion eggs.
+
+
+# Simulation testing
+As good practice, stock assessment models should pass the `self-testing' diagnostic test.  In the Herring Assessment Model, simulation testing can be performed using the command line options 
+
+	./ham -sim 123
+
+where the 123 is the random number seed for generating a unique sequence of random numbers that is repeatable.  Simple diagnostic plots of the relative error can be used to judge the precision and bias of estimated parameters. For example the following figure looks at how precisesly estimated the steepness of the stock recruitment relationship is (kappa), natural mortality, initial and average recruitment, and the average unfished recruitment (Ro). 
+
+```{r}
+	source(file.path("readSims.R"))
+	print(p + ggtitle("Precision and Bias"))
+```
+
+You can easily write an R-script, or makefile, to automate the process of running many simulations, reading the results, and producing summary statistics and plots.
+
+
+<!-- #Lucie
+Hi Dad.
+
+![I though it was important that you admit you're a Brony](mylittlepony.jpeg)
+ -->
