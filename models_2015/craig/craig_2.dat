@@ -47,13 +47,13 @@
 ## FECUNDITY REGRESSION COEFFICIENTS
 ## -------------------------------------------------------------------------- ##
 #- Number of Fecundity blocks
-	4
+	1
 #- terminal block year for change in Fecundity
-	1984	1998	2002 	2015
+	2015
 #- Slope of the regression line
-	195.314028 222.55 226.1260221 198.78295
+	210.5
 #- Intercept of regression line
-	1840.107419 2503.9 3383.01566 3031.97919
+	1092.3
 
 ## -------------------------------------------------------------------------- ##
 ## TOTAL ANNUAL CATCH (SHORT TONS)

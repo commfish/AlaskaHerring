@@ -1,0 +1,110 @@
+conn<-odbcConnect("acct.seastateinc.com","steve","seattle20160104")
+conn<-odbcConnect("seastate","steve","seattle20160104")
+remove.packages("RODBC")
+librarY(RODBC)
+install.packages("RODBC", type = "source")
+library(RODBC)
+conn <- odbcConnect("seastate",uid="steve",pwd="seattle20160104")
+conn
+library("RODBC")
+conn<-odbcConnect("seastate",uid="steve",pwd="seattle20160104")
+warngins()
+odbcDriverConnect("driver={freetds}; server=acct.seastateinc.com;1433;database=seastate;trusted_connection=true‌​")
+odbcDriverConnect("driver={SQL Server}; server=acct.seastateinc.com;1433;database=seastate;trusted_connection=true‌​")
+conn <- odbcConnect(seastate,"steve","seattle20160104")
+conn <- odbcConnect("seastate","steve","seattle20160104")
+odbcDriverConnect(connection="server=acct.seastateinc.com;database=seastate;uid=steve;pwd=seattle20160104;Port=1433;driver=FreeTDS;TDS_Version=7.0;")
+warnings()
+q()
+# ---------------------------------------------------------------------------- ##
+# MAP OF EASTERN BERING SEA	#
+# ---------------------------------------------------------------------------- ##
+	if(!require(marmap)) install.packages("marmap"); library(marmap)#
+	mapdata <- getNOAA.bathy(lon1=-180,lon2=-155,lat1=50,lat2=64,#
+	                         resolution=4,keep=TRUE,antimeridian=FALSE)#
+#
+	# Plot contour map with isobaths in dvec to svec by step#
+	dvec <- c(-5000,0)#
+	svec <- c(-10,0)#
+	step <- c(1000,0)#
+	plot(mapdata,deep=dvec,shallow=svec,step=step,#
+	     lwd=c(0.2,2),lty=c(1,1),drawlabel=c(FALSE,FALSE),#
+	     image=FALSE)
+source("/Users/steve/Library/Mobile Documents/com~apple~CloudDocs/icSEASTATE/ADFG_HerringModel/app/ham.Rmd")
+install.packages("mapview")
+library(leaflet)
+?garnishMap
+library(mapview)
+#devtools::install_github("edzer/sfr")#
+library(mapview)#
+library(sf)#
+#
+polygonData.sf <- function(obj) {#
+#
+  tmp <- lapply(geometry(obj), function(i) {#
+    lapply(i, function(j) {#
+      lng <- j[[1]][, 1]#
+      lat <- j[[1]][, 2]#
+      list(lng = lng, lat = lat)#
+    })#
+  })#
+#
+  bb <- bbox(geometry(obj))#
+#
+  bbx <- matrix(bb, ncol = 2, byrow = TRUE)#
+  attr(bbx, "dimnames") <- list(c("x", "y"), #
+                                c("min", "max"))#
+#
+  attributes(tmp) <- list(bbox = bbx)#
+#
+  return(tmp)#
+#
+}#
+#
+## create base map#
+m <- leaflet() %>% addTiles()#
+#
+## gadmCHE to sf#
+gadm_sf <- as.sf(gadmCHE)#
+#
+map_sf <- garnishMap(m, addPolygons, data = gadm_sf)#
+map_sp <- garnishMap(m, addPolygons, data = gadmCHE)#
+#
+## check similarity#
+sync(map_sp, map_sf)
+install.packages("sf")
+install.packages("sf",source=TRUE)
+setwd("/Users/steve/Library/Mobile Documents/com~apple~CloudDocs/SSI/ADFG_HerringModel/R")
+source("/Users/steve/Library/Mobile Documents/com~apple~CloudDocs/SSI/ADFG_HerringModel/R/R4HAM.R")
+output.Plots
+ssb<-read.table(pipe("pbpaste"))
+plot(colsums(ssb))
+plot(colSums(ssb))
+plot(rowSums(ssb))
+M[[1]]
+M[[1]]$ssb
+lines(M[[1]]$ssb)
+matplot(M[[1]]$year,cbind(rowSums(ssb),M[[1]]$ssb))
+names(M[[1]])
+matplot(M[[1]]$mod_syr:mod_nyr,cbind(rowSums(ssb),M[[1]]$ssb))
+matplot(M[[1]]$mod_syr:M[[1]]$mod_nyr,cbind(rowSums(ssb),M[[1]]$ssb))
+matplot(M[[1]]$dat_syr:M[[1]]$mod_nyr,cbind(rowSums(ssb),M[[1]]$ssb))
+(cbind(rowSums(ssb),M[[1]]$ssb))
+rowSums(ssb)
+plot(1980:2015,ssb)
+plot(1980:2015,M[[1]]$ssb)
+plot(1980:2016,M[[1]]$ssb)
+ssb
+length(1980:2015)
+plot(1980:2015,rowSums(ssb))
+length(M[[1]]$ssb)
+M[[1]]$mod_syr
+M[[1]]$mod_nyr
+om <- data.frame(Year=1980:2015,SSBom=rowSums(ssb))
+nm <- data.frame(Year=M[[1]]$mod_syr:M[[1]]$mod_nyr,SSBnm=M[[1]]$ssb)
+nm
+om
+left_join(nm,om)
+matplot(left_join(nm,om))
+df<-left_join(nm,om)
+matplot(df[,1],df[,-1])

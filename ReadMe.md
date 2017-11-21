@@ -3,6 +3,7 @@ Steve Martell.
 May 12, 2016
 Jun 29, 2016
 Jul 20, 2016
+Jul 29, 2016
 ----
 
 ## Introduction
@@ -18,13 +19,19 @@ Go to the [Github code repository for Ham](https://github.com/seastateinc/Alaska
 
 I would recommend using Git and Github, as they serve as valuable tools for version control, and tracking code changes over time.  Its perfectly fine to just download the zip file; however, using Git is far more efficient for incorporating code changes and working in groups.
 
+## R-scripts
+The R-scripts directory has two important files:
+	1. modelList.txt
+	2. R4HAM.R
+
+The modelList.txt file is a list of models that R4HAM.R will read into R.
 
 
 ----
 
 ## To Do List
 
-- [ ] Improve Numerical Stability:
+- [x] Improve Numerical Stability:
 	- [x] Parameter transformations to log-space
 	- [x] Design matrix for estimated parameters (ival, lb, ub, phz, bayes)
 	- [x] Develop option to condition the model on F and fit to catch.
@@ -40,19 +47,21 @@ I would recommend using Git and Github, as they serve as valuable tools for vers
 	- [x] OBSM::calcAgeCompResiduals
 	- [x] OBSM::calcEggMiledaySurveyResiduals
 	- [x] OBSM::catchObservationModel
-	- [ ] STAT::calcObjectiveFunction
-		- [ ] STAT::penaltyFunctions
-		- [ ] STAT::negativeLogLikelihoods
-		- [ ] STAT::constraintFunctions
-		- [ ] STAT::calculateDIC
-	- [ ] FORE::
+	- [x] STAT::calcObjectiveFunction
+		- [x] STAT::penaltyFunctions
+		- [x] STAT::negativeLogLikelihoods
+		- [x] STAT::constraintFunctions
+		- [x] STAT::calculateDIC
+	- [ ] FORE::runForecast
+		- [ ] FORE::ghlCalc
+		- [ ] FORE::calcTAC
 
-- [ ] Control file reorganization
+- [x] Control file reorganization
 	- [x] add design matrix to control parameter bounds and phases. 
 	- [x] add contrls for time varying maturity
 	- [x] add contrls for time varying natural mortality rate deviations.
 	- [x] add design matrix for selectivity parameter controls.
-	- [ ] add Miscellaneous controls for appending.
+	- [x] add Miscellaneous controls for appending.
 
 
 - [ ] Simulation model:
@@ -60,7 +69,7 @@ I would recommend using Git and Github, as they serve as valuable tools for vers
 	- [x] Add FUNCTION runSimulationModel
 		- [x] Get and use True Parameter values
 		- [x] Generate random variables | random number seed.
-		- [ ] Run population dynamics model conditioned on catch & process errors.
+		- [ ] Population dynamics conditioned on catch & S-R curve.
 		- [x] Cache observation model results into data variables.
 		- [x] Add observation errors.
 		- [x] Allow Alaska Herring Assessment to continue with parameter estimation.

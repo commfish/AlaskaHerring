@@ -1,6 +1,7 @@
 EXEC=ham
 DAT=sitka_2.dat
 CTL=sitka_2.ctl
+PIN=sim0.pin
 
 TPLS=../../src/$(EXEC).tpl
 DATA=$(EXEC).dat
@@ -15,24 +16,25 @@ else
 endif
 
 
-all: $(EXEC) $(EXEC).rep
+all: $(TPLS) $(EXEC) $(EXEC).rep
 
 $(EXEC): $(DIST)
 	ln -s $(DIST) $@
 
 
-
 $(EXEC).rep: $(EXEC) $(DATA) $(DAT) $(CTL)
 	./$(EXEC) -ind $(DATA) $(ARGS)
 
-
+$(TPLS):
+	make --directory "../../"
 
 run: $(DATA) 
 	./$(EXEC) -ind $(DATA) $(ARGS)
 
 
 mcmc: $(EXEC) $(DATA) $(CTL) $(DAT)
-	./$(EXEC) -ind $(DATA) $(ARGS) -mcmc -mcsave 10
+	./$(EXEC) -ind $(DATA) $(ARGS) -mcmc -mcsave 100
+	./$(EXEC) -ind $(DATA) $(ARGS) -mceval
 
 # Retrospective Rule
 NRET=1
@@ -60,21 +62,23 @@ runsims := $(foreach dir,$(simdirs),$(dir)/runsims)
 
 $(setsims):
 	mkdir -p sims/$(@D);
-	cp $(EXEC) $(DATA) $(DAT) $(CTL) Makefile sims/$(@D);
+	cp $(EXEC) $(DATA) $(DAT) $(CTL) $(PIN) Makefile sims/$(@D);
 	cd $(@D); touch setsims
 
 $(runsims):
-	cd sims/$(@D); make run ARGS="-sim -$(@D)";
+	cd sims/$(@D); make run ARGS="-sim -$(@D) -ainp $(PIN)";
 
 sim: $(EXEC) $(setsims) $(runsims)
 	touch SIMSDONE
 
-clean:
-	@rm -f $(EXEC) 
+dust:
 	@rm -f admodel.cov
 	@rm -f admodel.hes
 	@rm -f admodel.dep
-	@rm -f fmin.log
+	@rm -f fmin.log variance
+
+clean: dust
+	@rm -f $(EXEC) 
 	@rm -f $(EXEC).rep $(EXEC).par ham.[bcehmrpls]*
 	@rm -r rets ||:
 	@rm -r sims ||:
@@ -82,3 +86,5 @@ clean:
 	@rm -f retro
 	@rm -f RETRODONE
 	@rm -f SIMSDONE
+	@rm -f ders.dat makdirs derivatives 
+	@rm -f ssb.ps

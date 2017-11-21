@@ -1,0 +1,31 @@
+\BOOKMARK [1][-]{section.1}{Acknowledgments}{}% 1
+\BOOKMARK [1][-]{section.2}{Introduction}{}% 2
+\BOOKMARK [1][-]{section.3}{Model deconstruction}{}% 3
+\BOOKMARK [2][-]{subsection.3.1}{Model Structure}{section.3}% 4
+\BOOKMARK [1][-]{section.4}{Technical description of the proposed model changes}{}% 5
+\BOOKMARK [2][-]{subsection.4.1}{Input Data}{section.4}% 6
+\BOOKMARK [2][-]{subsection.4.2}{Control file}{section.4}% 7
+\BOOKMARK [2][-]{subsection.4.3}{Age-schedule information}{section.4}% 8
+\BOOKMARK [3][-]{subsubsection.4.3.1}{Maturity-at-age}{subsection.4.3}% 9
+\BOOKMARK [3][-]{subsubsection.4.3.2}{Natural mortality}{subsection.4.3}% 10
+\BOOKMARK [3][-]{subsubsection.4.3.3}{Selectivity}{subsection.4.3}% 11
+\BOOKMARK [2][-]{subsection.4.4}{Fishing mortality}{section.4}% 12
+\BOOKMARK [2][-]{subsection.4.5}{Population dynamics}{section.4}% 13
+\BOOKMARK [3][-]{subsubsection.4.5.1}{Initial state variables.}{subsection.4.5}% 14
+\BOOKMARK [3][-]{subsubsection.4.5.2}{Update state variables}{subsection.4.5}% 15
+\BOOKMARK [3][-]{subsubsection.4.5.3}{Stock-recruitment \046 Spawning stock biomass}{subsection.4.5}% 16
+\BOOKMARK [2][-]{subsection.4.6}{Observation models}{section.4}% 17
+\BOOKMARK [3][-]{subsubsection.4.6.1}{Age composition}{subsection.4.6}% 18
+\BOOKMARK [3][-]{subsubsection.4.6.2}{Egg deposition}{subsection.4.6}% 19
+\BOOKMARK [3][-]{subsubsection.4.6.3}{Aerial surveys}{subsection.4.6}% 20
+\BOOKMARK [3][-]{subsubsection.4.6.4}{Predicted catch}{subsection.4.6}% 21
+\BOOKMARK [2][-]{subsection.4.7}{Objective function}{section.4}% 22
+\BOOKMARK [3][-]{subsubsection.4.7.1}{Negative log-likelihoods}{subsection.4.7}% 23
+\BOOKMARK [3][-]{subsubsection.4.7.2}{Penalties}{subsection.4.7}% 24
+\BOOKMARK [1][-]{section.5}{Simulation example}{}% 25
+\BOOKMARK [2][-]{subsection.5.1}{Observation error}{section.5}% 26
+\BOOKMARK [2][-]{subsection.5.2}{Mixed error}{section.5}% 27
+\BOOKMARK [1][-]{section.6}{Example Assessment: Sitka herring}{}% 28
+\BOOKMARK [2][-]{subsection.6.1}{Input data}{section.6}% 29
+\BOOKMARK [2][-]{subsection.6.2}{Model outputs}{section.6}% 30
+\BOOKMARK [1][-]{section.7}{Summary}{}% 31

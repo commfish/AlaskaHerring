@@ -33,6 +33,7 @@ run: $(DATA)
 
 mcmc: $(EXEC) $(DATA) $(CTL) $(DAT)
 	./$(EXEC) -ind $(DATA) $(ARGS) -mcmc -mcsave 10
+	./$(EXEC) -ind $(DATA) $(ARGS) -mceval
 
 # Retrospective Rule
 NRET=1
