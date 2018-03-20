@@ -29,6 +29,8 @@
 *.r01
 *.rep
 *.std
+*.out
+*.ps
 sims
 
 .db
