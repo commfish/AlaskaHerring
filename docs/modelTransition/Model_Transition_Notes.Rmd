@@ -1,0 +1,68 @@
+---
+title: "Transition to HER - Sitka 2018 Forecast Notes"
+output: html_document
+---
+
+## Sara and Jane Meeting 4/10/2018 9am-noon
+
+### Jane to do before 4/13
+1.	Maturity time blocks – how to add more than one block (is the code structured the same as selectivity or natural mortality?)
+2.	Phases: what does it mean when phase is -2? -1 means the parameter is fixed (not estimated), which also doesn’t make sense
+
+### For HER hash 4/13
+1.	Forecast code in both models to make sure things are matching up
+2.	Other data and control file questions
+	
+### Notes
+1.	Model fecundity
+    +	Check to make sure model only estimates fecundity for 1980 on
+    +	Fecundity regression coefficients for old model in Sitka.ctl, in sitka.dat data file for HER
+
+2.	Catch
+    +	upper 1990s had a different level of precision in HER model
+
+3.	Model HER from 1980 on, but once transition over (after HER model updates and checks) then start the HER model at 1971. 
+    +	With our least squares structure the small variance (high weight) on the low abundance years in the 1970's doesn't work well and Pete Hulson recommended from his work to start at 1980. In the HER structure, it should hopefully be stable enough and weighting different enough that 1971 start date shouldn't be a problem.
+
+4.	Why there a high precision for catch (tons) and spawner weight at age and catch weight at age? Get rid of? Can we move to no decimal place precision or just one?
+
+5.	Does ADMB read -9 differently than -9.000000? integer versus double?
+
+6.	Egg deposition is in log space and se and not just variance
+    +	Where is this data from?
+    +	For 2016 and 2017, we used the variance from 2015 as a placeholder
+
+7.	Mile days of milt
+    +	How can we add in future?
+
+8.	Initial values for Ricker model in HER model
+    +	Recruitment compensation instead of Ricker parameterization in HER model (Mace and Doonan 1988 reference)-explanation in Martell et al. 2008 paper (different parameterization for Ricker)-recruitment compensation k (relative improvement in survival from egg to recruit as the SSB tends toward zero) (Goodyear 1980)
+    +	Alpha and beta can be derived from model output to make sure starting values are similar in HER model
+    +	Recruitment has 4 parameters (ro, r_bar, reck, rinit, precision)
+    +	Needs work to determine if initial values reasonable
+
+9.	Initial value for natural mortality in HER model in the control file
+    +	p1 and p2 are the parameters for the prior distribution around the parameter
+
+10.	  Forecast weight at age and forecast calculation
+    +	Determining if HER and old model have same forecast estimation
+    +	HER model uses commercial and spawner WAA while older model only uses spawner WAA (but may in a prior step use commercial WAA)
+    +	In old model fw_a_a is spawner WAA (defined in control file) not commercial WAA but in HER model, directly from data file (last year in data file)
+
+11.	  Time varying
+    +	Maturity blocks
+        +	Loop control file in old model- the breaks show the start year but in the HER model, the year is the terminal year
+        +	On Jane’s list
+        +	2018 forecast (1980-2014,	2015-2017)
+    +	Selectivity blocks
+        +	2018 forecast (1980-2017)
+        +	Logistic; number one in HER model
+    +	Natural Mortality blocks
+        +	2018 forecast (1980-1998; 1999-2014; 2015-2017)
+
+12.	  Other misc. section in ctl file
+    +	Condition on catch for HER model to make similar to old model
+    +	Check target harvest rate in HER model is 0.10????
+
+13.	  Stopped at selectivity because question about phases 
+
