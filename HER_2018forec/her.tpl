@@ -284,7 +284,7 @@ DATA_SECTION
 
  LOCAL_CALCS
     // selectivity model (see control file for options)
-    nSelType = ivector(column(selex_cont,2));
+    nSelType = ivector(column(selex_cont,2)); //pulling out 2nd col from ctl file where selectivity curve is defined
     // estimation phase for selectivity
     nslx_phz = ivector(column(selex_cont,7));
     // start of each selectivity time block
@@ -367,12 +367,12 @@ PARAMETER_SECTION
 // |---------------------------------------------------------------------------|
 // | POPULATION PARAMETERS
 // |---------------------------------------------------------------------------|
-// | - theta(1) -> log natural mortality
-// | - theta(2) -> log initial average age-3 recruitment for ages 4-9+ in dat_styr
-// | - theta(3) -> log average age-3 recruitment from dat_styr to dat_endyr
-// | - theta(4) -> log of unfished recruitment.
-// | - theta(5) -> log of recruitment compensation (reck > 1.0)
-// | - theta(6) -> log of simga R
+// | - theta(1) -> log natural mortality (log_natural_mortality)
+// | - theta(2) -> log initial average age-3 recruitment for ages 3-8+ in dat_syr (log_rinit)
+// | - theta(3) -> log average age-3 recruitment from dat_styr to dat_endyr (log_rbar)
+// | - theta(4) -> log of unfished recruitment (log_ro)
+// | - theta(5) -> log of recruitment compensation (reck > 1.0) (log_reck)
+// | - theta(6) -> log of simga R (precision = 1/(sigma_r^2))
  // init_bounded_number_vector allows us to set lower and upper bounds and phases for each of the 6 parameters (n_theta) separately (not the same for each parameter)
   init_bounded_number_vector theta(1,n_theta,theta_lb,theta_ub,theta_phz);
   //pulling out each parameter (initial values set in INITIALIZATION_SECTION)
