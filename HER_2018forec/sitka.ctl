@@ -7,7 +7,8 @@
 ##  -3 beta              (p1=alpha,p2=beta)                                   ##
 ##  -4 gamma             (p1=alpha,p2=beta)                                   ##
 ## —————————————————————————————————————————————————————————————————————————— ##
-##  init  lower   upper    est  prior
+# prior params change depending on statistical distribution used (see PRIORS FOR LEADING PARAMETERS section in tpl)
+##  init  lower   upper    est  prior  prior  prior  
 ## value  bound   bound    phz   type     p1    p2   # PARAMETER              ##
 ## —————————————————————————————————————————————————————————————————————————— ##
    -1.05   -6.79    1.00      2      0  -1.05  0.05   # log_natural_mortality
@@ -18,11 +19,9 @@
     6.25    0.00  200.00     -2      4   1.05  1.05   # precision = 1/(sigma_r^2)
 ## —————————————————————————————————————————————————————————————————————————— ##
 
-
-
-
 ## —————————————————————————————————————————————————————————————————————————— ##
 ##                CONTROLS FOR TIME-VARYING MATURITY                          ##
+## *FLAG* two maturity schedules (27% maturity for age-3 fish in 1980-2014 and 35% maturity for age-3 fish in 2015-2017) 
 ## —————————————————————————————————————————————————————————————————————————— ##
 ## nMatBlocks
   1
@@ -38,22 +37,23 @@
 ## KEY:
 ##  Type: 1 = constant M
 ##  Type: 2 = interpolated using cubic spline.
+
+## three survival estimates (57% survival for 1980-1998, 76% survival for 1999-2014, and 67% survival for 2015-2017)
 ## —————————————————————————————————————————————————————————————————————————— ##
 ## Type
   1
 ## Phase for estimation if nMortBlocks > 1
   -2
 ## nMortBlocks, or Nodes in the case of cubic spline interpolation
-  4
+  3
 ## The terminal year of each block
- 1977 1998 2002 2015
+ 1998 2014 2017
 ## —————————————————————————————————————————————————————————————————————————— ##
-
-
 
 
 ## —————————————————————————————————————————————————————————————————————————— ##
 ##                    CONTROLS FOR SELECTIVITY PARAMETERS                     ##
+## one selectivity schedule (15% of age-3 fish selected by the purse seine gear in 1980-2017) 
 ## —————————————————————————————————————————————————————————————————————————— ##
 ## - Each selectivity block can have different functional forms based on selType
 ## - LEGEND:
@@ -78,9 +78,9 @@
 6
 ## Value    # # - Description
 0.90718     # 1 - Catch Scaler (convert from short tons to metric tons)
-1           # 2 - Condition on Catch = 0, Condition of Ft = 1
-25000       # 3 - harvest threshold
-0.10        # 4 - target harvest rate
+0           # 2 - Condition on Catch = 0, Condition of Ft = 1
+25000       # 3 - harvest threshold 
+0.10        # 4 - target harvest rate *FLAG* - 0.2 instead?
 20000       # 5 - threshold denominator
 0.001       # 6 - standard deviation in natural mortality devs
 ## EOF
