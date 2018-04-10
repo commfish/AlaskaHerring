@@ -6,11 +6,10 @@
 #
 # Data file for Herring Assessment Model
 #
-	sitka_2.dat
-
+	sitka.dat
 
 #	
 # Control file
 #
-	sitka_2.ctl 
+	sitka.ctl 
 
