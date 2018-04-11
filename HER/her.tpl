@@ -1751,8 +1751,12 @@ REPORT_SECTION
   REPORT(Sij);
   REPORT(Qij);
 
+// Maturity curve
+  REPORT(mat);
+
 // Natural mortality
   REPORT(Mij);
+  REPORT(log_m_devs);
 
 // Fishing mortality
   dvector ft = value(exp(log_ft_pars));

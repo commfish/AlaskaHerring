@@ -27,7 +27,12 @@ run_admb("her")
 ssb <- readVec("ssb", file="her.rep")
 ## put in thousands
 ssb <- ssb/1000
-plot(ssb, ylim=c(0, max(ssb)*1.1), type="l", lwd=2)
+
+years <- 1971:2015
+plot(ssb ~ years, ylim=c(0, max(ssb)*1.1), type="l", lwd=2)
+
+natmat <- readMat("Mij", file = "her.rep", nrow = length(years))[,1]
+plot(natmat ~ years, ylim=c(0, max(natmat)*1.1), type="l", lwd=2)
 
 ## run simulation with seed 123
 run_admb("her", extra.args="-sim 123")

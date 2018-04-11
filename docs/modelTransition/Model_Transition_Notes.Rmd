@@ -10,7 +10,7 @@ output: html_document
 
 ### Jane to do before 4/13
 1.	Maturity time blocks – how to add more than one block (is the code structured the same as selectivity or natural mortality?)
-2.	Phases: what does it mean when phase is -2? -1 means the parameter is fixed (not estimated), which also doesn’t make sense
+2.	Phases: what does it mean when phase is -2? -1 means the parameter is fixed (not estimated), which also doesn’t make sense. *Any negative phase means the parameter is fixed instead of estimated in any particular phase (so -1 does the same thing as -2 or -5).*
 
 ### For HER hash 4/13
 1.	Forecast code in both models to make sure things are matching up

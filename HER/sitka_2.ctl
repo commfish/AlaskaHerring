@@ -40,9 +40,9 @@
 ##  Type: 2 = interpolated using cubic spline.
 ## —————————————————————————————————————————————————————————————————————————— ##
 ## Type
-  1
+  2
 ## Phase for estimation if nMortBlocks > 1
-  -2
+  1
 ## nMortBlocks, or Nodes in the case of cubic spline interpolation
   4
 ## The terminal year of each block
@@ -82,6 +82,6 @@
 25000       # 3 - harvest threshold
 0.10        # 4 - target harvest rate
 20000       # 5 - threshold denominator
-0.001       # 6 - standard deviation in natural mortality devs
+0.010       # 6 - standard deviation in natural mortality devs
 ## EOF
 999
