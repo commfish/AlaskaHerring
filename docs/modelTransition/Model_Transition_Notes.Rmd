@@ -5,6 +5,9 @@ output: html_document
 
 ## Sara and Jane Meeting 4/10/2018 9am-noon
 
+### Sherri to do before 4/13
+1.  Look into the variance/log se issue with the egg deposition data.
+
 ### Jane to do before 4/13
 1.	Maturity time blocks – how to add more than one block (is the code structured the same as selectivity or natural mortality?)
 2.	Phases: what does it mean when phase is -2? -1 means the parameter is fixed (not estimated), which also doesn’t make sense
@@ -13,7 +16,7 @@ output: html_document
 1.	Forecast code in both models to make sure things are matching up
 2.	Egg deposition variance. Where is this data and how did Steve calculate log standard error?
 3.  Other data and control file questions
-	
+
 ### Notes
 1.	Model fecundity
     +	Check to make sure model only estimates fecundity for 1980 on
