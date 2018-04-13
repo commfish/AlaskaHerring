@@ -1751,8 +1751,15 @@ REPORT_SECTION
   REPORT(Sij);
   REPORT(Qij);
 
-// Maturity curve
+// Maturity curve and parameters
   REPORT(mat);
+  REPORT(mat_a50);
+  REPORT(mat_a95);
+// *FLAG* can't figure out how to generalize maturity param output from mat_params, a bounded_vector_vector
+//  ivector a50 = column(mat_params,1);
+//  ivector a95 = column(mat_params,2);
+  REPORT(mat_params[1]);
+  REPORT(mat_params[2]);
 
 // Natural mortality
   REPORT(Mij);

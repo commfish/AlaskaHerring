@@ -18,9 +18,19 @@ remove <- sapply(1:length(rm_files), function(x) unlink(rm_files[x], TRUE))
 
 ## compile model
 compile_admb("her", verbose=TRUE)
-
 ## run MAP
 run_admb("her")
+
+years <- 1971:2015
+
+#Maturity
+readMat("mat", file="her.rep", nrow = length(years))
+readVec("mat_params[1]", file="her.rep")
+readVec("mat_params[2]", file="her.rep")
+
+# Natural mortality
+natmat <- readMat("Mij", file = "her.rep", nrow = length(years))[,1]
+plot(natmat ~ years, ylim=c(0, max(natmat)*1.1), type="l", lwd=2)
 
 ## read report from initial MAP run - maximum a posteriori estimation (i.e.
 ## maximum likelihood using priors!)
@@ -28,11 +38,8 @@ ssb <- readVec("ssb", file="her.rep")
 ## put in thousands
 ssb <- ssb/1000
 
-years <- 1971:2015
 plot(ssb ~ years, ylim=c(0, max(ssb)*1.1), type="l", lwd=2)
 
-natmat <- readMat("Mij", file = "her.rep", nrow = length(years))[,1]
-plot(natmat ~ years, ylim=c(0, max(natmat)*1.1), type="l", lwd=2)
 
 ## run simulation with seed 123
 run_admb("her", extra.args="-sim 123")

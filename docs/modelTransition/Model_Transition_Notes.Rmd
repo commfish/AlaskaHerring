@@ -9,8 +9,9 @@ output: html_document
 1.  Look into the variance/log se issue with the egg deposition data.
 
 ### Jane to do before 4/13
-1.	Maturity time blocks – how to add more than one block (is the code structured the same as selectivity or natural mortality?)
+1.	Maturity time blocks – how to add more than one block (is the code structured the same as selectivity or natural mortality?) *Completed, but results for each time block has to be extracted individually in the REPORT section. Maybe add this to the list of potential improvements. This parameter was also fixed instead of estimated in Steve's code.*
 2.	Phases: what does it mean when phase is -2? -1 means the parameter is fixed (not estimated), which also doesn’t make sense. *Any negative phase means the parameter is fixed instead of estimated in any particular phase (so -1 does the same thing as -2 or -5).*
+3.  Natural mortality - Steve had the estimation for natural mortality deviations turned off. Got them turned on, tested the cubic spline functionality, and changed the prior to be consistent with the BC stock assessment.
 
 ### For HER hash 4/13
 1.	Forecast code in both models to make sure things are matching up
