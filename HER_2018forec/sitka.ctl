@@ -11,7 +11,7 @@
 ##  init  lower   upper    est  prior  prior  prior  
 ## value  bound   bound    phz   type     p1    p2   # PARAMETER              ##
 ## —————————————————————————————————————————————————————————————————————————— ##
-   -1.05   -6.79    1.00      2      0  -1.05  0.05   # log_natural_mortality
+  -0.7985  -5.00   5.00       1      1  -0.7985  0.4  # log_natural_mortality
     4.60   -6.00   12.00      1      0      0     0   # log_rinit
     5.60   -6.00   12.00      1      0      0     0   # log_rbar
     6.00   -6.00   12.00      2      0      0     0   # log_ro
@@ -21,35 +21,29 @@
 
 ## —————————————————————————————————————————————————————————————————————————— ##
 ##                CONTROLS FOR TIME-VARYING MATURITY                          ##
-## *FLAG* two maturity schedules (27% maturity for age-3 fish in 1980-2014 and 35% maturity for age-3 fish in 2015-2017) 
 ## —————————————————————————————————————————————————————————————————————————— ##
 ## nMatBlocks
-  1
+   2
 ## a50    a95     phz   terminalBlockYear
-   4.5    7.0      -2           2015
+   4.5    7.0      2           2014
+   4.5    7.0      2           2017
 ## —————————————————————————————————————————————————————————————————————————— ##
-
-
-
 
 ## —————————————————————————————————————————————————————————————————————————— ##
 ##            CONTROLS FOR TIME-VARYING LN(NATURAL MORTALITY DEVS)            ##
 ## KEY:
 ##  Type: 1 = constant M
 ##  Type: 2 = interpolated using cubic spline.
-
-## three survival estimates (57% survival for 1980-1998, 76% survival for 1999-2014, and 67% survival for 2015-2017)
 ## —————————————————————————————————————————————————————————————————————————— ##
 ## Type
   1
 ## Phase for estimation if nMortBlocks > 1
-  -2
+  2
 ## nMortBlocks, or Nodes in the case of cubic spline interpolation
   3
 ## The terminal year of each block
  1998 2014 2017
 ## —————————————————————————————————————————————————————————————————————————— ##
-
 
 ## —————————————————————————————————————————————————————————————————————————— ##
 ##                    CONTROLS FOR SELECTIVITY PARAMETERS                     ##
@@ -82,6 +76,6 @@
 25000       # 3 - harvest threshold 
 0.10        # 4 - target harvest rate *FLAG* - 0.2 instead?
 20000       # 5 - threshold denominator
-0.001       # 6 - standard deviation in natural mortality devs
+0.050       # 6 - standard deviation in natural mortality devs
 ## EOF
 999

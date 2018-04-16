@@ -10,8 +10,8 @@
 ##  init  lower   upper    est  prior
 ## value  bound   bound    phz   type     p1    p2   # PARAMETER              ##
 ## —————————————————————————————————————————————————————————————————————————— ##
-## -1.05   -6.79    1.00      1      0  -1.05  0.05   # log_natural_mortality
-  -0.7985  -5.00    5.00      1      1  -0.7985  0.4  #log.m
+## -1.05   -6.79    1.00      1      0  -1.05  0.05   # log_natural_mortality 
+  -0.7985  -5.00    5.00      1      1  -0.7985  0.4  # log_natural_mortality
     4.60   -6.00   12.00      1      0      0     0   # log_rinit
     5.60   -6.00   12.00      1      0      0     0   # log_rbar
     6.00   -6.00   12.00      2      0      0     0   # log_ro
@@ -84,6 +84,6 @@
 25000       # 3 - harvest threshold
 0.10        # 4 - target harvest rate
 20000       # 5 - threshold denominator
-0.05       # 6 - standard deviation in natural mortality devs
+0.05        # 6 - standard deviation in natural mortality devs
 ## EOF
 999

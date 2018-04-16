@@ -120,46 +120,88 @@ $(document).ready(function () {
 </div>
 
 
-<div id="sara-and-jane-meeting-4102018-9am-noon" class="section level2">
-<h2>Sara and Jane Meeting 4/10/2018 9am-noon</h2>
+<div id="model-definitions" class="section level2">
+<h2>Model definitions</h2>
+<p>LS: ADFG’s least squares model</p>
+<p>HAM: Martell’s model</p>
+<p>HER: ADFG’s adaptation of HAM</p>
+</div>
+<div id="work-log-and-action-items" class="section level2">
+<h2>Work log and action items</h2>
+<div id="meetings-and-individual-hours-worked" class="section level3">
+<h3>Meetings and individual hours worked</h3>
+<p>Sara and Jane Meeting 2018-04-10 0900-1200</p>
+<p>Jane 2018-04-12 1400-1630</p>
+<p>Jane 2018-04-13 0800-1200</p>
+<p>Sherri, Sara, Jane Meeting 2018-04-13 1330-1630</p>
+<p>Jane 2018-04-16 0800-1200</p>
+</div>
+<div id="sherri-to-do-before-57" class="section level3">
+<h3>Sherri to do before 5/7</h3>
+<ol style="list-style-type: decimal">
+<li>Look into the variance/log se issue with the egg deposition data.</li>
+<li>Precision/sig figs on fecundity regression coefficients. Also change in spawn dep data file.</li>
+</ol>
+</div>
+<div id="jane-to-do-between-57" class="section level3">
+<h3>Jane to do between 5/7</h3>
+<ol style="list-style-type: decimal">
+<li><del>Go back to time blocks for log mean M</del></li>
+<li><del>List potential reasons why there are diffs between LS and HER</del> Added new section called “Model differences” to this file.</li>
+<li><del>List changes to priors, provide justification</del> Added new section cakked “Priors” to this file.</li>
+<li><del>Change precision on data (see Notes #4)</del></li>
+<li>Selectivity blocks</li>
+</ol>
+</div>
 <div id="sherri-to-do-before-413" class="section level3">
 <h3>Sherri to do before 4/13</h3>
 <ol style="list-style-type: decimal">
-<li>Look into the variance/log se issue with the egg deposition data.</li>
+<li>Look into the variance/log se issue with the egg deposition data. <em>In progress.</em></li>
 </ol>
 </div>
 <div id="jane-to-do-before-413" class="section level3">
 <h3>Jane to do before 4/13</h3>
 <ol style="list-style-type: decimal">
-<li>Maturity time blocks – how to add more than one block (is the code structured the same as selectivity or natural mortality?)</li>
-<li><del>Phases: what does it mean when phase is -2? -1 means the parameter is fixed (not estimated), which also doesn’t make sense</del> Any negative phase means the parameter is fixed instead of estimated in any particular phase (so -1 does the same thing as -2 or -5)</li>
+<li><del>Maturity time blocks – how to add more than one block (is the code structured the same as selectivity or natural mortality?)</del> Completed, but results for each time block has to be extracted individually in the REPORT section. Add to list of potential questions for Rudd or Martell. This parameter was also fixed instead of estimated in Steve’s code.</li>
+<li><del>Phases: what does it mean when phase is -2? -1 means the parameter is fixed (not estimated), which also doesn’t make sense.</del> Any negative phase means the parameter is fixed instead of estimated in any particular phase (so -1 does the same thing as -2 or -5).</li>
+<li><del>Time varying deviations on M.</del> Completed, changed prior on mean M to match BC. See justification in Priors section.</li>
 </ol>
 </div>
 <div id="for-her-hash-413" class="section level3">
 <h3>For HER hash 4/13</h3>
 <ol style="list-style-type: decimal">
-<li>Forecast code in both models to make sure things are matching up</li>
-<li>Egg deposition variance. Where is this data and how did Steve calculate log standard error?</li>
-<li>Other data and control file questions</li>
+<li><del>Natural mortality estimation, including discussion of cubic spline (random walk?), priors on M, and how much the block deviations should vary between blocks</del></li>
+<li><del>Precision of input data</del> except precision on fecundity coeffs still lingering</li>
 </ol>
 </div>
-<div id="notes" class="section level3">
-<h3>Notes</h3>
+<div id="for-her-hash-57" class="section level3">
+<h3>For HER hash 5/7</h3>
+<ol style="list-style-type: decimal">
+<li>Forecast code in both models to make sure things are matching up</li>
+<li>Egg deposition variance. Where is this data and how did Steve calculate log standard error? Other data and control file questions (e.g. p</li>
+</ol>
+</div>
+</div>
+<div id="notes" class="section level2">
+<h2>Notes</h2>
 <ol style="list-style-type: decimal">
 <li>Model fecundity
 <ul>
-<li>Check to make sure model only estimates fecundity for 1980 on</li>
+<li><del>Check to make sure model only estimates fecundity for 1980 on</del> They are.</li>
 <li>Fecundity regression coefficients for old model in Sitka.ctl, in sitka.dat data file for HER</li>
 </ul></li>
 <li>Catch
 <ul>
-<li>upper 1990s had a different level of precision in HER model</li>
+<li><del>upper 1990s had a different level of precision in HER model</del></li>
 </ul></li>
 <li>Model HER from 1980 on, but once transition over (after HER model updates and checks) then start the HER model at 1971.
 <ul>
 <li>With our least squares structure the small variance (high weight) on the low abundance years in the 1970’s doesn’t work well and Pete Hulson recommended from his work to start at 1980. In the HER structure, it should hopefully be stable enough and weighting different enough that 1971 start date shouldn’t be a problem.</li>
 </ul></li>
-<li><p>Why there a high precision for catch (tons) and spawner weight at age and catch weight at age? Get rid of? Can we move to no decimal place precision or just one?</p></li>
+<li><del>Why there a high precision for catch (tons) and spawner weight at age and catch weight at age? Get rid of? Can we move to no decimal place precision or just one?</del>
+<ul>
+<li>During HER hash 4/13 Sherri gave the following guidance on number of decimal points: 2 for catch, 1 for weight-at-age, 4 for age compositions, 6 for egg depositions</li>
+</ul></li>
 <li><p>Does ADMB read -9 differently than -9.000000? integer versus double?</p></li>
 <li>Egg deposition is in log space and se and not just variance
 <ul>
@@ -168,7 +210,8 @@ $(document).ready(function () {
 </ul></li>
 <li>Mile days of milt
 <ul>
-<li>How can we add in future?</li>
+<li><del>How can we add in future?</del></li>
+<li>This framework is functionally a duplicate for egg deposition, so potentially the weighting would be difficult. May be less of an issue with HER than LS.</li>
 </ul></li>
 <li>Initial values for Ricker model in HER model
 <ul>
@@ -213,6 +256,77 @@ $(document).ready(function () {
 <li><p>Stopped at selectivity because question about phases</p></li>
 </ol>
 </div>
+<div id="model-differences" class="section level2">
+<h2>Model differences</h2>
+<p>A running log of potential reasons why the LS Model and HER do not match up.</p>
+<ol style="list-style-type: decimal">
+<li><p>The structure and estimation of natural mortality is very different between models: LS did not have any prior on M, only bounded from 0.001 to 1. LS estimates independent M for each time block. HAM/HER estimtes log mean M and then estimates time varying (block or cubic spline) deviations for each block. HAM estimation of natural mortality deviations turned off. Got them turned on, tested the cubic spline functionality, and changed the prior to be consistent with the BC stock assessment ISCAM (<a href="https://github.com/smartell/iSCAM/blob/IPHC/examples/BCHerring/DATA/SOGLN1/SOG2012.ctl" class="uri">https://github.com/smartell/iSCAM/blob/IPHC/examples/BCHerring/DATA/SOGLN1/SOG2012.ctl</a>).</p></li>
+<li><p>Rounding issues in the input data. The LS dat file had extremely high and unrealtistic precision.</p></li>
+</ol>
+</div>
+<div id="priors" class="section level2">
+<h2>Priors</h2>
+<p>A list of priors, starting values, and bounds for each model, as well as justification for why any of these quantities were changed.</p>
+<p><strong>Abbreviations/Terminology:</strong> Phase - phase in which parameter is estimate (-2 means parameter was fixed) SV - starting value LB/UP - lower and upper bound p1/p2 - parameters for prior (normal has mu and sd, beta has alpha and beta, etc.)</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Parameter</th>
+<th align="left">Model</th>
+<th align="left">Phase</th>
+<th align="left">SV</th>
+<th align="left">Prior</th>
+<th align="right">LB</th>
+<th align="right">UB</th>
+<th align="left">p1</th>
+<th align="left">p2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Block-specific M</td>
+<td align="left">LS</td>
+<td align="left">2</td>
+<td align="left">N/A</td>
+<td align="left">N/A</td>
+<td align="right">0.001</td>
+<td align="right">1</td>
+<td align="left">N/A</td>
+<td align="left">N/A</td>
+</tr>
+<tr class="even">
+<td align="left">Log mean M</td>
+<td align="left">HAM</td>
+<td align="left">2</td>
+<td align="left">-1.05</td>
+<td align="left">Unform</td>
+<td align="right">-6.790</td>
+<td align="right">1</td>
+<td align="left">-1.05</td>
+<td align="left">0.05</td>
+</tr>
+<tr class="odd">
+<td align="left">Log mean M</td>
+<td align="left">HER</td>
+<td align="left">1</td>
+<td align="left">-0.7985</td>
+<td align="left">Normal</td>
+<td align="right">-5.000</td>
+<td align="right">5</td>
+<td align="left">mu = -0.7985</td>
+<td align="left">sd = 0.4</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Justification for changing prior on log mean M:</strong> the uniform prior limitted how much we could increase the sd in natural mortality deviations. I used the normal prior parameters from ISCAM, which allowed the time varying deviations to vary more broadly.</p>
+</div>
+<div id="lingering-questions" class="section level2">
+<h2>Lingering questions</h2>
+<ul>
+<li>How do you get likelihood profiles for time-varing parameters?</li>
+<li>If a parameter has both an upper bound and a lower bound, as well as parameters for a uniform prior, what are the actual bounds for estimation?</li>
+<li>Extracting time varying maturity parameters in report file (currently have to know how many blocks there are ahead of time).</li>
+</ul>
 </div>
 
 

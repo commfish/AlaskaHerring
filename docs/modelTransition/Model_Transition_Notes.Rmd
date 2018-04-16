@@ -3,33 +3,74 @@ title: "Transition to HER - Sitka 2018 Forecast Notes"
 output: html_document
 ---
 
-## Sara and Jane Meeting 4/10/2018 9am-noon
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(knitr)
+library(tidyverse)
+```
+
+## Model definitions
+
+LS:  ADFG's least squares model 
+
+HAM:  Martell's model
+
+HER:  ADFG's adaptation of HAM
+
+## Work log and action items
+
+### Meetings and individual hours worked
+
+Sara and Jane Meeting 2018-04-10 0900-1200
+
+Jane 2018-04-12 1400-1630 
+
+Jane 2018-04-13 0800-1200
+
+Sherri, Sara, Jane Meeting 2018-04-13 1330-1630
+
+Jane 2018-04-16 0800-1200
+
+### Sherri to do before 5/7
+1.  Look into the variance/log se issue with the egg deposition data.
+2.  Precision/sig figs on fecundity regression coefficients. Also change in spawn dep data file.
+
+### Jane to do between 5/7
+1.  ~~Go back to time blocks for log mean M~~
+2.  ~~List potential reasons why there are diffs between LS and HER~~ Added new section called "Model differences" to this file.
+3.  ~~List changes to priors, provide justification~~ Added new section cakked "Priors" to this file.
+4.  ~~Change precision on data (see Notes #4)~~
+5.  Selectivity blocks
 
 ### Sherri to do before 4/13
-1.  Look into the variance/log se issue with the egg deposition data.
+1.  Look into the variance/log se issue with the egg deposition data. *In progress.*
 
 ### Jane to do before 4/13
-1.	Maturity time blocks – how to add more than one block (is the code structured the same as selectivity or natural mortality?) *Completed, but results for each time block has to be extracted individually in the REPORT section. Maybe add this to the list of potential improvements. This parameter was also fixed instead of estimated in Steve's code.*
-2.	Phases: what does it mean when phase is -2? -1 means the parameter is fixed (not estimated), which also doesn’t make sense. *Any negative phase means the parameter is fixed instead of estimated in any particular phase (so -1 does the same thing as -2 or -5).*
-3.  Natural mortality - Steve had the estimation for natural mortality deviations turned off. Got them turned on, tested the cubic spline functionality, and changed the prior to be consistent with the BC stock assessment.
+1.	~~Maturity time blocks – how to add more than one block (is the code structured the same as selectivity or natural mortality?)~~ Completed, but results for each time block has to be extracted individually in the REPORT section. Add to list of potential questions for Rudd or Martell. This parameter was also fixed instead of estimated in Steve's code.
+2.	~~Phases: what does it mean when phase is -2? -1 means the parameter is fixed (not estimated), which also doesn’t make sense.~~ Any negative phase means the parameter is fixed instead of estimated in any particular phase (so -1 does the same thing as -2 or -5).
+3.  ~~Time varying deviations on M.~~ Completed, changed prior on mean M to match BC. See justification in Priors section.
 
 ### For HER hash 4/13
+1.  ~~Natural mortality estimation, including discussion of cubic spline (random walk?), priors on M, and how much the block deviations should vary between blocks~~ 
+2.  ~~Precision of input data~~ except precision on fecundity coeffs still lingering
+
+### For HER hash 5/7
 1.	Forecast code in both models to make sure things are matching up
 2.	Egg deposition variance. Where is this data and how did Steve calculate log standard error?
-3.  Other data and control file questions
+Other data and control file questions (e.g. p
 
-### Notes
+## Notes
 1.	Model fecundity
-    +	Check to make sure model only estimates fecundity for 1980 on
+    +	~~Check to make sure model only estimates fecundity for 1980 on~~ They are.
     +	Fecundity regression coefficients for old model in Sitka.ctl, in sitka.dat data file for HER
 
 2.	Catch
-    +	upper 1990s had a different level of precision in HER model
+    +	~~upper 1990s had a different level of precision in HER model~~
 
 3.	Model HER from 1980 on, but once transition over (after HER model updates and checks) then start the HER model at 1971. 
     +	With our least squares structure the small variance (high weight) on the low abundance years in the 1970's doesn't work well and Pete Hulson recommended from his work to start at 1980. In the HER structure, it should hopefully be stable enough and weighting different enough that 1971 start date shouldn't be a problem.
 
-4.	Why there a high precision for catch (tons) and spawner weight at age and catch weight at age? Get rid of? Can we move to no decimal place precision or just one?
+4.	~~Why there a high precision for catch (tons) and spawner weight at age and catch weight at age? Get rid of? Can we move to no decimal place precision or just one?~~
+    + During HER hash 4/13 Sherri gave the following guidance on number of decimal points: 2 for catch, 1 for weight-at-age, 4 for age compositions, 6 for egg depositions
 
 5.	Does ADMB read -9 differently than -9.000000? integer versus double?
 
@@ -38,7 +79,8 @@ output: html_document
     +	For 2016 and 2017, we used the variance from 2015 as a placeholder
 
 7.	Mile days of milt
-    +	How can we add in future?
+    +	~~How can we add in future?~~
+    + This framework is functionally a duplicate for egg deposition, so potentially the weighting would be difficult. May be less of an issue with HER than LS.
 
 8.	Initial values for Ricker model in HER model
     +	Recruitment compensation instead of Ricker parameterization in HER model (Mace and Doonan 1988 reference)-explanation in Martell et al. 2008 paper (different parameterization for Ricker)-recruitment compensation k (relative improvement in survival from egg to recruit as the SSB tends toward zero) (Goodyear 1980)
@@ -71,3 +113,42 @@ output: html_document
 
 13.	  Stopped at selectivity because question about phases 
 
+## Model differences
+
+A running log of potential reasons why the LS Model and HER do not match up.
+
+1.   The structure and estimation of natural mortality is very different between models:  LS did not have any prior on M, only bounded from 0.001 to 1. LS estimates independent M for each time block. HAM/HER estimtes log mean M and then estimates time varying (block or cubic spline) deviations for each block. HAM estimation of natural mortality deviations turned off. Got them turned on, tested the cubic spline functionality, and changed the prior to be consistent with the BC stock assessment ISCAM (https://github.com/smartell/iSCAM/blob/IPHC/examples/BCHerring/DATA/SOGLN1/SOG2012.ctl).
+
+2.   Rounding issues in the input data. The LS dat file had extremely high and unrealtistic precision.
+
+## Priors
+
+A list of priors, starting values, and bounds for each model, as well as justification for why any of these quantities were changed.
+
+**Abbreviations/Terminology:**
+Phase - phase in which parameter is estimate (-2 means parameter was fixed)
+SV - starting value
+LB/UP - lower and upper bound
+p1/p2 - parameters for prior (normal has mu and sd, beta has alpha and beta, etc.)
+
+```{r echo=FALSE}
+
+kable(data.frame(Parameter = c("Block-specific M", "Log mean M", "Log mean M"),
+           Model = c("LS", "HAM", "HER"),
+           Phase = c("2", "2", "1"),
+           SV = c("N/A", -1.05, -0.7985),
+           Prior = c("N/A", "Unform", "Normal"),
+           LB = c(0.001, -6.79, -5.00),
+           UB = c(1.00, 1.00, 5.00),
+           p1 = c("N/A", -1.05, "mu = -0.7985"),
+           p2 = c("N/A", 0.05, "sd = 0.4")))
+
+```
+
+**Justification for changing prior on log mean M:** the uniform prior limitted how much we could increase the sd in natural mortality deviations. I used the normal prior parameters from ISCAM, which allowed the time varying deviations to vary more broadly.
+
+## Lingering questions
+
++  How do you get likelihood profiles for time-varing parameters?
++  If a parameter has both an upper bound and a lower bound, as well as parameters for a uniform prior, what are the actual bounds for estimation?
++  Extracting time varying maturity parameters in report file (currently have to know how many blocks there are ahead of time).
