@@ -1,8 +1,8 @@
 // -------------------------------------------------------------------------- //
-//               Age-structured model for Alaska herring stocks               //
+//             Age-structured model for Alaska herring stocks (HER)           //
 //                                                                            //
-//                               VERSION 0.1                                  //
-//                                Jan  2015                                   //
+//                               VERSION 0.2                                  //
+//                                 May 2018                                   //
 //                                                                            //
 //                                 AUTHORS                                    //
 //                              Sherri Dressel                                //                                 
@@ -10,7 +10,9 @@
 //                               Sara Miller                                  //
 //                          sara.miller@alaska.gov                            //
 //                               Kray Van Kirk                                //
-//                          kray.vankirk@alaska.gov                           //
+//                          kray.vankirk@alaska.gov                           //  
+//                               Jane Sullivan                                //
+//                         jane.sullivan1@alaska.gov                          //  
 //                                                                            //
 //                   Built on code developed by Peter Hulson                  //
 //                            pete.hulson@noaa.gov                            //
@@ -1751,14 +1753,22 @@ REPORT_SECTION
   REPORT(Sij);
   REPORT(Qij);
 
+  // Maturity curve and parameters
+  REPORT(mat);
+// *FLAG* can't figure out how to generalize maturity param output from mat_params, a bounded_vector_vector. Must add another mat_params[] for each new block
+  //  ivector a50 = column(mat_params,1);
+  //  ivector a95 = column(mat_params,2);
+  REPORT(mat_params[1]);
+  REPORT(mat_params[2]);
+
 // Natural mortality
   REPORT(Mij);
+  REPORT(log_m_devs);
 
 // Fishing mortality
   dvector ft = value(exp(log_ft_pars));
   REPORT(ft);
   REPORT(Fij);
-
 
 // Residuals
   REPORT(resd_egg_dep);
