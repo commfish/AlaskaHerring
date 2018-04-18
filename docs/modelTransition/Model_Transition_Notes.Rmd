@@ -149,6 +149,7 @@ kable(data.frame(Parameter = c("Block-specific M", "Log mean M", "Log mean M"),
 
 ## Lingering questions
 
++  What does the value() fxn do and when do you have to use it?
 +  How do you get likelihood profiles for time-varing parameters?
 +  If a parameter has both an upper bound and a lower bound, as well as parameters for a uniform prior, what are the actual bounds for estimation?
 +  Extracting time varying maturity parameters in report file (currently have to know how many blocks there are ahead of time).

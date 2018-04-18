@@ -45,7 +45,7 @@ plot(natmat ~ years, ylim=c(0, max(natmat)*1.1), type = "l", lwd = 2)
 ## read report from initial MAP run - maximum a posteriori estimation (i.e.
 ## maximum likelihood using priors!)
 ssb <- readVec("ssb", file="her.rep")
-## put in thousands
+## put in thousands 
 # ssb <- ssb/1000
 
 plot(ssb ~ years, ylim = c(0, max(ssb)*1.1), type = "l", lwd = 2)
