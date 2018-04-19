@@ -36,5 +36,8 @@
 *.ps
 sims
 
+*.xlsx
+*.xlsm
+
 # Windows thumbnail cache files
 Thumbs.db
