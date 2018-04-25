@@ -4,7 +4,8 @@
 
 source("R/tools.R") 
 library(R2admb)
-
+library(tidyverse)
+        
 
 # clean up directory - remove unnecessary files to run
 # add ".pin" when wanting to save .pin file, or any other file to save
