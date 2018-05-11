@@ -21,28 +21,35 @@ HER:  ADFG's adaptation of HAM
 ### Meetings and individual hours worked
 
 Sara and Jane Meeting 2018-04-10 0900-1200
-
 Jane 2018-04-12 1400-1630 
-
 Jane 2018-04-13 0800-1200
-
 Sherri, Sara, Jane Meeting 2018-04-13 1330-1630
-
 Jane 2018-04-16 0800-1200
+Sherri, Sara, Jane Meeting 2018-05-10 1500-1615
 
-### Sherri to do before 5/7
-1.  Look into the variance/log se issue with the egg deposition data.
-2.  Precision/sig figs on fecundity regression coefficients. Also change in spawn dep data file.
+### Sherri to do before 5/30
+1.  Why does the log standard error roughly equal the CV?
+2.  Give Jane CVs from 2018 forecast model because 1978-1990 get updated from the regression.
+3.  How did Steve get the CV for the 1971-1977 hydroaccoustic data?
 
-### Jane to do between 5/7
+### Jane to do before 5/30
+1.  Round fecundity regression coefficients to 1 decimal place.
+2.  Selectivity blocks
+3.  Commercial and spawning weight at age are the exact same except for 1997 (Sitka only!!). It is our best estimate of population waa
+
+### Sherri to do before 5/10
+1.  ~~Look into the variance/log se issue with the egg deposition data.~~
+2.  ~~Precision/sig figs on fecundity regression coefficients. Also change in spawn dep data file.~~
+
+### Jane to do between 5/10
 1.  ~~Go back to time blocks for log mean M~~
 2.  ~~List potential reasons why there are diffs between LS and HER~~ Added new section called "Model differences" to this file.
-3.  ~~List changes to priors, provide justification~~ Added new section cakked "Priors" to this file.
+3.  ~~List changes to priors, provide justification~~ Added new section called "Priors" to this file.
 4.  ~~Change precision on data (see Notes #4)~~
 5.  Selectivity blocks
 
 ### Sherri to do before 4/13
-1.  Look into the variance/log se issue with the egg deposition data. *In progress.*
+1.  ~~Look into the variance/log se issue with the egg deposition data. *In progress.*~~
 
 ### Jane to do before 4/13
 1.	~~Maturity time blocks – how to add more than one block (is the code structured the same as selectivity or natural mortality?)~~ Completed, but results for each time block has to be extracted individually in the REPORT section. Add to list of potential questions for Rudd or Martell. This parameter was also fixed instead of estimated in Steve's code.
@@ -53,10 +60,14 @@ Jane 2018-04-16 0800-1200
 1.  ~~Natural mortality estimation, including discussion of cubic spline (random walk?), priors on M, and how much the block deviations should vary between blocks~~ 
 2.  ~~Precision of input data~~ except precision on fecundity coeffs still lingering
 
-### For HER hash 5/7
+### For HER hash 5/10
 1.	Forecast code in both models to make sure things are matching up
 2.	Egg deposition variance. Where is this data and how did Steve calculate log standard error?
-Other data and control file questions (e.g. p
+    + the log se ~= the CV, which we can get from the bootstrap
+    + 1971-1977 is not from egg surveys, they are from hydroaccoustics
+    + 1978-1990 is estimated from the regression of mean versus sd of 1991-present (and is recalculated annually)
+    + in 2017 model
+Other data and control file questions
 
 ## Notes
 1.	Model fecundity
@@ -153,3 +164,4 @@ kable(data.frame(Parameter = c("Block-specific M", "Log mean M", "Log mean M"),
 +  How do you get likelihood profiles for time-varing parameters?
 +  If a parameter has both an upper bound and a lower bound, as well as parameters for a uniform prior, what are the actual bounds for estimation?
 +  Extracting time varying maturity parameters in report file (currently have to know how many blocks there are ahead of time).
++  When meeting with Kyle on herring data, review whether or not we want to round biomass (significant digits). Look also at other ASA models to see if they should be rounded.
