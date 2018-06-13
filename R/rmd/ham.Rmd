@@ -168,7 +168,7 @@ The age-composition residuals are available using *plot.resd* with the commercia
 # Understanding Model Units
 (@) The units for annual catch is specified in the model as metric tons. Therefore, if you input short tons in the data file, you must specify the conversion factor (e.g., 0.90718     # - Catch Scaler (convert from short tons to metric tons)) in the control file under Miscellaneous Controls.
 (@) Numbers-at-age are in millions, assuming that weight-at-age is specified in grams.
-(@) Egg survey numbers are scaled to trillions.  For example, and entry of 1.0 corresponds to one trillion eggs.
+(@) Egg survey numbers are scaled to trillions.  For example, an entry of 1.0 corresponds to one trillion eggs.
 
 
 # Simulation testing
@@ -184,10 +184,3 @@ where the 123 is the random number seed for generating a unique sequence of rand
 ```
 
 You can easily write an R-script, or makefile, to automate the process of running many simulations, reading the results, and producing summary statistics and plots.
-
-
-<!-- #Lucie
-Hi Dad.
-
-![I though it was important that you admit you're a Brony](mylittlepony.jpeg)
- -->
