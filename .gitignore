@@ -36,8 +36,10 @@
 *.ps
 sims
 
+# other file types we don't want to track
 *.xlsx
 *.xlsm
+*.docx
 
 # Windows thumbnail cache files
 Thumbs.db
