@@ -16,6 +16,19 @@ HAM:  Martell's model
 
 HER:  ADFG's adaptation of HAM
 
+## Objectives from Jane's workplan
+
+HER (Martell’s age-structured herring model) for Sitka: 
+1.  Update report file
+2.  Generate graphics and tables
+3.  Conduct retrospective analysis
+4.  Add feature to examine likelihood profiles
+5.  Estimate variance using MCMC on quantities of interest
+6.  Run simulation test
+7.  Goal of a side-by-side comparison of 2018 forecast (2017 data)
+    +  Document any differences in underlying model structure or assumptions
+    +  Compare quantities of interest and explore differences
+
 ## Work log and action items
 
 ### Meetings and individual hours worked
