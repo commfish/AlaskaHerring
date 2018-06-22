@@ -1,0 +1,181 @@
+---
+title: "HER_2018forec_sitka"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# year of forecast, generalizes email for a given year
+YEAR <- 2018
+
+```
+
+`r Sys.Date()`
+
+# 2018 herring forecast for Sitka
+
+##Forecast, GHL, and Harvest Rate 
+ 
+The recommended `r YEAR` forecast for Sitka Sound is 55,637 tons and the corresponding guideline harvest level (GHL) is 11,128 tons (20% harvest rate) (Figures 1-3). Like last year, spring commercial purse seine weight at age was used to calculate the forecast and the forecast will not be updated with winter test fishery weight at age, as had been done prior to the `r YEAR-1` fishery (i.e. this is the only forecast for `r YEAR`; Figure 4). The forecasted age composition is dominated by age-4 and age-6 fish, both in number (47% and 32%, respectively; Figure 5) and in mature biomass (22,109  and 21,194 tons, respectively; Figure 6). The forecast of age-3 fish is based on the Ricker spawner-recruit function (Figure 7). 
+
+The mature biomass forecast is a 12% decrease from the model hindcast of `r YEAR-1` mature (pre-fishery) biomass (63,410 tons), a 13% increase from the model hindcast of `r YEAR-1` spawning (post-fishery) biomass (49,347 tons), and a 24% decrease from the `r YEAR-1` mature biomass forecast (Figure 3; 73,245 tons) (Figure 3). The larger than average recruitment of age-3 fish in `r YEAR-1` (Figure 8) and the large increase in maturity between age-3 and age-4 fish (35% of age-3 fish to 99% of age-4 fish for the 2015-2017 time period; Figure 9) is responsible for the 13% increase from the model hindcast of `r YEAR-1` spawning (post-fishery) biomass to the model forecast of `r YEAR` mature (pre-fishery) biomass.  The decrease in egg deposition from `r YEAR-2` to `r YEAR-1` (Figure 10) was due to the following:
+
+1.  the model-estimated size of the 2015 age-3 cohort (772 million) was smaller than previously estimated (1042 million in the 2017 forecast model) now that it has been sampled for multiple years (Figure 8);
+2.  the increase in the population due to increasing maturity of the 2016 age-3 cohort was minimal because of the small size of that cohort (22 million; Figure 8);
+3.  the increase in the population due to the above average 2017 age-3 cohort was tempered because only 35% of the age-3 cohort were mature (Figures 8 and 9); and 
+4.  ages-4 and older only exhibited decreases in abundance due to natural and fishing mortality since they were all estimated to be fully mature (Figures 9 and 11). 
+
+The decrease from the `r YEAR-1` hindcast of mature biomass (63,410 tons) to the `r YEAR` forecast of mature biomass (55,637 tons), the result of increasing maturity of age-3 to age-4 fish and the small estimated addition of age-3 fish (11%; Figure 5), could not offset the decreases across all age classes due to natural and fishing mortality. The combined 14,063 ton harvest in 2017 (combined sac roe harvest, test fish harvest, and personal use bait by permit harvest) was under the 14,649 GHL (ADF&G 2016), but the exploitation rate in 2017 (harvest divided by the hindcast of 2017 mature biomass) was 22%, slightly over the 20% target harvest rate due to the 15% overforecast (Figures 2, 3, and 12). 
+Model Selection
+Like previous years, the parameterization of the recommended 2018 forecast ASA model was compared to a suite of models with different parameterizations. Also, like previous years, the recommended model was selected by considering Akaike Information Criterion corrected for small sample sizes (AICc; Burnham and Anderson 1998), biologically realistic estimation of parameters, inspection of residuals, and consistency with prior parameterizations (similar periods of change for survival, maturity, and selectivity as prior years). The difference (∆i) between a given model and the model with the lowest AICc value is the primary statistic for choosing appropriate models. For biologically realistic models, those with ∆i ≤ 2 have substantial support, those in which 4 ≤ ∆i ≤ 7 have considerably less support, and models with ∆i > 10 have essentially no support (Burnham and Anderson 2004). This year the model with the lowest AICc value and with biologically realistic parameters was recommended for the 2018 forecast.
+Alternative Model Parameterizations
+Like previous years, alternative model parameterizations included changes in time periods of survival, maturity, and commercial fishery selectivity. The years in which model-estimated parameters were allowed to change were in years when sea-surface temperature shifted, as measured by the Pacific Decadal Oscillation (PDO), a basin-wide oceanographic index of sea surface temperatures that has been linked to lower trophic level productivity and Pacific salmon production in the North Pacific (Mantua et al. 1997; Mantua and Hare 2002).  However, unlike past years, we formalized the months used to define the annual PDO index. The mean monthly PDO values, from April of the previous year through March of the labelled year, were used as an annual PDO index from 1980 to 2017 (Figure 13). For example, the PDO index for 1990 was the average monthly PDO value from April 1989 through March 1990. Outer coast herring stocks in Southeast Alaska, including the Sitka stock, spawn primarily in late March, at which time data for the model are collected. The chosen PDO index time period coincides with the model’s annual time step. In other words, the natural mortality (or maturity or selectivity) time-dependent parameter that is estimated for 1990 is based on the natural mortality experienced by herring during the year from the previous spring spawning event, the last time data was collected. Hereafter, we will refer to this index as the ‘mean PDO index’. 
+Like previous years, break-points between years with predominantly positive PDO anomalies and years with predominantly negative PDO anomalies defined time blocks within which survival, maturity, and selectivity parameters were allowed to differ if the additional parameters resulted in improved model fit. A change in selectivity was only investigated as an alternative model if maturity time periods changed or if there were known and obvious changes in selectivity (none were known for Sitka). In this write-up, selectivity is defined as availability plus fishing selectivity (both gear and fisher’s behavior). 
+Because consistently defining meaningful shifts in the PDO is not necessarily obvious, we also standardized our method of determining where breakpoints in the PDO index occur. The “Sequential t-Test Analysis of Regime Shifts (STARS)” method was used in this year’s assessment for the first time to determine the breaks in the mean PDO index (Rodionov and Overland 2005). The STARS method identifies discontinuity in a time-series and allows for early detection of a regime shift and subsequent monitoring of changes in its magnitude over time (Rodionov 2004). Detection of discontinuity is accomplished by sequentially testing whether a new mean PDO value within a time-series represents a statistically significant deviation from the mean value of the current ‘regime.’ As data are added to the time-series, the hypothesis of a new ‘regime’ (i.e. time block) is either confirmed or rejected based on the Student’s t-test (Rodionov and Overland 2005). The STARS method is well documented in the literature and has been applied previously to physical and biological indices (Mueter et al. 2007; Reid et al. 2016; Marty et al. 2008; Conversi et al. 2010; Menberg et al. 2014; Blamey et al. 2012; Lindegren et al. 2010, Howard et al. 2007). A tool for its application is available on the website http://www. beringclimate.noaa.gov/regimes.
+Several parameters within the STARS method need specification prior to application to determine the breaks in the mean PDO index. Two parameters, the p-value (the probability level for significance between ‘regime’ means) and the cutoff length (the approximate minimum number of years within a regime) control the magnitude and scale of the regimes to be detected, or how strong a change in the mean PDO index needs to be detected. If regimes are longer than the cutoff length, they will be detected. There is a reduced probability of detection for regimes shorter than the cutoff length, but the regimes may still be detected if the shift is of sufficient magnitude (Rodionov 2004). In addition, Huber’s weight parameter determines the weight assigned to outliers and thus the magnitude of the average values of each regime (Huber 1964). Finally, the user determines whether to account for autocorrelation and specifies the associated subsample size needed. For this study, a p-value of 0.10 was chosen, which is well within the range of other studies that have applied the STARS method. Regime shifts are known to be associated with relatively rapid changes in climate, oceanic conditions, or the ecosystem from one decadal-scale period of a persistent state to another (King 2005) and the most important scale of variability for fisheries management is decadal-scale (King and McFarlane 2006). Therefore, a cutoff value of ten years was specified within the STARS method. The default value of one for Huber’s weight parameter, and autocorrelation was included with the default of six for the subsample size (Newman et al. 2003). This resulted in three potential time blocks: 1980-1998, 1999-2014, and 2015-2017 (corresponding to splits in 1998/1999 and 2014/2015; Figure 13). These potential time blocks were considered in the 2018 forecast ASA models for Southeast Alaska herring stocks.
+Model Updates
+As a result of the standardizations in methods this year, three potential time blocks, corresponding to break-points in 1998/1999 and 2014/2015, were considered in the 2018-forecast ASA model. This differs from the 2017-forecast ASA model in which five potential time blocks, corresponding to break-points in 1998/1999, 2002/2003, 2007/2008, and 2013/2014 were considered. In both the 2017- and 2018-forecast models, every possible time period combination, based on the respective break-points, was run. 
+This year, 28 parameterizations of the model (various combinations of survival, maturity, and selectivity time-periods; see 2018 AICc.xlsx) successfully ran and were considered (models that did not converge and those that had breaks in selectivity time periods that differed from those of maturity are not shown). Using rationale consistent with other years and other Southeast Alaska stocks, the model with the minimum AICc was chosen as the recommended 2018-forecast model. The recommended 2018-forecast model for Sitka has three survival time periods (1980-1998, 1999-2014, and 2015-2017; Figure 11), two maturity schedules (1980-2014 and 2015-2017; Figure 9), and one selectivity schedule (1980-2017; Figure 14). 
+The fit to the egg index (Figures 10 and 15), observed spawning age composition, (Figures 16 and 17), and observed commercial seine age composition (Figures 18 and 19) are all quite good and exhibit reasonably small residual patterns. The parameterization changed from previous years because the potential PDO break-points changed. The largest differences between the parameterization used for the 2017 and 2018 Sitka forecasts are that (1) the 2018-forecast maturity and selectivity parameterizations do not include a 1999-2002 period when the maturity and selectivity had been estimated to be greater for young fish, and (2) the 2018-forecast maturity in the 2015-2017 period has changed to be greater for young fish (Figure 9).
+Final Model Description
+Similar to the 2017-forecast ASA model, the recommended 2018-forecast ASA model 
+1)	was implemented in AD Model Builder,
+2)	was based on data starting in year 1980, 
+3)	weighted annual spawn deposition estimates by the inverse of their estimated variance (Figure 10),
+4)	used the most recent survival and maturity for the 2018 forecast (Figures 9 and 11),
+5)	used the most recent year of average weight at age from the commercial purse seine samples as the forecasted weight at age (Figure 4),
+6)	considered alternative model parameterizations of survival, maturity, and gear selectivity, based on breakpoints in the PDO index (Figure 13),
+7)	only investigated a change in gear selectivity as an alternative parameterization if maturity time periods changed or if there were known and obvious changes in selectivity/fishing,
+8)	had three survival estimates (57% survival for 1980-1998, 76% survival for 1999-2014, and 67% survival for 2015-2017; Figure 11),
+9)	incorporated a Ricker spawner-recruit function that was weighted low in the objective function and helped the model to run smoothly, but had virtually no influence on model fit (Figure 7), 
+10)	used the Ricker spawner-recruit function to forecast age-3 recruitment in 2018 (Figures 5 and 7), and
+11)	will not be updated with winter test fishery weights at age prior to the 2018 fishery (i.e. this is the only forecast for 2018).
+Unlike the 2017-forecast ASA model, the recommended 2018-forecast ASA model
+1)	standardized the months used in the mean PDO index,
+2)	applied the STARS method to determine the breaks in the mean PDO index, 
+3)	considered three potential time blocks: 1988-1998, 1999-2014, and 2015-2017 (corresponding to splits in 1998/1999 and 2014/2015; Figure 13) in which model-estimated survival, maturity, and gear selectivity were allowed to change,
+4)	had two maturity schedules (27% maturity for age-3 fish in 1980-2014 and 35% maturity for age-3 fish in 2015-2017) with an increasing percent of mature fish over ages (Figure 9), and
+5)	had one selectivity schedule (15% of age-3 fish selected by the purse seine gear in 1980-2017) with an increasing percent of selected fish over ages (Figure 14).
+Notes
+I stored an updated copy of the summary files under S:\Region1Shared-DCF\Research\Herring-Dive Fisheries\Herring\Year 2018 Forecasts\Forecast models\ ASA Models\Sitka. 
+
+I look forward to hearing your thoughts,
+Sherri
+
+
+ 
+References:
+
+Alaska Department of Fish and Game. (2016). Sitka Sound Herring Fishery Announcement. News Release. December 12, 2016.
+ 
+Burnham, K. P., and Anderson, D.R. (2004) Multimodel inference: Understanding AIC and BIC in model selection. Sociological Methods & Research, Vol. 33(2): 261-304.
+
+Burnham, K. P., and Anderson, D.R. (1998) Model Selection and Inference. Springer, New York. 353 pp. 
+
+Blamey, L. K, Howard, J.A.E, Agenbag, J., and Jarre, A. (2012). Regime-shifts in the southern Benguela shelf and inshore region. Progress in oceanography, 106: 80-95. doi: 10.1016/j.pocean.2012.07.001
+
+Conversi A., Fonda Umani S., Peluso T., Molinero J.C., Santojanni A., and Edwards, M. (2010) The Mediterranean Sea regime shift at the end of the 1980s, and intriguing parallelisms with other European basins. PLoS ONE 5(5): e10633. DOI:10.1371/journal.pone.0010633
+
+Howard J.A.E., Jarre A., Clark, A.E. and Moloney, C.L. (2007) Application of the sequential t-test algorithm for analysing regime shifts to the southern Benguela ecosystem. African Journal of Marine Science, 29(3): 437-451. DOI: 10.2989/AJMS.2007.29.3.11.341
+
+Huber, P. -J. (1964) Robust estimation of a location parameter. Annals of Mathematical Statistics 35: 73–101.
+
+King, J.R (Ed.), (2005) Report of the study group on fisheries and ecosystem responses
+to recent regime shifts. PICES Scientific Report 28, 162 pp.
+
+King, J.R. and McFarlane, G.A. (2006) A framework for incorporating climate regime shifts into the management of marine resources. Fisheries Management and Ecology, 13: 93–102. doi:10.1111/j.1365-2400.2006.00480.x
+
+Lindegren, M., Diekmann, R., and Mollmann, C. (2010) Regime shifts, resilience, and recovery of a local cod stock. Marine Ecology Progress Series, 402: 239–53
+
+Mantua, N. J., and Hare, S.R. (2002) The Pacific Decadal Oscillation. Journal of Oceanography, 58(1): 35-44.
+
+Mantua, N. J., Hare, S. R., Zhang, Y., Wallace J.M., and Francis R.C. (1997) A Pacific interdecadal climate oscillation with impacts on salmon production. Bulletin of the American Meteorological Society, 78: 1069-1079. 
+
+Marty, C. (2008) Regime shift of snow days in Switzerland. Geophysical Research Letters, 35, L12501, doi:10.1029/2008GL033998.
+
+Menberg, K., Blum P., Kurylyk, B. L., and Bayer, P. (2014) Observed groundwater temperature response to recent climate change. Hydrology and Earth System Sciences, 18, 44534466, doi:10.5194/hess-18-4453-2014.
+
+Mueter, F. J., Boldt , J. L., Megrey, B.A., and Peterman, R.M. (2007) Recruitment and survival of Northeast Pacific Ocean fish stocks: temporal trends, covariation, and regime shifts. Canadian Journal of Fisheries and Aquatic Sciences, 64: 911 – 927.
+
+Newman, M., Compo, G.P., and Alexander, M.A. (2003) ENSO-forced variability of the Pacific decadal oscillation. Journal of Climate, 16(23): 3853-3857.
+
+Reid, P. C., Hari, R.E., Beaugrand, G., Livingstone, D.M., Marty, C., Straile, D., Barichivich, J., Goberville, E., Adrian, R., Aono, Y., Brown, R., Foster, J., Groisman, P., Hélaouët, P., Hsu, H.-H., Kirby, R., Knight, J., Kraberg, A., Li, J., Lo, T.-T., Myneni, R. B., North, R. P., Pounds, J. A., Sparks, T., Stübi, R., Tian, Y., Wiltshire, K. H., Xiao, D. and Zhu, Z. (2016), Global impacts of the 1980s regime shift. Global Change Biology, 22: 682–703. doi:10.1111/gcb.13106
+
+Rodionov, S. N. (2004) A sequential algorithm for testing climate regime shifts. Geophysical Research Letters, 31:L09204.
+
+Rodionov, S., and Overland, J.E. (2005) Application of a sequential regime shift detection method to the Bering Sea ecosystem. ICES Journal of Marine Science, 62: 328 – 332.
+
+
+
+ 
+ Figures 
+ 
+Figure 1: Survey-estimated spawning biomass plus catch (tons), model-estimated mature biomass (tons), and model-estimated mature biomass forecast (tons). Survey-estimated eggs were converted to biomass using year-specific age composition and weight at age over the time series (i.e. survey-estimated spawning biomass matches the spawn deposition file for each year).
+
+
+ 
+Figure 2: Stacked bar graph of catch (orange), spawning biomass (green), GHL (blue),  and the spawning biomass forecast (pink) along with the threshold (grey line). The harvest (or GHL) plus the spawning biomass equals the mature biomass. If there is no catch (or GHL), the spawning biomass (or spawning biomass forecast) equals the mature biomass (or mature biomass forecast). 
+
+ 
+Figure 3: Comparison of past and current survey-estimated mature biomass (survey-estimated spawning biomass plus catch), model-estimated mature biomass, and model-estimated mature biomass forecasts (tons).
+
+ 
+Figure 4: Forecasted weight at age (weight at age from the 2017 spring  commercial purse seine fishery).
+
+
+  
+Figure 5: Forecasted percentage of mature numbers at age for forecast year. The percent of age-3 fish was estimated with a Ricker spawner-recruit function (red bar).
+
+
+  
+Figure 6: Forecasted mature biomass at age (tons) for forecast year. 
+  Figure 7: Spawning biomass (tons) versus age-3 abundance (millions of mature and immature fish) (blue circles) with Ricker-estimated age-3 abundance (red line). 
+
+
+
+ 
+Figure 8: Model estimates of age-3 recruit strength (numbers of age-3 mature and immature fish).
+
+  Figure 9: Model estimates of maturity at age by year.
+
+ 
+Figure 10: Survey-and model-estimated egg deposition. Survey estimates have 95% confidence limits. Confidence limits from 1991-2017 were based on bootstrap analysis. Standard deviations for 1980-1990 were estimated based on a linear regression of ln(egg numbers) to ln(standard deviation) of 1991-2017 data. Confidence limits for 1980-1990 were based on two standard deviations around the mean. The upper confidence limit for the 2008 survey-estimated egg deposition (29.06 trillion eggs) is not shown to better view the other years.
+  Figure 11: Model estimates of survival by year. 
+  Figure 12: Spawning population biomass (blue bars; top figure), spawning population abundance (blue bars; middle figure), immature and spawning abundance (blue bars; bottom figure), and commercial fishery harvest (yellow bars) over time. The combination of the blue and yellow bars (total height of each bar) is the mature biomass, mature population abundance, or total population abundance.
+
+ 
+Figure 13: Mean PDO index with 95% percentiles in monthly values. Time blocks are at 1980-1998, 1999-2014, and 2015-2017. The horizontal solid lines are the mean PDO value within each time-block.  Positive values indicate a positive, or warm phase of the cycle (red lines) and negative values indicate a negative, or cool phase of the cycle (blue line). 
+
+
+  Figure 14: Model estimates of seine gear selectivity at age by year.
+
+
+
+ 
+Figure 15: Residuals from model fits to survey egg deposition (top) and the Ricker spawner-recruit function (bottom).
+
+
+ 
+
+ Figure 16: Observed cast net (bars) and model-estimated (red line with square points) spawning age composition.
+
+ 
+Figure 17:  Spawning-age composition residuals. Positive values suggest that observed data is greater than model-estimated and negative means the opposite.
+
+
+
+
+  Figure 18: Observed seine (bars) and model-estimated (red line with square points) catch-age composition. 
+
+
+
+ 
+
+
+
+
+ 
+Figure 19:  Catch-age composition residuals. Positive values suggest that observed data is greater than model-estimated and negative means the opposite.
+
+

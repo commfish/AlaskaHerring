@@ -178,3 +178,67 @@ kable(data.frame(Parameter = c("Block-specific M", "Log mean M", "Log mean M"),
 +  If a parameter has both an upper bound and a lower bound, as well as parameters for a uniform prior, what are the actual bounds for estimation?
 +  Extracting time varying maturity parameters in report file (currently have to know how many blocks there are ahead of time).
 +  When meeting with Kyle on herring data, review whether or not we want to round biomass (significant digits). Look also at other ASA models to see if they should be rounded.
+
+## HER variable definitions
+
+## Model dimensions
+$dat_syr$: first year of data
+$day_nyr$: last year of data
+$mod_syr$: first year of model
+$mod_nyr$: last year of model
+$sage$: first age class
+$nage$: plus group age class
+$rec_syr$: first year of recruitment (e.g. if mod_syr = 1971, rec_syr = 1974)
+
+## Time series data
+$data_catch$: catch in short tons (Year, Catch, log.se)
+$data_sp_waa$: spawner weight-at-age in grams (Year, weight-at-age)
+$data_cm_waa$: commercial catch weight-at-age in grams (Year, weight-at-age)
+$data_cm_comp$: commercial catch composition (Year, age proporitons)
+$data_sp_comp$: spawn sample age composition (Year, age proportions)
+$data_egg_dep$: egg deposition survey in trillions of eggs (Year, Index, log.se)
+$avg_sp_waa$: Average weight-at-age in grams of spawning biomass
+
+## Population parameters
+$log_natural_mortality$: mean natural mortality in log space (keeps estimate positive); theta(1)
+$log_rinit$: log initial average age-3 recruitment for ages 3-8+ in dat_syr; theta(2)
+$nFecBlocks$: number of fecundity blocks
+$fec_slope$: slope of regression line in fecundity relationship
+$fec_inter$: intercept of regression line in fecundity relationship
+
+
+## Variables
+$ro$: equilibrium recruitment
+$reck$: recruitment compensation ratio
+
+$so$: the 'alpha' parameter in the standard Ricker stock recruitment function
+$beta$: the beta parameter in the standard Ricker function 
+$$recruits=so*spawners*e^{-beta*spawners}$$
+$fore_sb$: forecasted spawning biomass
+$fore_vb$: vulnerable biomass
+$ghl$: guideline harvest level
+
+## Vectors
+$ssb$: spawning stock biomass at the time of spawning
+$recruits$: vector of $sage$ recruits predicted by S-R curve
+$resd_rec$: vector of residual process error (log-normal) (rec_syr,mod_nyr+1)
+$pred_egg_dep$: model predicted egg deposition (mod_syr,mod_nyr);
+$resd_egg_dep$: residual egg deposition (obs - pred) (mod_syr,mod_nyr);
+$pred_mileday$: model predicted mile days of milt *egg dep is derived from this so it's not currently used* (mod_syr,mod_nyr);
+$resd_mileday$: residual mile days(mod_syr,mod_nyr);
+$pred_catch$: predicted catch (mod_syr,mod_nyr);
+$resd_catch$: residual catch (mod_syr,mod_nyr);
+
+## Matrices (mod_syr,mod_nyr+1,sage,nage)
+$E_{ij}$: fecundity-at-age $j$ in year $i$
+$Nij$: numbers-at-age 
+$Oij$: mature numbers-at-age
+$Pij$: numbers-at-age post harvest
+$Sij$: selectivity-at-age
+$Qij$: vulnerable proportions-at-age
+$Cij$: predicted catch-at-age in numbers
+
+$pred_cm_comp$: predicted commercial compositinos
+$resd_cm_comp$: residual commercial compositions 
+$pred_sp_comp$: predicted spawning composition 
+$resd_sp_comp$: residual spawning composition 
