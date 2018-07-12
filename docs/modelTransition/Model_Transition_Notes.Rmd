@@ -214,29 +214,41 @@ $reck$: recruitment compensation ratio
 $so$: the 'alpha' parameter in the standard Ricker stock recruitment function
 $beta$: the beta parameter in the standard Ricker function 
 $$recruits=so*spawners*e^{-beta*spawners}$$
-$fore_sb$: forecasted spawning biomass
-$fore_vb$: vulnerable biomass
+`fore`
+$fore\_sb$: forecasted spawning biomass
+$fore\_vb$: vulnerable biomass
 $ghl$: guideline harvest level
+$pyr$: forecast year ($mod_nyr$+1)
+$fore\_rt$: ricker stock-recruit curve to forecast one year of recruitment
+$fore\_nj$: abundance-at-age in forecast year
+$pa$: 
 
 ## Vectors
 $ssb$: spawning stock biomass at the time of spawning
 $recruits$: vector of $sage$ recruits predicted by S-R curve
-$resd_rec$: vector of residual process error (log-normal) (rec_syr,mod_nyr+1)
-$pred_egg_dep$: model predicted egg deposition (mod_syr,mod_nyr);
-$resd_egg_dep$: residual egg deposition (obs - pred) (mod_syr,mod_nyr);
-$pred_mileday$: model predicted mile days of milt *egg dep is derived from this so it's not currently used* (mod_syr,mod_nyr);
-$resd_mileday$: residual mile days(mod_syr,mod_nyr);
-$pred_catch$: predicted catch (mod_syr,mod_nyr);
-$resd_catch$: residual catch (mod_syr,mod_nyr);
+$resd\_rec$: vector of residual process error (log-normal) (rec_syr,mod_nyr+1)
+$pred\_egg\_dep$: model predicted egg deposition (mod_syr,mod_nyr)
+$resd\_egg\_dep$: residual egg deposition (obs - pred) (mod_syr,mod_nyr)
+
+$pred\_mileday$: model predicted mile days of milt *egg dep is derived from this so it's not currently used* (mod_syr,mod_nyr)
+$resd\_mileday$: residual mile days(mod_syr,mod_nyr)
+$pred\_catch$: predicted catch (mod_syr,mod_nyr)
+$resd\_catch$: residual catch (mod_syr,mod_nyr)
+
+
+$mbar$: average natural mortality
+$mat\_bar$: average maturity
+$wbar$
 
 ## Matrices (mod_syr,mod_nyr+1,sage,nage)
-$E_{ij}$: fecundity-at-age $j$ in year $i$
+$Eij$: fecundity-at-age $j$ in year $i$
 $Nij$: numbers-at-age 
 $Oij$: mature numbers-at-age
 $Pij$: numbers-at-age post harvest
 $Sij$: selectivity-at-age
 $Qij$: vulnerable proportions-at-age
 $Cij$: predicted catch-at-age in numbers
+$Mij$: natural mortality by age and year
 
 $pred_cm_comp$: predicted commercial compositinos
 $resd_cm_comp$: residual commercial compositions 
