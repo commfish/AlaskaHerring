@@ -11,7 +11,7 @@ YEAR <- 2018
 
 # YEAR - 1 forecast (forecast from last year's assessment
 PAST_FOREC <- 73245
-
+source("../r/helper.r")
 
 ```
 
@@ -101,7 +101,9 @@ ggplot(aes(x = age, y = maturity, colour = `Maturity blocks`,
   scale_colour_grey() +
   lims(y = c(0, 1)) +
   labs(x = "\nAge", y = "Maturity\n") +
-  theme(legend.position = c(0.8, 0.7)) -> plot_mature
+  theme(legend.position = c(0.8, 0.7)) -> maturity_plot
+
+ggsave("figs/LS/maturity_plot.png", plot = maturity_plot, dpi = 300, height = 4, width = 6, units = "in")
 
 # Selectivity blocks
 LS_byage %>% 
@@ -115,7 +117,9 @@ ggplot(aes(x = age, y = gear_select, colour = `Selectivity blocks`,
   scale_colour_grey() +
   lims(y = c(0, 1)) +
   labs(x = "\nAge", y = "Selectivity\n") +
-  theme(legend.position = c(0.8, 0.7)) -> plot_select
+  theme(legend.position = c(0.8, 0.7)) -> selectivity_plot
+
+ggsave("figs/LS/selectivity_plot.png", plot = selectivity_plot, dpi = 300, height = 4, width = 6, units = "in")
 
 # Survival blocks
 tickr(LS_byage, Year, 5) -> axis
@@ -124,35 +128,87 @@ LS_byage %>%
   geom_line() +
   lims(y = c(0, 1)) +
   scale_x_continuous(breaks = axis$breaks, labels = axis$labels) +
-  labs(x = "", y = "Survival\n") -> plot_surv
+  labs(x = "", y = "Survival\n") -> survival_plot
 
-# Catch compositions
-
-# Plot comps three ways:
-# 1) Pearson residual bubble plots
-# 2) Bar plot with line for fitted (current method)
-# 3) Observational data in bubble plot
-
-# 3) 
-
-axisy <- tickr(agecompdat, year, 3)
-axisx <- tickr(agecompdat, age, 10)
-
-ggplot(data = LS_byage,
-       aes(x = age, y = Year, size = proportion)) + #*FLAG* could swap size with proportion_scaled
-  geom_point(shape = 21, colour = "black", fill = "black") +
-  scale_size(range = c(0, 4)) +
-  facet_wrap(~ Sex) +
-  xlab('\nObserved age') +
-  ylab('') +
-  guides(size = FALSE) +
-  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
-  scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels)
-
-ggsave("figures/bubble_fishery_agecomp_byyear.png", 
-       dpi=300, height=5, width=7.5, units="in")
+ggsave("figs/LS/survival_plot.png", plot = survival_plot, dpi = 300, height = 4, width = 6, units = "in")
 
 ```
+
+```{r agecomps_plots}
+# Catch compositions plotted three ways:
+
+# 1) Observational data in bubble plot 
+axisy <- tickr(LS_byage, Year, 3)
+LS_byage %>% 
+  melt(id.vars = c("Year", "age"), measure.vars = c("catchage_comp_obs", "spawnage_comp_obs"), variable.name = "Source", value.name = "proportion") %>% 
+  mutate(Source = factor(Source, labels = c("Seine fishery (mature biomass)", "Cast net survey (spawning stock biomass)"))) %>% 
+  ggplot(aes(x = age, y = Year, size = proportion)) + #*FLAG* could swap size with proportion_scaled
+  geom_point(shape = 21, colour = "black", fill = "black") +
+  scale_size(range = c(0, 4)) +
+  facet_wrap(~ Source) +
+  xlab('\nAge') +
+  ylab('') +
+  guides(size = FALSE) +
+  scale_x_continuous(breaks = unique(LS_byage$age), labels = unique(LS_byage$Age)) +
+  scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels) -> agecomps_bubbleplot
+
+ggsave("figs/LS/agecomps_bubbleplot.png", plot = agecomps_bubbleplot, dpi = 300, height = 5, width = 6, units = "in")
+
+# 2) Pearson residual bubble plots
+LS_byage %>% 
+  # Pearson residuals
+  mutate(catch_resid = (catchage_comp_obs - catchage_comp_est) / sqrt(var(catchage_comp_est)),
+         spawn_resid = (spawnage_comp_obs - spawnage_comp_est) / sqrt(var(spawnage_comp_est))) %>% 
+  melt(id.vars = c("Year", "age"), measure.vars = c("catch_resid", "spawn_resid"), variable.name = "Source", value.name = "residual") %>% 
+  mutate(Source = factor(Source, labels = c("Seine fishery (mature biomass)", "Cast net survey (spawning stock biomass)")),
+         `Model performance` = ifelse(residual >= 0, "Predicted less than observed", "Predicted greater than observed"),
+         residual = abs(residual)) %>% 
+  ggplot(aes(x = age, y = Year, size = residual,
+             fill = `Model performance`)) + 
+  geom_point(shape = 21, colour = "black") +
+  scale_size(range = c(0, 4)) +
+  facet_wrap(~ Source) +
+  labs(x = '\nAge', y = '') +
+  guides(size = FALSE) +
+  scale_fill_manual(values = c("white", "black")) +
+  scale_x_continuous(breaks = unique(LS_byage$age), labels = unique(LS_byage$Age)) +
+  scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels) +
+  theme(legend.position = "bottom") -> agecomps_residplot
+
+ggsave("figs/LS/agecomps_residplot.png", plot = agecomps_residplot, dpi = 300, height = 5, width = 6, units = "in")
+
+# 3) Bar plot with line for fitted (current method)
+
+LS_byage %>% # fishery 
+  ggplot() +
+  geom_bar(aes(x = Age, y = catchage_comp_obs), 
+           stat = "identity", colour = "lightgrey", fill = "lightgrey") +
+  geom_line(aes(x = Age, y = catchage_comp_est, group = 1), size = 1) +
+  facet_wrap(~ Year, dir = "v", ncol = 5) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
+  labs(x = '\nAge', y = 'Proportion-at-age\n') -> catchage_barplot
+
+ggsave("figs/LS/catchage_comps_barplot.png", plot = catchage_barplot, dpi = 300, height = 8, width = 6, units = "in")
+
+LS_byage %>% # cast net
+  ggplot() +
+  geom_bar(aes(x = Age, y = spawnage_comp_obs), 
+           stat = "identity", colour = "lightgrey", fill = "lightgrey") +
+  geom_line(aes(x = Age, y = spawnage_comp_est, group = 1), size = 1) +
+  facet_wrap(~ Year, dir = "v", ncol = 5) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
+  labs(x = '\nAge', y = 'Proportion-at-age\n') -> spawnage_barplot
+
+ggsave("figs/LS/spawnage_comps_barplot.png", plot = spawnage_barplot, dpi = 300, height = 8, width = 6, units = "in")
+
+```
+
+```{r waa_plots}
+LS_byyear %>% names()
+LS_byage %>% names()
+
+```
+
 The mature biomass forecast `r hindc_sum$prefsh_eval` from the model hindcast of `r YEAR-1` mature (pre-fishery) biomass (`r hindc_sum$hindc_f` tons), `r hindc_sum$postfsh_eval` from the model hindcast of `r YEAR-1` spawning (post-fishery) biomass (`r hindc_sum$ssb_f` tons), and `r hindc_sum$pastforec_eval` from the `r YEAR-1` mature biomass forecast (Figure 3; 73,245 tons) (Figure 3). The larger than average recruitment of age-3 fish in `r YEAR-1` (Figure 8) and the large increase in maturity between age-3 and age-4 fish (35% of age-3 fish to 99% of age-4 fish for the 2015-2017 time period; Figure 9) is responsible for the 13% increase from the model hindcast of `r YEAR-1` spawning (post-fishery) biomass to the model forecast of `r YEAR` mature (pre-fishery) biomass.  The decrease in egg deposition from `r YEAR-2` to `r YEAR-1` (Figure 10) was due to the following:
 
 1.  the model-estimated size of the 2015 age-3 cohort (772 million) was smaller than previously estimated (1042 million in the 2017 forecast model) now that it has been sampled for multiple years (Figure 8);
