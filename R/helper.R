@@ -7,7 +7,6 @@
 
 if(!require("mosaic"))   install.packages("mosaic") # derivedFactor, derivedVariable. masks over a lot of fxns, but generally only improves their utility
 if(!require("tidyverse"))   install.packages("tidyverse") # dplyr, ggplot, etc.
-if(!require("tidyr"))   install.packages("tidyr") 
 if(!require("lubridate"))   install.packages("lubridate") # dates functions like yday, dmy/mdy
 # if(!require("mgcv"))   install.packages("mgcv") # gams
 # if(!require("gridExtra"))   install.packages("gridExtra") # multipanneled plots
