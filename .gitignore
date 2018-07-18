@@ -35,6 +35,13 @@
 *.out
 *.ps
 sims
+dgs2
+diags
+*.b02
+*.p02
+*.prf
+*.r02
+*.plt
 
 # other file types we don't want to track
 *.xlsx
