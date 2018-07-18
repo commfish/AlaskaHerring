@@ -384,6 +384,15 @@ PARAMETER_SECTION
   number log_ro;
   number log_reck;
   number log_sigma_r;
+
+  // Likelihood profiles for population parameters 
+  //likeprof_number log_natural_mortality_prof;
+  likeprof_number log_rinit_prof;
+  //likeprof_number log_rbar_prof;
+  //likeprof_number log_ro_prof;
+  //likeprof_number log_reck_prof;
+  //likeprof_number log_sigma_r_prof;
+
   //// used to generate process error in the simulation model but then estimated in the assessment model
   // estimated deviations in initial numbers at age in the first year
   init_bounded_dev_vector log_rinit_devs(sage+1,nage,-15.0,15.0,2);
@@ -527,6 +536,10 @@ PARAMETER_SECTION
 
 PRELIMINARY_CALCS_SECTION
 
+  // control profile likelihood calculations
+  log_rinit_prof.set_stepnumber(0.01);
+  log_rinit_prof.set_stepsize(0.01); // step is in standard deviation units
+
   /* 
    * SIMULATION MODEL SWITCH
    */
@@ -588,6 +601,9 @@ PROCEDURE_SECTION
 // |    - save posterior samples from -mceval cmd line option
 // |---------------------------------------------------------------------------|
   
+ //log_natural_mortality_prof = log_natural_mortality;
+  log_rinit_prof = log_rinit;
+
   initializeModelParameters();
   if(DEBUG_FLAG) cout<<"--> Ok after initializeModelParameters      <--"<<endl;
 

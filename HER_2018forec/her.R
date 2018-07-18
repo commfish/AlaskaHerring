@@ -2,15 +2,49 @@
 # HER - ADFG's new herring model. Original ADMB code written by SJD Martell. Helper
 # files and documentation contributed by M. Rudd.
 
+# Libraries/source files
+
+library(R2admb) # run ADMB in R
+library(tidyverse)
+library(data.table)
+
 source("R/tools.r")
 source("R/helper.r") 
 
-# Read results:
+# Can't figure out how to put file path directly from project root into the
+# compile_admb() function
+setwd(file.path(getwd(), "HER_2018forec"))
+
+# Running model
+compile_admb("her", verbose = TRUE)
+run_admb("her", extra.args = "-lprof") # likelihood profiles, takes awhile to run
+run_admb("her") # likelihood profiles, takes awhile to run
+
+# read in likelihood profile
+prof <- readMat(string="Profile likelihood", file="Linf_pro.plt", nrow=87)
+profk <- readMat(string="Profile likelihood", file="k_prof.plt", nrow=85)
+
+prof %>% 
+  data.frame() %>% 
+  select(Linf = X1, like = X2) %>% 
+  mutate(nll = -log(like)) -> prof
+
+prof %>% 
+  mutate(min_nll = min(nll),
+         ci_95 = min_nll + 0.5 * qchisq(p = 0.95, df = 1)) %>% 
+  filter(nll == min_nll) -> ci
+
+ggplot(data = prof, aes(x = Linf, y = nll)) +
+  geom_line() +
+  geom_hline(yintercept = ci$ci_95, colour = "red", lty = 2) +
+  geom_vline(xintercept = ci$Linf, colour = "red", lty = 2)
 
 # Read in the data from the model report, par, and cor files.
-D <- read.admb("HER_2018forec/her") # read.admb() from globals.r
+# D <- read.admb("HER_2018forec/her") # read.admb() from globals.r
+D <- read.admb("her") # read.admb() from globals.r
 
-sb.file <- "HER_2018forec/ssb.ps" # Will only exist if you've run -mceval
+# sb.file <- "HER_2018forec/ssb.ps" # Will only exist if you've run -mceval
+sb.file <- "ssb.ps" # Will only exist if you've run -mceval
 if(file.exists(sb.file)){
   D$post.samp.ssb=read.table(sb.file)
   colnames(D$post.samp.ssb) <- paste0("year",D$year)
@@ -20,12 +54,12 @@ if(file.exists(sb.file)){
 plot.catch <- function(D = D, nm = "data_ct_raw",...) {
   df <- as.data.frame(D[[nm]])
   colnames(df) <- c("Year","Catch","log.se")
-  # z  <- 1.96
+  z  <- 1.96
    df <- df %>% 
     mutate(ln.ct = log(Catch),
            lci = exp(ln.ct - z*log.se),
            uci = exp(ln.ct + z*log.se),
-           std = 1.96*sqrt(log(log.se+1)),
+           std = 1.96 * sqrt(log(log.se+1)),
            lower = Catch - std * Catch,
            upper = Catch + std * Catch)
   
