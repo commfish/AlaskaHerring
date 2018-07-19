@@ -41,7 +41,7 @@ ggplot(data = prof, aes(x = Linf, y = nll)) +
 
 # Read in the data from the model report, par, and cor files.
 # D <- read.admb("HER_2018forec/her") # read.admb() from globals.r
-D <- read.admb("her") # read.admb() from globals.r
+D <- read_admb("her") # read.admb() from globals.r
 
 # sb.file <- "HER_2018forec/ssb.ps" # Will only exist if you've run -mceval
 sb.file <- "ssb.ps" # Will only exist if you've run -mceval
@@ -276,6 +276,7 @@ d3 <- plot.waa(D, nm = "data_cm_waa")
 d4 <- plot.comp(D, nm = "data_cm_comp")
 d5 <- plot.comp(D, nm = "data_sp_comp")
 d6 <- plot.eggdepfit(D, sfx = "egg_dep", fit = TRUE)
+plot.ssb(D)
 
 
 # Run models:
