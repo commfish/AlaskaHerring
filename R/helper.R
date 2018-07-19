@@ -74,12 +74,7 @@ tickr <- function(
 
 # Functions from SJD Martell, formerly in globals.r
 
-
-
-
-
-
-read.admb <-
+read_admb <-
   function(ifile)
   {	
     ret=read.fit(ifile)
@@ -95,7 +90,7 @@ read.admb <-
     return(A)
   }
 
-read.fit <-
+read_fit <-
   function(ifile)
   {
     # __Example:             
@@ -127,7 +122,7 @@ read.fit <-
     return(ret)
   }
 
-read.rep <- 
+read_rep <- 
   function(fn)
   {
     # The following reads a report file
@@ -166,7 +161,7 @@ read.rep <-
     return(A)
   }
 
-read.psv <-
+read_psv <-
   function(fn, nsamples=10000)
   {
     #This function reads the binary output from ADMB
