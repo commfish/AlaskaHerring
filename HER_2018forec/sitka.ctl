@@ -74,7 +74,7 @@
 0.90718     # 1 - Catch Scaler (convert from short tons to metric tons)
 0           # 2 - Condition on Catch = 0, Condition of Ft = 1
 25000       # 3 - harvest threshold 
-0.10        # 4 - target harvest rate *FLAG* - 0.2 instead?
+0.20        # 4 - target harvest rate
 20000       # 5 - threshold denominator
 0.050       # 6 - standard deviation in natural mortality devs
 ## EOF
