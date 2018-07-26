@@ -31,13 +31,13 @@ HER (Martell’s age-structured herring model) for Sitka:
 
 ### What are the *quantities of interest* for variance:
 Mature biomass (pre-fishery)
-Spawning stock biomass (post-fishery)
+~~Spawning stock biomass (post-fishery)~~
 Forecast mature biomass
 Natural mortality
 Recruitment
 Maturity
 Selectivity
-Catch
+Catch - I added this, but it only works when conditioning on effort (conditioning on catch assumes zero variance)
 
 ### What are the *quantities of interest* for side-by-side:
 Mature biomass (pre-fishery)
@@ -178,6 +178,10 @@ A running log of potential reasons why the LS Model and HER do not match up.
 
 2.   Rounding issues in the input data. The LS dat file had extremely high and unrealtistic precision.
 
+3.   HER does not use objective function weights.
+
+4.   Phasing different for leading parameters?
+
 ## Priors
 
 A list of priors, starting values, and bounds for each model, as well as justification for why any of these quantities were changed.
@@ -214,7 +218,7 @@ kable(data.frame(Parameter = c("Block-specific M", "Log mean M", "Log mean M"),
 
 ## HER variable definitions
 
-## Model dimensions
+### Model dimensions
 $dat_syr$: first year of data
 $day_nyr$: last year of data
 $mod_syr$: first year of model
@@ -223,7 +227,7 @@ $sage$: first age class
 $nage$: plus group age class
 $rec_syr$: first year of recruitment (e.g. if mod_syr = 1971, rec_syr = 1974)
 
-## Time series data
+### Time series data
 $data_catch$: catch in short tons (Year, Catch, log.se)
 $data_sp_waa$: spawner weight-at-age in grams (Year, weight-at-age)
 $data_cm_waa$: commercial catch weight-at-age in grams (Year, weight-at-age)
@@ -232,7 +236,7 @@ $data_sp_comp$: spawn sample age composition (Year, age proportions)
 $data_egg_dep$: egg deposition survey in trillions of eggs (Year, Index, log.se)
 $avg_sp_waa$: Average weight-at-age in grams of spawning biomass
 
-## Population parameters
+### Population parameters
 $log_natural_mortality$: mean natural mortality in log space (keeps estimate positive); theta(1)
 $log_rinit$: log initial average age-3 recruitment for ages 3-8+ in dat_syr; theta(2)
 $nFecBlocks$: number of fecundity blocks
@@ -240,7 +244,7 @@ $fec_slope$: slope of regression line in fecundity relationship
 $fec_inter$: intercept of regression line in fecundity relationship
 
 
-## Variables
+### Variables
 $ro$: equilibrium recruitment
 $reck$: recruitment compensation ratio
 
@@ -249,14 +253,14 @@ $beta$: the beta parameter in the standard Ricker function
 $$recruits=so*spawners*e^{-beta*spawners}$$
 `fore`
 $fore\_sb$: forecasted spawning biomass
-$fore\_vb$: vulnerable biomass
+$fore\_vb$: forecasted vulnerable biomass
 $ghl$: guideline harvest level
 $pyr$: forecast year ($mod_nyr$+1)
 $fore\_rt$: ricker stock-recruit curve to forecast one year of recruitment
 $fore\_nj$: abundance-at-age in forecast year
 $pa$: 
 
-## Vectors
+### Vectors
 $ssb$: spawning stock biomass at the time of spawning
 $recruits$: vector of $sage$ recruits predicted by S-R curve
 $resd\_rec$: vector of residual process error (log-normal) (rec_syr,mod_nyr+1)
@@ -273,7 +277,10 @@ $mbar$: average natural mortality
 $mat\_bar$: average maturity
 $wbar$
 
-## Matrices (mod_syr,mod_nyr+1,sage,nage)
+### Matrices 
+
+Dimensions: ($mod\_syr$,$mod\_nyr+1$,$sage$,$nage$)
+
 $Eij$: fecundity-at-age $j$ in year $i$
 $Nij$: numbers-at-age 
 $Oij$: mature numbers-at-age
@@ -283,7 +290,187 @@ $Qij$: vulnerable proportions-at-age
 $Cij$: predicted catch-at-age in numbers
 $Mij$: natural mortality by age and year
 
-$pred_cm_comp$: predicted commercial compositinos
-$resd_cm_comp$: residual commercial compositions 
-$pred_sp_comp$: predicted spawning composition 
-$resd_sp_comp$: residual spawning composition 
+$pred\_cm\_comp$: predicted commercial compositinos
+$resd\_cm\_comp$: residual commercial compositions 
+$pred\_sp\_comp$: predicted spawning composition 
+$resd\_sp\_comp$: residual spawning composition 
+
+
+## LS variable definitions
+
+### Model dimensions
+
+$nages$: number of ages
+$dat\_styr$: data start year
+$dat\_endyr$: data end year
+$mod\_styr$: model start year
+$mod\_endyr$: model end year
+$dyrs$: data year index
+$myrs$: model year index
+$md\_offset$: offset data to model *FLAG - can you explain this?*
+$Year$: year sequence for graphics (model + 1)
+$i$: year
+$j$: age
+
+### Phasing 
+
+An interesting way to do this, not how HER is structured.
+
+Phase 1:
+$ph\_Int$: initial population
+$ph\_S    $: natural mortality
+$ph\_mat\_a$: maturity inflection
+$ph\_gs\_a $: gear selectivity inflection
+$ph\_gs\_b $: gear selectivity slope
+
+Phase 2:
+$ph\_mat\_b$: maturity slope
+
+Phase 3:
+$ph\_Rec$: recruitment (age-3)
+$ph\_Ric$: Ricker function
+
+### Data
+
+$tcb$: total annual commercial catch (short tons)
+$tcbm$: $tcb$ in metric tons (metric tons = 0.90718 * short tons)
+$obs\_sp\_waa$: spawning (cast net) weight-at-age
+$obs\_c\_waa$: commercial catch weight-at-age
+$obs\_c\_comp$: commercial catch age composition
+$obs\_sp\_comp$: spawner (cast net) age composition
+$obs\_egg$: egg deposition
+$mile\_days$: mile days of milt (not always used)
+
+### Time blocks
+
+Written this way to accomodate blocks and looping. Not necessarily recommended for HER.
+
+$M\_Bk$: number of mortality blocks (1 split = 2 blocks)
+$M\_Bk\_Yrs$: specific years in which mortality M changes
+$mat\_Bk$: number of maturity blocks (1 split = 2 blocks)
+$mat\_Bk\_Yrs$: specific years in which maturity-at-age changes
+$gs\_Bk$: number of gear selectivity blocks (1 split = 2 blocks)
+$gs\_Bk\_Yrs$: specific years in which gear-selectivity-at-age changes
+$F\_Bk$: number of fecundity blocks (1 split = 2 blocks)
+$F\_Bk\_Yrs$: specific years in which fecundity changes
+$F\_slope$: Slope of fecundity-at-age regression
+$F\_inter$: Intercept of fecundity
+
+### Parameters
+
+Initialize population
+$init\_age_3$: vector of initial age-3 abundance by year
+$init\_pop$: vector of initial population abundance (ages 4 - 8+)
+
+Spawner-recruit relationship
+$log\_alpha$: natural log-scale spawner-recruit alpha parameter (estimate)
+$log\_beta$: natural log-scale spawner-recruit beta parameter (estimated)
+$alpha$: spawner-recruit alpha parameter (derived)
+$beta$: spawner-recruit beta parameter (derived)
+
+Natural mortality and survival
+$M$: natural mortality
+$Sur$: survival matrix *FLAG* is this here for age-dependent survival?
+$S$: survival vector
+$S\_for$: mean survival (for forecasting)
+  
+Maturity
+$mat\_a$: age at 50% maturity
+$mat\_b$: maturity-at-age slope
+$Mat$: Maturity-at-age matrix (1,myrs,1,nages)
+$mat\_fore$: *FLAG CHECK* forecast maturity-at-age
+
+Selectivity
+$gs\_a$: age at 50% selectivity
+$gs\_b$: selecitivity-at-age slope
+$GS$: *FLAG CHECK* gear selectivity-at-age matrix (1,myrs,1,nages)
+$GS\_Sc$: *FLAG CHECK* scaled gear selectivity-at-age matrix
+$int1$: maximum of gear selectivity, used to scale
+$int2$: *FLAG - what is pop rec* proportion of pop rec to gear * weight-at-age
+$int3$: int2 summed over ages
+
+Mile days of milt
+$md\_c$: mile-days coefficient *FLAG - what's this? we do not have anything similar in HER*
+
+### Matrices
+$naa$: total population (mature + immature) (millions)
+$sel\_naa$: *FLAG* Current defn: N selected by gear. Improved defn: numbers-at-age vulnerable to gear
+$sel\_naa\_prop$: *FLAG* Current definition: proportion of N selected by gear. Improved defn: proportion vulnerable-at-age out of the vulnerable population
+$est\_c\_naa$: catch composition-at-age                                  
+$est\_sp\_naa$: spawning numbers-at-age (millions)            
+$est\_sp\_comp$: spawners numbers-at-age (proportion)            
+$est\_sp\_baa$: spawning biomass-at-age (metric tons)
+$est\_mat\_naa$: mature abundance-at-age (millions)                       
+$est\_mat\_baa$: mature biomass-at-age (metric tons)          
+$post\_naa$: total numbers-at-age (mature + immature) - catch (millions)     
+$est\_egg\_naa$: egg production-at-age (trillions)     
+
+### Vectors
+$tot\_sel\_N$: total N selected by gear (millions)                      
+$tot\_sp\_B$: total spawning biomass (metric tons)
+$tot\_mat\_N$: total mature abundance (millions)
+$tot\_sp\_N$: total spawning abundance (millions)                    
+$tot\_mat\_B$: total mature biomass (metric tons)   
+$tot\_post\_N$: total population (mature + immature) - catch (millions)     
+$tot\_est\_egg$: total egg deposition (trillions)                          
+$N$: total abundance (mature + immature) (millions)
+$SR$: Ricker spawner-recruit
+$M_D$: Mile days of milt
+
+
+### Forecast quantities
+$for\_naa$: forecast numbers-at-age (mature + immature) (millions)
+$for\_mat\_naa$: forecast mature numbers-at-age (millions)
+$for\_mat\_baa$: forecast mature biomass-at-age (metric tons)
+$for\_mat\_prop$: forecast mature proportion-at-age by number
+$for\_mat\_\b_\prop$: forecast mature proportion-at-age by biomass
+$for\_mat\_B$: total forecast mature biomass (metric tons)
+$for\_mat\_B\_st$: total forecast mature biomass (US short tons) 
+$for\_tot\_mat\_N$: total mature numbers-at-age                   
+$HR$: harvest rate                                 
+$HR\_p$: harvest rate sliding proportion               
+$GHL$: guideline harvest limit                
+
+### Objective function components
+
+$res\_c\_comp$: residuals catch age composition      
+$res\_sp\_comp$: residuals spawner age composition
+$res\_tot\_egg$: residuals egg deposition
+$res\_SR$: residuals spawner-recruit function
+$SSQc$: Sums of squares catch age composition
+$SSQsp$: Sums of squares spawner age composition
+$wSSQE$: Sums of squares weighted egg deposition vector over years
+$WSSQE$: Sums of squares egg deposition
+$SSQR$: Sums of squares spawner-recruit
+$M_DR$: *FLAG CHECK* Sums of squares mile-days of milt vector over years
+$wSSQM$: *FLAG - what's this?*
+$WSSQM$ *FLAG - what's this*
+
+### Objective function weights
+
+HER does not have objective function weights
+
+$lC$: Catch age composition (number)
+$lS$: Spawning age composition (number)
+$lR$: Ricker spawner-recruit (number)
+$lD$: Egg Deposition (btw dataset weighting) (number)
+$lE$: Egg deposition (within) (vector of years)
+$lM$: Mile-days (vector of years)
+
+### Bootsrap and SD report calls
+
+Bootstrap has not been implemented (at least since 2015)
+
+$BSDATA$: Define bootstrap data matrix (1,myrs,1,26)
+$Data_start_year$: Index number
+$Data_end_year$: Index number
+$Model_start_year$: Index number
+$Model_end_year$: Index number
+$obj$: Rejection criteria number
+
+SD report calls
+
+$SpawnBio$: Spawning biomass (vector 1,myrs)
+$SpawnBioFor$: Forecast spawning biomass (number)
+$GHLsd$: GHL (number)
+$AICcsd$: AIC (number)
