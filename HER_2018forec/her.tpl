@@ -385,9 +385,9 @@ PARAMETER_SECTION
   number log_reck;
   number log_sigma_r;
 
-  // Likelihood profiles for population parameters 
+  // Attempts at ikelihood profiles for population parameters *these do NOT run*
   //likeprof_number log_natural_mortality_prof;
-  likeprof_number log_rinit_prof;
+  //likeprof_number log_rinit_prof;
   //likeprof_number log_rbar_prof;
   //likeprof_number log_ro_prof;
   //likeprof_number log_reck_prof;
@@ -601,8 +601,9 @@ PROCEDURE_SECTION
 // |    - save posterior samples from -mceval cmd line option
 // |---------------------------------------------------------------------------|
   
+ // Example of calling likelihood profiles for population parameters (these do NOT run)
  //log_natural_mortality_prof = log_natural_mortality;
-  log_rinit_prof = log_rinit;
+ //log_rinit_prof = log_rinit;
 
   initializeModelParameters();
   if(DEBUG_FLAG) cout<<"--> Ok after initializeModelParameters      <--"<<endl;
@@ -757,6 +758,10 @@ FUNCTION void writePosteriorSamples()
     // example of saving two non-time-varying posterior distributions
     ofstream ofs2("natural.ps");
     ofs2 << "natural_mortality\tnatural_survival" << endl;
+
+    // forecast spawning biomass 
+    ofstream ofs("foresb.ps");
+
   }
   ofstream ofs("ssb.ps",ios::app);
   ofs<<ssb<<endl;
@@ -764,8 +769,8 @@ FUNCTION void writePosteriorSamples()
   ofstream ofs2("natural.ps",ios::app);
   ofs2<< exp(log_natural_mortality) << "\t" << exp(-(exp(log_natural_mortality))) << endl;
 
-
-
+  ofstream ofs("foresb.ps",ios::app);
+  ofs<<fore_sb<<endl;
   
 FUNCTION void runSimulationModel(const int& rseed)
   

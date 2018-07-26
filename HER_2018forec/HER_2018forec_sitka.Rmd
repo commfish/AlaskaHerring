@@ -4,8 +4,7 @@ output: word_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
+knitr::opts_chunk$set(message = FALSE, include = FALSE)
 # year of forecast, generalizes email for a given year
 YEAR <- 2018
 
@@ -20,13 +19,42 @@ source("../r/helper.r")
 
 # 2018 herring forecast for Sitka
 
-```{r HER_results}
+```{r HER_results, include = FALSE}
 
 D <- read_admb("her")
 
+D$theta
+D$fit
+D$theta
+D$theta
 ```
 
-```{r HER_weightatage}
+
+```{r posterior_ssb, include = FALSE}
+
+# I don't understand why the credibility intervals are *so* tight on SSB. There is definitely something going wrong here.
+
+ssb <- D$post.samp.ssb
+colnames(ssb) <- paste(D$year)
+df <- gather(ssb, Year, ssb) %>% 
+  group_by(Year) %>% 
+  summarize(median = median(ssb) / 1000,
+            q025 = quantile(ssb, 0.025) / 1000,
+            q975 = quantile(ssb, 0.975) / 1000) %>% 
+  mutate(year = as.integer(Year)) 
+
+ggplot(df) +
+  geom_point( aes(x = year, y = median)) +
+  geom_line( aes(x = year, y = median, group = 1)) +
+  geom_ribbon(aes(x = year, ymin = q025, ymax = q975),
+              alpha = 0.2, colour = "grey", fill = "grey") +
+  labs(x = "\nYear",
+       y = "Spawning stock biomass (1000 t)\n") +
+  ylim(c(0, 130))
+```
+
+
+```{r HER_weightatage, include = FALSE}
 
 # Two ways of plotting trends in weight-at-age
 
@@ -74,7 +102,7 @@ ggsave("figs/waa_plot.png", plot = waa_plot, dpi = 300, height = 4, width = 6, u
 
 ```
 
-```{r HER_eggdep}
+```{r HER_eggdep, include=FALSE}
 
 # Two ways of plotting egg deposition (observed and model predicted, residuals)
 df <- as.data.frame(D[["data_egg_dep"]]) 
@@ -111,7 +139,7 @@ cowplot::plot_grid(obsfit, resids, align = "hv", nrow = 2) -> eggdep_plot
 ggsave("figs/HER/eggdep_plot.png", plot = eggdep_plot, dpi = 300, height = 5, width = 6, units = "in")
 ```
 
-```{r HER_catch}
+```{r HER_catch, include=FALSE}
 
 # If conditioning model on fishing effort, all elements of D$ft will equal 0
 

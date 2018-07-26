@@ -17,8 +17,8 @@ setwd(file.path(getwd(), "HER_2018forec"))
 
 # Running model
 compile_admb("her", verbose = TRUE)
-run_admb("her", extra.args = "-lprof") # likelihood profiles, takes awhile to run
-run_admb("her") # likelihood profiles, takes awhile to run
+# run_admb("her", extra.args = "-lprof") # likelihood profiles, takes awhile  and couldn't get this to run
+run_admb("her") 
 
 # read in likelihood profile
 prof <- readMat(string="Profile likelihood", file="Linf_pro.plt", nrow=87)
@@ -220,15 +220,37 @@ plot.ft.post <- function(D=D) {
 plot.ssb.post <- function(D = D) {
   ssb.ps <- D$post.samp.ssb
   colnames(ssb.ps) <- paste(D$year)
-  df <- gather(ssb.ps, Year, SSB)
+  df <- gather(ssb.ps, Year, SSB) %>% 
+    group_by(Year) %>% 
+    summarize(median = median(SSB) / 1000,
+              q025 = quantile(SSB, 0.025) / 1000,
+              q975 = quantile(SSB, 0.975) / 1000)
   
-  ggplot(df, aes(Year, SSB / 1000)) + 
-    geom_violin(alpha = 0.25, fill = "steel blue", size = 0.25,
-                draw_quantiles = c(0.25, 0.5, 0.75)) +
+  # ggplot(df, aes(Year, SSB / 1000)) + 
+  #   geom_violin(alpha = 0.25, fill = "steel blue", size = 0.25,
+  #               draw_quantiles = c(0.25, 0.5, 0.75)) +
+  #   ylim(c(0, NA)) + 
+  #   labs(x = "Year", y = "Spawning Stock Biomass (1000 t)\n") +
+  #   scale_x_discrete(breaks = seq(D$mod_syr, D$mod_nyr, by = 5))
+
+  ggplot(df, aes(x = Year, y = SSB / 1000)) + 
+    geom_line() +
     ylim(c(0, NA)) + 
     labs(x = "Year", y = "Spawning Stock Biomass (1000 t)\n") +
     scale_x_discrete(breaks = seq(D$mod_syr, D$mod_nyr, by = 5))
   
+  ggplot() +
+    # geom_point( aes(x = Year, y = median)) +
+    # geom_line( aes(x = Year, y = median, group = 1)) +
+    geom_ribbon(data = df, 
+                aes(x = Year, ymin = q025, ymax = q975),
+                colour = "black", fill = "grey") #+, 
+                # alpha = 0.2, fill = "grey") +
+    # labs(x = "\nYear",
+    #      y = "Spawning stock biomass (1000 t)\n") +
+    # # theme(legend.position = "none") +
+    # xlim(c(0, 130)) 
+    
   # }
 }
 
@@ -277,6 +299,8 @@ d4 <- plot.comp(D, nm = "data_cm_comp")
 d5 <- plot.comp(D, nm = "data_sp_comp")
 d6 <- plot.eggdepfit(D, sfx = "egg_dep", fit = TRUE)
 plot.ssb(D)
+
+plot.ssb.post(D)
 
 
 # Run models:
@@ -330,7 +354,7 @@ lines(LS_year$tot_sp_B_tons ~ years, type = "l", col = "red", lwd = 2)
 run_admb("her", extra.args="-sim 123")
 
 ## run MCMC
-run_admb("her", extra.args="-mcmc 10000 -mcsave 10")
+run_admb("her", extra.args="-mcmc 1000 -mcsave 10")
 run_admb("her", extra.args="-mceval")
 
 ## posterior distributions
@@ -346,3 +370,4 @@ abline(h=median(natural_ps[,2]), col="red")
 ## from tech doc:
 ## 1) first fit to sitka data
 ## 2) save .par file as her.pin
+D$

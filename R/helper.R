@@ -81,15 +81,15 @@ tickr <- function(
 read_admb <-
   function(ifile)
   {	
-    ret=read.fit(ifile)
+    ret=read_fit(ifile)
     
     fn=paste(ifile,'.rep', sep='')
-    A=read.rep(fn)
+    A=read_rep(fn)
     A$fit=ret
     
     pfn=paste(ifile,'.psv',sep='')
     if(file.exists(pfn))
-      A$post.samp=read.psv(pfn)
+      A$post.samp=read_psv(pfn)
     
     return(A)
   }
