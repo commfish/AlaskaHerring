@@ -214,13 +214,21 @@ kable(data.frame(Parameter = c("Block-specific M", "Log mean M", "Log mean M"),
 +  What does the value() fxn do and when do you have to use it?
 +  How do you get likelihood profiles for time-varing parameters?
 +  If a parameter has both an upper bound and a lower bound, as well as parameters for a uniform prior, what are the actual bounds for estimation?
-+  Extracting time varying maturity parameters in report file (currently have to know how many blocks there are ahead of time).
++  Extracting time varying maturity parameters in report file (currently hard-coded so you have to know how many blocks there are ahead of time).
 +  When meeting with Kyle on herring data, review whether or not we want to round biomass (significant digits). Look also at other ASA models to see if they should be rounded.
 +  Having a problem getting estimates for selectivity Sij. I don't understand Sij.sub(mod_syr,mod_nyr) = mfexp(log_slx);  I've tried the following lines but had no luck. 
   //Sij(mod_syr,mod_nyr) = mfexp(log_slx);
   //Sij(mod_syr,mod_nyr+1,sage,nage) = mfexp(log_slx);
   //Sij(mod_syr,mod_nyr,sage,nage) = mfexp(log_slx);
   //Sij = mfexp(log_slx);
+  
+## Future HER development
+
+1.    Population dynamcis equations and assumptions related to maturity and selectivity:
+
++   Revisit how the spawning population is defined. Currently the LS and HER models define it as spawning numbers-at-age = (maturity matrix $\times$ numbers-at-age) – catch-at-age. Steve M. originally had it as maturity_matrix $\times$ (numbers-at-age - catch-at-age). Similarly, may want to revisit post fishery numbers-at-age (mature + immature) with is numbers-at-age - catch-at-age. Steve’s notation on how he calculates the spawning population is conflicting. The equation in the code (as you mention below) is (Nij-catch at age) $\times$ maturity, and that is how he describes it in his contract report (last paragraph page 14) and defines it in his contract equation T2.10 on page 27, but it does not match the note he put in the code which says that he coded it as in LS (maturity matrix*Nij)-catch-at-age per a contract between he and I. I’m wondering if added that note but never changed the code and report.
+
++   Revisit the question of how to treat selectivity. Do we apply selectivity to numbers-at-age as is done now in both HER and LS, such that it is essentially the combination of availability and fishery selectivity? Or do we change it so that numbers-at-age is first multiplied by maturity and then by selectivity (such that selectivity in this case is fishery selectivity alone and maturity deals with the fish that are available to the fishery on the spawning grounds)?
 
 ## HER variable definitions
 
