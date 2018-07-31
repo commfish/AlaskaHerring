@@ -505,7 +505,7 @@ PARAMETER_SECTION
 // |---------------------------------------------------------------------------|
   // +1 is for one year of forecast
   matrix Nij(mod_syr,mod_nyr+1,sage,nage); // numbers-at-age N(syr,nyr,sage,nage)
-  matrix Oij(mod_syr,mod_nyr+1,sage,nage);// mature numbers-at-age O(syr,nyr,sage,nage)
+  matrix Oij(mod_syr,mod_nyr+1,sage,nage);// post-fishery mature numbers-at-age O(syr,nyr,sage,nage)
   matrix Pij(mod_syr,mod_nyr+1,sage,nage); // numbers-at-age P(syr,nyr,sage,nage) post harvest.
   matrix Sij(mod_syr,mod_nyr+1,sage,nage); // selectivity-at-age 
   matrix Qij(mod_syr,mod_nyr+1,sage,nage); // vulnerable proportions-at-age
@@ -537,8 +537,8 @@ PARAMETER_SECTION
 PRELIMINARY_CALCS_SECTION
 
   // control profile likelihood calculations
-  log_rinit_prof.set_stepnumber(0.01);
-  log_rinit_prof.set_stepsize(0.01); // step is in standard deviation units
+  // log_rinit_prof.set_stepnumber(0.01);
+  // log_rinit_prof.set_stepsize(0.01); // step is in standard deviation units
 
   /* 
    * SIMULATION MODEL SWITCH
@@ -752,7 +752,11 @@ FUNCTION void writePosteriorSamples()
   // rows = number of samples
   // columns = number of years
   if(nf==1){
-    // example of saving a time-varying parameter posterior distributions
+
+    // mature biomass (pre-fishery)
+    ofstream ofs0("matbio.ps");
+
+    // spawning stock biomass (post-fishery)
     ofstream ofs("ssb.ps");
 
     // example of saving two non-time-varying posterior distributions
@@ -760,17 +764,19 @@ FUNCTION void writePosteriorSamples()
     ofs2 << "natural_mortality\tnatural_survival" << endl;
 
     // forecast spawning biomass 
-    ofstream ofs("foresb.ps");
+    ofstream ofs3("forecsb.ps");
 
   }
+
+  ofstream ofs0("matbio.ps"); 
   ofstream ofs("ssb.ps",ios::app);
   ofs<<ssb<<endl;
 
   ofstream ofs2("natural.ps",ios::app);
   ofs2<< exp(log_natural_mortality) << "\t" << exp(-(exp(log_natural_mortality))) << endl;
 
-  ofstream ofs("foresb.ps",ios::app);
-  ofs<<fore_sb<<endl;
+  ofstream ofs3("forecsb.ps",ios::app);
+  ofs3<<fore_sb<<endl;
   
 FUNCTION void runSimulationModel(const int& rseed)
   
@@ -1034,9 +1040,7 @@ FUNCTION void calcSelectivity()
       log_slx(i) = log(slx) - log(mean(slx));
     }
   }
-  Sij.sub(mod_syr,mod_nyr) = mfexp(log_slx);
-
-
+  Sij.sub(mod_syr,mod_nyr) = mfexp(log_slx); 
 
 FUNCTION void calcFishingMortality()
   /**
@@ -1773,6 +1777,8 @@ REPORT_SECTION
 // Selectivity and vulnerable proportion-at-age.
   REPORT(Sij);
   REPORT(Qij);
+
+  REPORT(log_slx);
 
   // Maturity curve and parameters
   REPORT(mat);
