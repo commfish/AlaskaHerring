@@ -1199,8 +1199,16 @@ FUNCTION void calcSpawningStockRecruitment()
 
   /*
     Spoke to Sherri about this. Agreed to change the equation to prevent
-    substracting immature fish from the numbers before calculating SSB.
+    substracting immature fish from the numbers before calculating SSB. 
   */
+
+  /*
+    JYS 2018-07-31:
+    I changed the population equations to make them look like the LS model. 
+    See "Future HER developments" in the Model_Transition_Notes.Rmd for more 
+    documentation. 
+
+    */
   for(int i = mod_syr; i <= mod_nyr; i++){
     // mature numbers at age before the fishery
     //Oij(i) = elem_prod(mat(i),Nij(i));
@@ -1213,13 +1221,15 @@ FUNCTION void calcSpawningStockRecruitment()
     mat_N(i) = sum(mat_Nij(i));
     // spawning numbers at age
     sp_Nij(i) = mat_Nij(i) - Cij(i);
+    // spawning abundance 
+    sp_N(i) = sum(sp_Nij(i));
     // spawning biomass at age 
     sp_Bij(i) = elem_prod(sp_Nij(i),data_sp_waa(i)(sage,nage));
     // spawning biomass after the fishery
     sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage); //(sage,nage);
     // mature biomass at age before the fishery (first how I would do it, then how the LS model does it)
-    mat_Bij(i) = elem_prod(mat_Nij(i),data_sp_waa(i)(sage,nage));
-    // mat_Bij(i) = elem_prod(Cij(i),data_cm_waa(i)) + elem_prod(sp_Nij(i),data_sp_waa(i));
+    // mat_Bij(i) = elem_prod(mat_Nij(i),data_sp_waa(i)(sage,nage));
+    mat_Bij(i) = elem_prod(Cij(i),data_cm_waa(i)(sage,nage)) + elem_prod(sp_Nij(i),data_sp_waa(i)(sage,nage));
     // mature biomass before the fishery
     mat_B(i) = sum(mat_Bij(i));
   }

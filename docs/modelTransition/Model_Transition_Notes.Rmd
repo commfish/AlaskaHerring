@@ -38,6 +38,7 @@ Recruitment
 Maturity
 Selectivity
 Catch - I added this, but it only works when conditioning on effort (conditioning on catch assumes zero variance)
+*Egg deposition?*
 
 ### What are the *quantities of interest* for side-by-side:
 Mature biomass (pre-fishery)
