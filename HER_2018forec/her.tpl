@@ -486,7 +486,12 @@ PARAMETER_SECTION
 // |---------------------------------------------------------------------------|
 // | VECTORS
 // |---------------------------------------------------------------------------|
-  vector ssb(mod_syr,mod_nyr); // spawning stock biomass at the time of spawning.
+  
+  vector mat_N(mod_syr,mod_nyr); // pre-fishery mature abundance (numbers)
+  vector mat_B(mod_syr,mod_nyr); // pre-fishery mature biomass
+  vector sp_N(mod_syr,mod_nyr); // post-fishery mature (spawning) abundance (numbers)
+  vector sp_B(mod_syr,mod_nyr); // post-fishery mature (spawning) biomass
+
   vector recruits(rec_syr,mod_nyr+1); // vector of sage recruits predicted by S-R curve.
   vector spawners(rec_syr,mod_nyr+1); //vector of ssb indexed by brood year.
   vector resd_rec(rec_syr,mod_nyr+1); //vector of residual process error (log-normal).
@@ -505,7 +510,11 @@ PARAMETER_SECTION
 // |---------------------------------------------------------------------------|
   // +1 is for one year of forecast
   matrix Nij(mod_syr,mod_nyr+1,sage,nage); // numbers-at-age N(syr,nyr,sage,nage)
-  matrix Oij(mod_syr,mod_nyr+1,sage,nage);// post-fishery mature numbers-at-age O(syr,nyr,sage,nage)
+  // JYS added new quantities 2018-07-31 to make this look more like the LS model
+  matrix mat_Nij(mod_syr,mod_nyr+1,sage,nage);// pre-fishery mature numbers-at-age 
+  matrix mat_Bij(mod_syr,mod_nyr+1,sage,nage);// pre-fishery mature biomass-at-age 
+  matrix sp_Nij(mod_syr,mod_nyr+1,sage,nage);// post-fishery mature (spawning) numbers-at-age
+  matrix sp_Bij(mod_syr,mod_nyr+1,sage,nage);// post-fishery mature (spawning) biomass-at-age 
   matrix Pij(mod_syr,mod_nyr+1,sage,nage); // numbers-at-age P(syr,nyr,sage,nage) post harvest.
   matrix Sij(mod_syr,mod_nyr+1,sage,nage); // selectivity-at-age 
   matrix Qij(mod_syr,mod_nyr+1,sage,nage); // vulnerable proportions-at-age
@@ -658,8 +667,8 @@ PROCEDURE_SECTION
   }
 
   if(sd_phase()) {
-    sd_terminal_ssb = ssb(mod_nyr);
-    sd_ssb  = ssb(mod_syr,mod_nyr);
+    sd_terminal_ssb = sp_B(mod_nyr);
+    sd_ssb  = sp_B(mod_syr,mod_nyr);
   }
 
   // | OBJECTIVE FUNCTION THAT ADMB WILL MINIMIZE
@@ -685,7 +694,7 @@ FUNCTION void runForecast()
     -2 Calculate F-at-age conditional on harvest rule.
       * harvest_rate = 20% || set TAC option
     -3 Update state variables from pyr=mod_nyr+1 to pyr+2
-      * recruitment based on ssb(pyr-sage)
+      * recruitment based on sp_B(pyr-sage)
     -4 Compute GHLs given threshold and target harvest rate
       * user specifies threshold and harvest rate in control file.
 
@@ -699,7 +708,7 @@ FUNCTION void runForecast()
   dvar_vector fore_nj(sage,nage); //numbers-at-age
   dvar_vector fore_cj(sage,nage); //catch-at-age
 
-  fore_rt = so * ssb(pyr-sage) * exp(-beta*ssb(pyr-sage)); // ricker stock-recruit curve to forecast one year of recruitment
+  fore_rt = so * sp_B(pyr-sage) * exp(-beta*sp_B(pyr-sage)); // ricker stock-recruit curve to forecast one year of recruitment
   fore_nj = Nij(pyr); // abundance at age in forecast year
   fore_nj(sage) = fore_rt; // recruits in forecast year
   fore_vb = fore_nj * elem_prod(Sij(nyr),data_cm_waa(nyr)(sage,nage)); // vulnerable biomass at age
@@ -738,7 +747,7 @@ FUNCTION void runForecast()
   // forecast abundance at age at end of year (after fishing harvest and natural mortality)
   fore_nj = elem_prod(fore_nj - fore_cj,mfexp(-Mij(nyr)));
   // forecast recruitment
-  fore_nj(sage) = so * ssb(pyr+1-sage) * exp(-beta*ssb(pyr-sage));
+  fore_nj(sage) = so * sp_B(pyr+1-sage) * exp(-beta*sp_B(pyr-sage));
   // forecast spawning biomass = abundance * survey spawner weight-at-age * proportion mature
   fore_sb = fore_nj * elem_prod(mat(nyr),data_sp_waa(nyr)(sage,nage));
   sd_projected_ssb = fore_sb;
@@ -770,7 +779,7 @@ FUNCTION void writePosteriorSamples()
 
   ofstream ofs0("matbio.ps"); 
   ofstream ofs("ssb.ps",ios::app);
-  ofs<<ssb<<endl;
+  ofs<<sp_B<<endl;
 
   ofstream ofs2("natural.ps",ios::app);
   ofs2<< exp(log_natural_mortality) << "\t" << exp(-(exp(log_natural_mortality))) << endl;
@@ -1196,10 +1205,19 @@ FUNCTION void calcSpawningStockRecruitment()
     // spawning biomass after the fishery
     //ssb(i) = (Oij(i) - Cij(i)) * data_sp_waa(i)(sage,nage);
 
-    //mature numbers-at-age after the fishery
-    Oij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
+    // mature numbers at age before the fishery
+    mat_Nij(i) = elem_prod(mat(i),Nij(i));
+    // spawning numbers at age
+    sp_Nij(i) = mat_Nij(i) - Cij(i);
+    // spawning biomass at age 
+    sp_Bij(i) = elem_prod(sp_Nij(i),data_sp_waa(i));
     // spawning biomass after the fishery
-    ssb(i) = Oij(i) * data_sp_waa(i)(sage,nage);
+    sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
+    // mature biomass at age before the fishery (first how I would do it, then how the LS model does it)
+    // mat_Bij(i) = elem_prod(mat_Nij(i),data_sp_waa(i));
+    mat_Bij(i) = elem_prod(Cij(i),data_cm_waa(i)) + elem_prod(sp_Nij(i),data_sp_waa(i));
+    // mature biomass before the fishery
+    mat_B(i) = sum(mat_Bij(i));
   }
   
 
@@ -1239,7 +1257,7 @@ FUNCTION void calcSpawningStockRecruitment()
   so   = reck/phie;
   beta = log(reck) / (ro * phie);
 
-  spawners = ssb(mod_syr,mod_nyr-sage+1).shift(rec_syr);
+  spawners = sp_B(mod_syr,mod_nyr-sage+1).shift(rec_syr);
   recruits = elem_prod( so*spawners , mfexp(-beta*spawners) );
   // vector of residual process error (log-normal).
   resd_rec = log(column(Nij,sage)(rec_syr,mod_nyr+1)+TINY) 
@@ -1265,9 +1283,9 @@ FUNCTION void calcAgeCompResiduals()
     }
 
     // spawning age-comp prediction
-    // tiny is added to Oij so that none are zero
+    // tiny is added to sp_Nij (spawner numbers at age) so that none are zero
     // but must divide by sum including tiny to recalculate the proportions to sum to 1.
-    pred_sp_comp(i) = (Oij(i)+TINY) / sum(Oij(i)+TINY); // proportion numbers-at-age after the fishery
+    pred_sp_comp(i) = (sp_Nij(i)+TINY) / sum(sp_Nij(i)+TINY); // proportion numbers-at-age after the fishery
     // in the years with spawner survey comp data, calculate residuals
     if( data_sp_comp(i,sage) >= 0 ){
       resd_sp_comp(i) = data_sp_comp(i)(sage,nage) - pred_sp_comp(i);
@@ -1287,7 +1305,7 @@ FUNCTION void calcEggSurveyResiduals()
   */
   resd_egg_dep.initialize();
   for(int i = mod_syr; i <= mod_nyr; i++){
-    pred_egg_dep(i) = (0.5 * Oij(i)) * Eij(i); // proportion female * proportion numbers at age * number of eggs
+    pred_egg_dep(i) = (0.5 * sp_Nij(i)) * Eij(i); // proportion female * proportion numbers at age * number of eggs
     // for years with egg data, calculate residuals in log space
     if(data_egg_dep(i,2) > 0){
       resd_egg_dep(i) = log(data_egg_dep(i,2)) - log(pred_egg_dep(i));
@@ -1310,12 +1328,12 @@ FUNCTION void calcMiledaySurveyResiduals()
   for(int i = mod_syr; i <= mod_nyr; i++){
     // for when mileday data is available, calculate residuals between mileday and predicted spawning stock biomass
     if(data_mileday(i,2) > 0){
-      zt(i) = log(data_mileday(i,2)) - log(ssb(i));
+      zt(i) = log(data_mileday(i,2)) - log(sp_B(i));
       zbar  = zt(i)/n + zbar *(n-1)/n;
       n++ ;// increase n by 1 for each data point
     }   
   }
-  pred_mileday = ssb * exp(zbar);
+  pred_mileday = sp_B * exp(zbar);
   resd_mileday = zt - zbar;
   // COUT(resd_mileday);
 
@@ -1762,15 +1780,23 @@ REPORT_SECTION
   REPORT(data_catch);
   REPORT(pred_catch);
 
-// SSB, recruits, spawners,
-  REPORT(ssb);
+// SSB, recruits, spawners, mature pop
+  REPORT(sp_B);
   REPORT(spawners);
   REPORT(recruits);
   REPORT(pred_egg_dep);
+  REPORT(mat_N);
+  REPORT(mat_B);
+  REPORT(sp_N);
+  REPORT(sp_B);
 
 // Numbers-at-age of various flavors.
   REPORT(Nij);
-  REPORT(Oij);
+  //REPORT(Oij); //taken out when mat_/sp_ varbs were put in
+  REPORT(mat_Nij);
+  REPORT(mat_Bij);
+  REPORT(sp_Nij);
+  REPORT(sp_Bij);
   REPORT(Pij);
   REPORT(Cij);
 

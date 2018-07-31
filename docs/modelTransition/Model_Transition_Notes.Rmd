@@ -224,11 +224,15 @@ kable(data.frame(Parameter = c("Block-specific M", "Log mean M", "Log mean M"),
   
 ## Future HER development
 
-1.    Population dynamcis equations and assumptions related to maturity and selectivity:
+1.    Population dynamcis equations and assumptions related to maturity, selectivity, and weight-at-age:
 
 +   Revisit how the spawning population is defined. Currently the LS and HER models define it as spawning numbers-at-age = (maturity matrix $\times$ numbers-at-age) – catch-at-age. Steve M. originally had it as maturity_matrix $\times$ (numbers-at-age - catch-at-age). Similarly, may want to revisit post fishery numbers-at-age (mature + immature) with is numbers-at-age - catch-at-age. Steve’s notation on how he calculates the spawning population is conflicting. The equation in the code (as you mention below) is (Nij-catch at age) $\times$ maturity, and that is how he describes it in his contract report (last paragraph page 14) and defines it in his contract equation T2.10 on page 27, but it does not match the note he put in the code which says that he coded it as in LS (maturity matrix*Nij)-catch-at-age per a contract between he and I. I’m wondering if added that note but never changed the code and report.
 
 +   Revisit the question of how to treat selectivity. Do we apply selectivity to numbers-at-age as is done now in both HER and LS, such that it is essentially the combination of availability and fishery selectivity? Or do we change it so that numbers-at-age is first multiplied by maturity and then by selectivity (such that selectivity in this case is fishery selectivity alone and maturity deals with the fish that are available to the fishery on the spawning grounds)?
+
++  Currently spawner and fishery weight-at-age are identical (fishery is used for spawner weight-at-age in all years except 1997) - do we really feel like 1997 should be an exception? Also, why do we collect cast net weight-at-age if we don't use them? In PWS they take gonad condition to determine proportion mature.
+
++  We currently assume the spawning population has a 50:50 sex ratio. Do we have data to support this assumption or otherwise?
 
 ## HER variable definitions
 
@@ -300,7 +304,7 @@ $fore\_nj$: abundance-at-age in forecast year
 $pa$: 
 
 ### Vectors
-$ssb$: spawning stock biomass at the time of spawning
+~~$ssb$: spawning stock biomass at the time of spawning *FLAG - JYS got rid of this when I added the new mature and spawning population variables, replaced by $sp\_B$*~~
 $recruits$: vector of $sage$ recruits predicted by S-R curve
 $resd\_rec$: vector of residual process error (log-normal) (rec_syr,mod_nyr+1)
 $pred\_egg\_dep$: model predicted egg deposition (mod_syr,mod_nyr)
@@ -310,7 +314,6 @@ $pred\_mileday$: model predicted mile days of milt *egg dep is derived from this
 $resd\_mileday$: residual mile days(mod_syr,mod_nyr)
 $pred\_catch$: predicted catch (mod_syr,mod_nyr)
 $resd\_catch$: residual catch (mod_syr,mod_nyr)
-
 
 $mbar$: average natural mortality
 $mat\_bar$: average maturity
@@ -323,22 +326,22 @@ Dimensions: ($mod\_syr$,$mod\_nyr+1$,$sage$,$nage$)
 
 $Eij$: fecundity-at-age $j$ in year $i$
 $Nij$: numbers-at-age 
-$Oij$: mature numbers-at-age after fishery (spawning population) *FLAG - get rid of this with new variables*
+~~$Oij$: mature numbers-at-age after fishery (spawning population) *FLAG - JYS got rid of this when I added the new mature and spawning population variables*~~
+$mat\_Nij$: matrix of pre-fishery mature numbers-at-age by year $i$
+$mat\_Bij$: matrix of pre-fishery mature biomass-at-age by year $i$
+$sp\_Nij$: matrix of post-fishery mature (spawning) numbers-at-age by year $i$
+$sp\_Bij$: matrix of post-fishery mature (spawning) biomass-at-age by year $i$
 $Pij$: numbers-at-age post harvest
 $Sij$: selectivity-at-age
 $Qij$: vulnerable proportions-at-age
 $Cij$: predicted catch-at-age in numbers
 $Mij$: natural mortality by age and year
 
-New variables
-$mat\_Nij$: matrix of pre-fishery mature numbers-at-age by year $i$
+
 $mat\_N$: vector pre-fishery mature total abundance by year $i$
-$mat\_Bij$: matrix of pre-fishery mature biomass-at-age by year $i$
 $mat\_B$: vector of pre-fishery mature total biomass by year $i$
-$sp\_Nij$: matrix of post-fishery mature (spawning) numbers-at-age by year $i$
 $sp\_N$: vector of post-fishery mature (spawning) total abundance by year $i$
-$sp\_Bij$: of post-fishery mature (spawning) biomass-at-age by year $i$
-$sp\_B$: of post-fishery mature (spawning) biomass by year $i$
+$sp\_B$: vector of post-fishery mature (spawning) biomass by year $i$
 
 $pred\_cm\_comp$: predicted commercial compositinos
 $resd\_cm\_comp$: residual commercial compositions 
