@@ -30,10 +30,10 @@ HER (Martell’s age-structured herring model) for Sitka:
     +  Compare *quantities of interest* and explore differences
 
 ### What are the *quantities of interest* for variance:
-Mature biomass (pre-fishery)
+~Mature biomass (pre-fishery)~
 ~~Spawning stock biomass (post-fishery)~~
-Forecast mature biomass
-Natural mortality
+~~Forecast mature biomass~~
+~~Natural mortality/survival~~
 Recruitment
 Maturity
 Selectivity

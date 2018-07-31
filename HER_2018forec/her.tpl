@@ -763,28 +763,30 @@ FUNCTION void writePosteriorSamples()
   if(nf==1){
 
     // mature biomass (pre-fishery)
-    ofstream ofs0("matbio.ps");
+    ofstream ofs0("mat_B.ps");
 
     // spawning stock biomass (post-fishery)
-    ofstream ofs("ssb.ps");
+    ofstream ofs1("sp_B.ps");
 
     // example of saving two non-time-varying posterior distributions
     ofstream ofs2("natural.ps");
     ofs2 << "natural_mortality\tnatural_survival" << endl;
 
     // forecast spawning biomass 
-    ofstream ofs3("forecsb.ps");
+    ofstream ofs3("forec_sb.ps");
 
   }
 
-  ofstream ofs0("matbio.ps"); 
-  ofstream ofs("ssb.ps",ios::app);
-  ofs<<sp_B<<endl;
+  ofstream ofs0("matB.ps",ios::app);
+  ofs0<<mat_B<<endl;
+
+  ofstream ofs1("sp_B.ps",ios::app);
+  ofs1<<sp_B<<endl;
 
   ofstream ofs2("natural.ps",ios::app);
   ofs2<< exp(log_natural_mortality) << "\t" << exp(-(exp(log_natural_mortality))) << endl;
 
-  ofstream ofs3("forecsb.ps",ios::app);
+  ofstream ofs3("forec_sb.ps",ios::app);
   ofs3<<fore_sb<<endl;
   
 FUNCTION void runSimulationModel(const int& rseed)
