@@ -182,6 +182,7 @@ A running log of potential reasons why the LS Model and HER do not match up.
 
 4.   Phasing different for leading parameters?
 
+5.   HER did not have the pre-fishery mature biomass/numbers. 
 ## Priors
 
 A list of priors, starting values, and bounds for each model, as well as justification for why any of these quantities were changed.
@@ -215,6 +216,11 @@ kable(data.frame(Parameter = c("Block-specific M", "Log mean M", "Log mean M"),
 +  If a parameter has both an upper bound and a lower bound, as well as parameters for a uniform prior, what are the actual bounds for estimation?
 +  Extracting time varying maturity parameters in report file (currently have to know how many blocks there are ahead of time).
 +  When meeting with Kyle on herring data, review whether or not we want to round biomass (significant digits). Look also at other ASA models to see if they should be rounded.
++  Having a problem getting estimates for selectivity Sij. I don't understand Sij.sub(mod_syr,mod_nyr) = mfexp(log_slx);  I've tried the following lines but had no luck. 
+  //Sij(mod_syr,mod_nyr) = mfexp(log_slx);
+  //Sij(mod_syr,mod_nyr+1,sage,nage) = mfexp(log_slx);
+  //Sij(mod_syr,mod_nyr,sage,nage) = mfexp(log_slx);
+  //Sij = mfexp(log_slx);
 
 ## HER variable definitions
 
@@ -226,6 +232,32 @@ $mod_nyr$: last year of model
 $sage$: first age class
 $nage$: plus group age class
 $rec_syr$: first year of recruitment (e.g. if mod_syr = 1971, rec_syr = 1974)
+$h$: time blocks
+
+
+### Controls for time varying parameters
+
+Maturity
+$nMatBlocks$: number of maturity blocks
+$maturity\_cont$: matrix of maturity parameter controls (1,nMatBlocks,1,4)
+
+Natural mortality rate deviations in each block
+$mort\_type$: constant or interpolated using cubic spline
+$mort\_dev_phz$: phase for estimating $M$
+$nMortBlocks$: number of mortality blocks or nodes in the case of cubic spline
+$nMortBlockYear$: terminal year of each mortality block (vector of length $nMortBlocks$)
+
+Selectivity
+$nSlxCols$: number of columns in selectivity design matrix (*FLAG - fixed at 9?*)
+$nSlxBlks$: number of selectivity blocks/patterns 
+$selex\_cont$: matrix of controls to be read in from control file.
+$nSelType$: type of selectivity curve (currently only logistic), vector (1,$nSlxBlks$) 
+$nslx_phz$: phase of estimation for each block, vector (1,$nSlxBlks$) 
+$nslx_rows$: number of row for $log\_slx\_pars$, vector (1,$nSlxBlks$) 
+$nslx_cols$: number of columns for $log\_slx\_pars$, vector (1,$nSlxBlks$)
+$nslx_syr$: start year for each selectivity block, vector (1,$nSlxBlks$)
+$nslx_nyr$: vector (1,nSlxBlks)
+$log\_slx\_pars$: 
 
 ### Time series data
 $data_catch$: catch in short tons (Year, Catch, log.se)
@@ -234,7 +266,7 @@ $data_cm_waa$: commercial catch weight-at-age in grams (Year, weight-at-age)
 $data_cm_comp$: commercial catch composition (Year, age proporitons)
 $data_sp_comp$: spawn sample age composition (Year, age proportions)
 $data_egg_dep$: egg deposition survey in trillions of eggs (Year, Index, log.se)
-$avg_sp_waa$: Average weight-at-age in grams of spawning biomass
+$avg_sp_waa$: Average weight-at-age in grams of spawning biomass *FLAG - check the dimensions here*
 
 ### Population parameters
 $log_natural_mortality$: mean natural mortality in log space (keeps estimate positive); theta(1)
@@ -242,7 +274,6 @@ $log_rinit$: log initial average age-3 recruitment for ages 3-8+ in dat_syr; the
 $nFecBlocks$: number of fecundity blocks
 $fec_slope$: slope of regression line in fecundity relationship
 $fec_inter$: intercept of regression line in fecundity relationship
-
 
 ### Variables
 $ro$: equilibrium recruitment
@@ -275,7 +306,8 @@ $resd\_catch$: residual catch (mod_syr,mod_nyr)
 
 $mbar$: average natural mortality
 $mat\_bar$: average maturity
-$wbar$
+$wa$: extracted annual vector of commercial catch weight-at-age
+$wbar$: average weight of catch
 
 ### Matrices 
 
@@ -283,18 +315,27 @@ Dimensions: ($mod\_syr$,$mod\_nyr+1$,$sage$,$nage$)
 
 $Eij$: fecundity-at-age $j$ in year $i$
 $Nij$: numbers-at-age 
-$Oij$: mature numbers-at-age
+$Oij$: mature numbers-at-age after fishery (spawning population) *FLAG - get rid of this with new variables*
 $Pij$: numbers-at-age post harvest
 $Sij$: selectivity-at-age
 $Qij$: vulnerable proportions-at-age
 $Cij$: predicted catch-at-age in numbers
 $Mij$: natural mortality by age and year
 
+New variables
+$mat\_Nij$: matrix of pre-fishery mature numbers-at-age by year $i$
+$mat\_N$: vector pre-fishery mature total abundance by year $i$
+$mat\_Bij$: matrix of pre-fishery mature biomass-at-age by year $i$
+$mat\_B$: vector of pre-fishery mature total biomass by year $i$
+$sp\_Nij$: matrix of post-fishery mature (spawning) numbers-at-age by year $i$
+$sp\_N$: vector of post-fishery mature (spawning) total abundance by year $i$
+$sp\_Bij$: of post-fishery mature (spawning) biomass-at-age by year $i$
+$sp\_B$: of post-fishery mature (spawning) biomass by year $i$
+
 $pred\_cm\_comp$: predicted commercial compositinos
 $resd\_cm\_comp$: residual commercial compositions 
 $pred\_sp\_comp$: predicted spawning composition 
 $resd\_sp\_comp$: residual spawning composition 
-
 
 ## LS variable definitions
 
@@ -311,6 +352,7 @@ $md\_offset$: offset data to model *FLAG - can you explain this?*
 $Year$: year sequence for graphics (model + 1)
 $i$: year
 $j$: age
+$t$: time block
 
 ### Phasing 
 
@@ -345,8 +387,8 @@ $mile\_days$: mile days of milt (not always used)
 
 Written this way to accomodate blocks and looping. Not necessarily recommended for HER.
 
-$M\_Bk$: number of mortality blocks (1 split = 2 blocks)
-$M\_Bk\_Yrs$: specific years in which mortality M changes
+$S\_Bk$: number of survival blocks (1 split = 2 blocks) *FLAG - this is incorrectly defined as $M\_Bk$ in LS tpl documentaiton* 
+$S\_Bk\_Yrs$: specific years in which survival $S$ changes *FLAG - this is incorrectly defined as $M\_Bk\_Yrs$ in LS tpl documentaiton* 
 $mat\_Bk$: number of maturity blocks (1 split = 2 blocks)
 $mat\_Bk\_Yrs$: specific years in which maturity-at-age changes
 $gs\_Bk$: number of gear selectivity blocks (1 split = 2 blocks)
@@ -370,15 +412,15 @@ $beta$: spawner-recruit beta parameter (derived)
 
 Natural mortality and survival
 $M$: natural mortality
-$Sur$: survival matrix *FLAG* is this here for age-dependent survival?
-$S$: survival vector
-$S\_for$: mean survival (for forecasting)
+$Sur$: survival matrix (i, j) *FLAG - is this here for age-dependent survival?*
+$S$: survival vector (1:$S\_Bk$)
+$S\_for$: mean survival (for forecasting) *FLAG - incorrectly defined in LS tpl documentation. This is not mean survival, it's the most recent survival -> Sur(myrs,1)*
   
 Maturity
 $mat\_a$: age at 50% maturity
 $mat\_b$: maturity-at-age slope
 $Mat$: Maturity-at-age matrix (1,myrs,1,nages)
-$mat\_fore$: *FLAG CHECK* forecast maturity-at-age
+$mat\_for$: *FLAG CHECK* forecast maturity-at-age -> the most recent year maturity-at-age. *This variable does not actually get used in forecast*
 
 Selectivity
 $gs\_a$: age at 50% selectivity
@@ -386,8 +428,8 @@ $gs\_b$: selecitivity-at-age slope
 $GS$: *FLAG CHECK* gear selectivity-at-age matrix (1,myrs,1,nages)
 $GS\_Sc$: *FLAG CHECK* scaled gear selectivity-at-age matrix
 $int1$: maximum of gear selectivity, used to scale
-$int2$: *FLAG - what is pop rec* proportion of pop rec to gear * weight-at-age
-$int3$: int2 summed over ages
+$int2$: *FLAG - what is pop rec* proportion of pop rec to gear \times weight-at-age *FLAG - proposed defn:* proportion vulnerable-at-age \times commercial weight-at-age
+$int3$: int2 summed over ages (one for each year $i$)
 
 Mile days of milt
 $md\_c$: mile-days coefficient *FLAG - what's this? we do not have anything similar in HER*
@@ -395,15 +437,15 @@ $md\_c$: mile-days coefficient *FLAG - what's this? we do not have anything simi
 ### Matrices
 $naa$: total population (mature + immature) (millions)
 $sel\_naa$: *FLAG* Current defn: N selected by gear. Improved defn: numbers-at-age vulnerable to gear
-$sel\_naa\_prop$: *FLAG* Current definition: proportion of N selected by gear. Improved defn: proportion vulnerable-at-age out of the vulnerable population
+$sel\_naa\_prop$: *FLAG* Current definition: proportion of N selected by gear. Improved defn: proportion vulnerable-at-age (out of the vulnerable population)
 $est\_c\_naa$: catch composition-at-age                                  
 $est\_sp\_naa$: spawning numbers-at-age (millions)            
 $est\_sp\_comp$: spawners numbers-at-age (proportion)            
 $est\_sp\_baa$: spawning biomass-at-age (metric tons)
 $est\_mat\_naa$: mature abundance-at-age (millions)                       
 $est\_mat\_baa$: mature biomass-at-age (metric tons)          
-$post\_naa$: total numbers-at-age (mature + immature) - catch (millions)     
-$est\_egg\_naa$: egg production-at-age (trillions)     
+$post\_naa$: numbers-at-age post-harvest; total numbers-at-age (mature + immature) - catch (millions)     
+$est\_egg\_naa$: egg production-at-age (trillions) (egg deposition)    
 
 ### Vectors
 $tot\_sel\_N$: total N selected by gear (millions)                      
@@ -429,7 +471,8 @@ $for\_mat\_B\_st$: total forecast mature biomass (US short tons)
 $for\_tot\_mat\_N$: total mature numbers-at-age                   
 $HR$: harvest rate                                 
 $HR\_p$: harvest rate sliding proportion               
-$GHL$: guideline harvest limit                
+$GHL$: guideline harvest limit       
+$fw\_a\_a$: forecast weight-at-age, most recent year of spawner weight-at-age. Commented out in tpl, now defined in tpl.
 
 ### Objective function components
 
