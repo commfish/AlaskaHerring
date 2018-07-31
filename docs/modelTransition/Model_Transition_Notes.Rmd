@@ -326,7 +326,7 @@ Dimensions: ($mod\_syr$,$mod\_nyr+1$,$sage$,$nage$)
 
 $Eij$: fecundity-at-age $j$ in year $i$
 $Nij$: numbers-at-age 
-~~$Oij$: mature numbers-at-age after fishery (spawning population) *FLAG - JYS got rid of this when I added the new mature and spawning population variables*~~
+~~$Oij$: mature numbers-at-age after fishery (spawning population) *FLAG - JYS got rid of this when I added the new mature and spawning population variables; now Oij = $sp\_Nij$*~~
 $mat\_Nij$: matrix of pre-fishery mature numbers-at-age by year $i$
 $mat\_Bij$: matrix of pre-fishery mature biomass-at-age by year $i$
 $sp\_Nij$: matrix of post-fishery mature (spawning) numbers-at-age by year $i$

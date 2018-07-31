@@ -1207,15 +1207,17 @@ FUNCTION void calcSpawningStockRecruitment()
 
     // mature numbers at age before the fishery
     mat_Nij(i) = elem_prod(mat(i),Nij(i));
+    // mature abundance before fishery
+    mat_N(i) = sum(mat_Nij(i));
     // spawning numbers at age
     sp_Nij(i) = mat_Nij(i) - Cij(i);
     // spawning biomass at age 
-    sp_Bij(i) = elem_prod(sp_Nij(i),data_sp_waa(i));
+    sp_Bij(i) = elem_prod(sp_Nij(i),data_sp_waa(i)(sage,nage));
     // spawning biomass after the fishery
-    sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
+    sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage); //(sage,nage);
     // mature biomass at age before the fishery (first how I would do it, then how the LS model does it)
-    // mat_Bij(i) = elem_prod(mat_Nij(i),data_sp_waa(i));
-    mat_Bij(i) = elem_prod(Cij(i),data_cm_waa(i)) + elem_prod(sp_Nij(i),data_sp_waa(i));
+    mat_Bij(i) = elem_prod(mat_Nij(i),data_sp_waa(i)(sage,nage));
+    // mat_Bij(i) = elem_prod(Cij(i),data_cm_waa(i)) + elem_prod(sp_Nij(i),data_sp_waa(i));
     // mature biomass before the fishery
     mat_B(i) = sum(mat_Bij(i));
   }
