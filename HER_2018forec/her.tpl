@@ -1813,6 +1813,7 @@ REPORT_SECTION
   REPORT(sp_Bij);
   REPORT(Pij);
   REPORT(Cij);
+  REPORT(pred_sp_comp);
 
 // Selectivity and vulnerable proportion-at-age.
   REPORT(Sij);

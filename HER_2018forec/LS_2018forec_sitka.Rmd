@@ -204,6 +204,35 @@ ggsave("figs/LS/spawnage_comps_barplot.png", plot = spawnage_barplot, dpi = 300,
 
 ```
 
+```{r LSbiomass_tsplots}
+
+# in SPAWN folder, numbers from excel spread sheet for spawn deposition.
+LS_byyear$surv_est_sp_B <- c(35000,30000,29500,23500,38500,31000,25000,46000,58500,27000,23000,23500,
+       43351,37150,14941,34990,40827,28611,34942,44554,57988,58756,40366,55769,
+       69907,101305,66111,84501,247088,110946,126230,161904,62518,103267,48561, 
+       58183,77973,46919)
+
+
+LS_byyear %>% 
+  select(year, surv_est_sp_B, tcb, tot_mat_B_tons) %>% 
+  mutate(surv_est_mat_B = (surv_est_sp_B + tcb) / 1000,
+         tot_mat_B_tons = tot_mat_B_tons / 1000) -> df
+
+tickr(df, year, 5) -> axisx
+
+  # gather("Mature Biomass", "Biomass", -c(year, surv_est_sp_B)) %>% 
+ggplot(data = df, aes(x = year)) +
+  geom_line(aes(y = tot_mat_B_tons, linetype = "Model-estimated mature biomass", guides = FALSE), size = 1) +
+  geom_point(aes(y = surv_est_mat_B, shape = "Survey index of mature biomass"), colour = "grey") +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  labs(x = "", y = "Mature biomass (x 1000 short tons)\n", linetype = NULL, shape = NULL) +
+  theme(legend.position = c(0.3, 0.8)) -> biomass_plot
+
+ggsave("figs/LS/biomass_plot.png", plot = biomass_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+```
+
 ```{r waa_plots}
 LS_byyear %>% names()
 LS_byage %>% names()

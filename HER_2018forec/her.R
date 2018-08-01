@@ -17,7 +17,6 @@ setwd(file.path(getwd(), "HER_2018forec"))
 
 # Running model
 compile_admb("her", verbose = TRUE)
-# run_admb("her", extra.args = "-lprof") # likelihood profiles, takes awhile  and couldn't get this to run
 run_admb("her") 
 
 # read in likelihood profile

@@ -169,6 +169,8 @@ Other data and control file questions
 
 13.	  Stopped at selectivity because question about phases 
 
+14.   Weight-at-age in Sitka: Fish and Game uses weight-at-age from the fishery for both fishery and spawner weight-at-age, because there are too many spawned out fish collected in cast net that may bias samples. The only exception is 1997, when cast net samples were used for spawner weight-at-age because the weight-at-age in the fishery was deemed to be too high. 
+
 Change in maturity curves after 2015. Potential mechanisms: population declines produce density-dependent response, where fish are maturing at an earlier age. Recent declines in size-at-age, potentially environmentally driven and coincident with recent warming temperatures (The Blob). The 2015 break was based on the shift in the PDO. 
 
 ## Model differences
@@ -183,7 +185,8 @@ A running log of potential reasons why the LS Model and HER do not match up.
 
 4.   Phasing different for leading parameters?
 
-5.   HER did not have the pre-fishery mature biomass/numbers. 
+5.   HER did not have the pre-fishery mature biomass/numbers - added these 2018-07-31.
+
 ## Priors
 
 A list of priors, starting values, and bounds for each model, as well as justification for why any of these quantities were changed.
