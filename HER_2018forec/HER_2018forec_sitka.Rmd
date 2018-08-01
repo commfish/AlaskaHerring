@@ -23,10 +23,9 @@ source("../r/helper.r")
 
 D <- read_admb("her")
 
-D$theta
-D$fit
-D$theta
-D$theta
+# D$theta
+# D$fit
+
 ```
 
 
@@ -55,6 +54,8 @@ ggplot(df) +
 
 
 ```{r HER_weightatage, include = FALSE}
+
+
 
 # Two ways of plotting trends in weight-at-age
 
@@ -137,6 +138,7 @@ ggplot(data = df,aes(x = Year, y = resid)) +
 cowplot::plot_grid(obsfit, resids, align = "hv", nrow = 2) -> eggdep_plot
 
 ggsave("figs/HER/eggdep_plot.png", plot = eggdep_plot, dpi = 300, height = 5, width = 6, units = "in")
+
 ```
 
 ```{r HER_catch, include=FALSE}
@@ -233,6 +235,38 @@ LS_forec %>%
 
 ```
 
+```{r compare_LS_HER}
+
+# Compare quantities of interest between HER and LS
+
+# 1. Time series of mature biomass (pre-fishery) and spawning biomass (post-fishery)
+df <- data.frame(Year = D[["year"]], 
+                 HER_matB = D[["mat_B"]] / 0.90718,
+                 HER_spB = D[["sp_B"]] / 0.90718,
+                 LS_matB = LS_byyear$tot_mat_B_tons,
+                 LS_spB = LS_byyear$tot_sp_B_tons) %>% 
+  gather("Biomass", "tons", -Year)
+
+ggplot(df, aes(x = Year, y = tons, colour = Biomass)) +
+  geom_point() +
+  geom_line()
+
+# 2. Egg deposition
+df <- as.data.frame(D[["data_egg_dep"]]) 
+colnames(df) <- c("Year", "obs", "log_se")
+df %>% filter(Year >= D[["mod_syr"]]) %>% 
+  bind_cols(data.frame(HER_egg = D[["pred_egg_dep"]],
+                       LS_egg = LS_byyear$tot_est_egg))%>% 
+  gather("Predicted egg deposition", "trillions", -c(Year, obs, log_se)) -> df
+
+ggplot(df, aes(x = Year)) +
+  geom_point(aes(y = obs)) +
+  geom_line(aes(y = trillions, colour = `Predicted egg deposition`))
+
+
+
+
+```
 ##Forecast, GHL, and Harvest Rate 
  
 The recommended `r YEAR` forecast for Sitka Sound is `r forec$forec_f` tons and the corresponding guideline harvest level (GHL) is `r forec$ghl_f` tons (20% harvest rate) (Figures 1-3). Like last year, spring commercial purse seine weight-at-age was used to calculate the forecast and the forecast will not be updated with winter test fishery weight-at-age, as had been done prior to the 2017 fishery (i.e. this is the only forecast for `r YEAR`; Figure 4). The forecasted age composition is dominated by `r paste0(pull(dominant_ages, Age)[1], " and ", pull(dominant_ages, Age)[2])` fish, both in number (`r paste0(pull(dominant_ages, perc)[1], " and ", pull(dominant_ages, perc)[2])`, respectively; Figure 5) and in mature biomass (`r paste0(pull(dominant_ages, mat_baa)[1], " and ", pull(dominant_ages, mat_baa)[2])` tons, respectively; Figure 6). The forecast of age-3 fish is based on the Ricker spawner-recruit function (Figure 7). 
