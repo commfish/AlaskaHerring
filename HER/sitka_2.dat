@@ -34,7 +34,7 @@
 #- Last year of data (dat_nyr)
 	2015
 #- First year for model (mod_syr)
-	1971
+	1980
 #- Last year for model (mod_nyr)
 	2015
 #- Youngest age class in model (sage)
