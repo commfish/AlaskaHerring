@@ -59,7 +59,7 @@ ggplot(df) +
 
 # Two ways of plotting trends in weight-at-age
 
-df <- as.data.frame(D[["data_sp_waa"]])
+df <- as.data.frame(D[["data_cm_waa"]])
 colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
 df <-	df %>% 
   gather("Age", "weight", -Year) %>% 
