@@ -11,13 +11,112 @@ library(data.table)
 source("R/tools.r")
 source("R/helper.r") 
 
+# LS 2018 forecast results
+LS_forec <- read_csv("HER_2018forec/LS_2018forec_results.csv")
+LS_byage <- read_csv("HER_2018forec/LS_2018forec_results_byage.csv")
+LS_byyear <- read_csv("HER_2018forec/LS_2018forec_results_byyear.csv")
+
 # Can't figure out how to put file path directly from project root into the
 # compile_admb() function
-setwd(file.path(getwd(), "HER_2018forec"))
+#setwd(file.path(getwd(), "HER_2018forec"))
+setwd(file.path(getwd(), "HER"))
 
-# Running model
+# Running model in R
+setup_admb()
 compile_admb("her", verbose = TRUE)
-run_admb("her") 
+run_admb("her", verbose = TRUE) 
+
+# Running her model in command line
+# 1) Open command prompt ("C:/ADMB/ADMB Command Prompt (MinGW 64Bit)")
+# 2) Navigate to AlaskaHerring deep inside S drive using 
+# > cd ../..
+# > S:
+# > cd "S:\Region1Shared-DCF\Research\Herring-Dive Fisheries\Herring\ADMB Rudd Workshop 2018\AlaskaHerring"
+# Compile
+# > admb her 
+# Run
+# > her
+
+
+# Diagnostics
+P <- read_fit("her")
+P[["nopar"]]
+P[["nlogl"]]
+P[["logDetHess"]]
+P[["maxgrad"]]
+
+# Results
+
+D <- read_admb("her")
+
+D$fore_sb
+D$ghl
+
+#Print out natural mortality
+df <- data.frame(D[["year"]], 
+                 D[["Mij"]])
+colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
+write.table(df,sep="\t", row.names=FALSE, col.names=FALSE)
+
+#Print out maturity
+df <- data.frame(D[["year"]], 
+                 D[["mat"]])
+colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
+write.table(df,sep="\t", row.names=FALSE, col.names=FALSE)
+
+#Print out selectivity
+# number of yrs in the model 
+nyr <- D[["mod_nyr"]] - D[["mod_syr"]] + 1
+
+df <- data.frame(D[["year"]], 
+                 D[["Sij"]][1:nyr, ]) # change number of rows
+colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
+write.table(df,sep="\t", row.names=FALSE, col.names=FALSE)
+
+# 1. Time series of mature biomass (pre-fishery) and spawning biomass (post-fishery)
+tot_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
+
+df <- data.frame(Year = D[["year"]], 
+                 spB = D[["ssb"]] / 0.90718, # convert to short tons
+                 catch = D[["data_catch"]][seq(tot_yrs - nyr + 1, tot_yrs, 1), 2] # just the column of catch, already in short tons
+) %>% 
+  mutate(matB = spB + catch,
+         Model = "HER") %>% 
+  select(-catch) %>% 
+  gather("Biomass", "tons", -c(Model, Year)) %>% 
+  bind_rows(data.frame(Year = LS_byyear$year,
+                       matB = LS_byyear$tot_mat_B_tons,
+                       spB = LS_byyear$tot_sp_B_tons,
+                       Model = "LS") %>% 
+              gather("Biomass", "tons", -c(Model, Year)))
+
+ggplot(df, aes(x = Year, y = tons, colour = Model, linetype = Biomass)) +
+  geom_point() +
+  geom_line() +
+  theme(legend.position = c(0.1, 0.8))
+
+D[["recruits"]]
+
+
+# ----
+
+
+# 2. Egg deposition
+df <- as.data.frame(D[["data_egg_dep"]]) 
+colnames(df) <- c("Year", "obs", "log_se")
+df %>% filter(Year >= D[["mod_syr"]]) %>% 
+  bind_cols(data.frame(HER_egg = D[["pred_egg_dep"]],
+                       LS_egg = LS_byyear$tot_est_egg))%>% 
+  gather("Predicted egg deposition", "trillions", -c(Year, obs, log_se)) -> df
+
+ggplot(df, aes(x = Year)) +
+  geom_point(aes(y = obs)) +
+  geom_line(aes(y = trillions, colour = `Predicted egg deposition`)) 
+
+
+
+
+
 
 # read in likelihood profile
 prof <- readMat(string="Profile likelihood", file="Linf_pro.plt", nrow=87)
