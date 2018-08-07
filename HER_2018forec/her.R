@@ -16,6 +16,12 @@ LS_forec <- read_csv("HER_2018forec/LS_2018forec_results.csv")
 LS_byage <- read_csv("HER_2018forec/LS_2018forec_results_byage.csv")
 LS_byyear <- read_csv("HER_2018forec/LS_2018forec_results_byyear.csv")
 
+# in SPAWN folder, numbers from excel spread sheet for spawn deposition.
+LS_byyear$surv_est_spB <- c(35000,30000,29500,23500,38500,31000,25000,46000,58500,27000,23000,23500,
+                             43351,37150,14941,34990,40827,28611,34942,44554,57988,58756,40366,55769,
+                             69907,101305,66111,84501,247088,110946,126230,161904,62518,103267,48561, 
+                             58183,77973,46919)
+
 # Can't figure out how to put file path directly from project root into the
 # compile_admb() function
 #setwd(file.path(getwd(), "HER_2018forec"))
@@ -31,12 +37,11 @@ run_admb("her", verbose = TRUE)
 # 2) Navigate to AlaskaHerring deep inside S drive using 
 # > cd ../..
 # > S:
-# > cd "S:\Region1Shared-DCF\Research\Herring-Dive Fisheries\Herring\ADMB Rudd Workshop 2018\AlaskaHerring"
+# > cd "S:\Region1Shared-DCF\Research\Herring-Dive Fisheries\Herring\ADMB Rudd Workshop 2018\AlaskaHerring\HER"
 # Compile
 # > admb her 
 # Run
 # > her
-
 
 # Diagnostics
 P <- read_fit("her")
@@ -76,9 +81,10 @@ write.table(df,sep="\t", row.names=FALSE, col.names=FALSE)
 # 1. Time series of mature biomass (pre-fishery) and spawning biomass (post-fishery)
 tot_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
 
+
 df <- data.frame(Year = D[["year"]], 
                  spB = D[["ssb"]] / 0.90718, # convert to short tons
-                 catch = D[["data_catch"]][seq(tot_yrs - nyr + 1, tot_yrs, 1), 2] # just the column of catch, already in short tons
+                 catch = D[["data_catch"]][10:45, 2]#[nyr + 1, tot_yrs, 1), 2] # just the column of catch, already in short tons
 ) %>% 
   mutate(matB = spB + catch,
          Model = "HER") %>% 
@@ -90,32 +96,81 @@ df <- data.frame(Year = D[["year"]],
                        Model = "LS") %>% 
               gather("Biomass", "tons", -c(Model, Year)))
 
-ggplot(df, aes(x = Year, y = tons, colour = Model, linetype = Biomass)) +
+srv_index <- data.frame(Year = LS_byyear$year,
+                      srv_spB = LS_byyear$surv_est_sp_B,
+                      Model = "Historical survey index")
+
+df %>% filter(Biomass %in% c("spB")) -> df
+
+axisx <- tickr(df, Year, 5)
+ggplot() +
+  geom_point(data = df, aes(x = Year, y = tons, colour = Model, linetype = Model, shape = Model)) +
+  geom_line(data = df, aes(x = Year, y = tons, colour = Model, linetype = Model, shape = Model)) +
+  geom_point(data = srv_index, aes(x = Year, y = srv_spB), shape = "*", size = 5) +
+  #scale_colour_grey() +
+  theme(legend.position = c(0.1, 0.8)) +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  labs(x = "", y = "Spawning biomass (short tons)\n")
+
+# 2. Recruitment
+df <- data.frame(Year = seq(D[["mod_syr"]] + D[["sage"]],
+                      D[["mod_nyr"]] + 1, 1),
+           recruits = D[["recruits"]],
+           Model = "HER") %>% 
+  bind_rows(LS_byyear %>% 
+  select(Year = year, recruits = init_age_3) %>% #
+  mutate(Model = "LS"))
+
+ggplot(df, aes(x = Year, y = recruits, colour = Model, shape = Model)) +
   geom_point() +
   geom_line() +
-  theme(legend.position = c(0.1, 0.8))
+  # scale_colour_grey() +
+  theme(legend.position = c(0.1, 0.8)) +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  labs(x = "", y = "Age-3 recruits (millions)\n")
 
-D[["recruits"]]
-
-
-# ----
-
-
-# 2. Egg deposition
-df <- as.data.frame(D[["data_egg_dep"]]) 
+# 3. Egg deposition
+df <- as.data.frame(D[["data_egg_dep"]][10:45, ])#[seq(tot_yrs - nyr + 1, tot_yrs, 1), ]) 
 colnames(df) <- c("Year", "obs", "log_se")
 df %>% filter(Year >= D[["mod_syr"]]) %>% 
-  bind_cols(data.frame(HER_egg = D[["pred_egg_dep"]],
-                       LS_egg = LS_byyear$tot_est_egg))%>% 
-  gather("Predicted egg deposition", "trillions", -c(Year, obs, log_se)) -> df
+  bind_cols(data.frame(HER = D[["pred_egg_dep"]],
+                       LS = LS_byyear$tot_est_egg[1:36]))%>% 
+  gather("Model", "trillions", -c(Year, obs, log_se)) -> df
 
 ggplot(df, aes(x = Year)) +
-  geom_point(aes(y = obs)) +
-  geom_line(aes(y = trillions, colour = `Predicted egg deposition`)) 
+  geom_point(aes(y = obs), shape = "*", size = 5) +
+  geom_line(aes(y = trillions, colour = Model,
+                linetype = Model, shape = Model)) +
+  geom_point(aes(y = trillions, colour = Model,
+                linetype = Model, shape = Model)) +
+  # scale_colour_grey() +
+  theme(legend.position = c(0.1, 0.8)) +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
 
+  labs(x = "", y = "Eggs spawned (trillions)\n")
 
+# 4. spawn age comps, cast net
+df <- data.frame(spawnage_comp_obs = D[["data_sp_comp"]])
+colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
+df %>% 
+  filter(Year >= 1980 & Year <= 2015) %>% 
+  gather("Age", "proportion", -Year) %>% 
+  mutate(Src = "Observed") -> obs
 
+df <- data.frame(Year = D[["year"]],
+                 spawnage_comp_pred = D[["pred_sp_comp"]])
+colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
+df %>% 
+  gather("Age", "proportion", -Year) %>% 
+  mutate(Src = "Predicted") -> pred
 
+ggplot() +
+  geom_bar(data = obs, aes(x = Age, y = proportion), 
+           stat = "identity", colour = "lightgrey", fill = "lightgrey") +
+  geom_line(data = pred, aes(x = Age, y = proportion, group = 1), size = 1) +
+  facet_wrap(~ Year, dir = "v", ncol = 5) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
+  labs(x = '\nAge', y = 'Proportion-at-age\n') 
 
 
 # read in likelihood profile
