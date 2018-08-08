@@ -225,7 +225,6 @@ ggplot(data = df, aes(x = year)) +
   geom_line(aes(y = tot_mat_B_tons, linetype = "Model-estimated mature biomass", guides = FALSE), size = 1) +
   geom_point(aes(y = surv_est_mat_B, shape = "Survey index of mature biomass"), colour = "grey") +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
-  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
   labs(x = "", y = "Mature biomass (x 1000 short tons)\n", linetype = NULL, shape = NULL) +
   theme(legend.position = c(0.3, 0.8)) -> biomass_plot
 
