@@ -43,6 +43,9 @@ diags
 *.r02
 *.plt
 
+# retrospective analysis folder
+run_retro
+
 # other file types we don't want to track
 *.xlsx
 *.xlsm
