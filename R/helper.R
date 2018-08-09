@@ -19,6 +19,7 @@ if(!require("knitr"))   install.packages("knitr") # r markdown
 if(!require("cowplot"))   install.packages("cowplot") # plot_grid and so much else
 if(!require("R2admb"))   install.packages("R2admb") # run admb from r
 if(!require("ggthemes"))   install.packages("ggthemes") # access to 150 colour palettes from canva.com design school, among other things
+if(!require("scales"))   install.packages("scales") # add comma to ggplot axis with scale_y_countinuous(label = comma)
 # https://www.canva.com/learn/100-color-combinations/
 # http://makeadifferencewithdata.com/wp-content/uploads/2016/12/color-palettes.txt
 # if(!require("scales"))   install.packages("scales") # used to expand colour palettes
@@ -78,21 +79,43 @@ tickr <- function(
 
 # Functions from SJD Martell, formerly in globals.r
 
+# read_admb <-
+#   function(ifile)
+#   {
+#     ret=read_fit(ifile)
+# 
+#     fn=paste(ifile,'.rep', sep='')
+#     A=read_rep(fn)
+#     A$fit=ret
+# 
+#     pfn=paste(ifile,'.psv',sep='')
+#     if(file.exists(pfn))
+#       A$post.samp=read_psv(pfn)
+# 
+#     return(A)
+#   }
+
 read_admb <-
   function(ifile)
-  {	
-    ret=read_fit(ifile)
-    
-    fn=paste(ifile,'.rep', sep='')
+  {
+    fn=paste(ifile,'.rep', sep = '')
     A=read_rep(fn)
-    A$fit=ret
-    
-    pfn=paste(ifile,'.psv',sep='')
+
+    if(file.exists(paste(ifile, '.cov', sep = ''))) {
+
+      ret = read_fit(ifile)
+      A$fit = ret
+    } else {
+      A$fit="Not_converged"
+    }
+
+    pfn=paste(ifile,'.psv',sep = '')
     if(file.exists(pfn))
       A$post.samp=read_psv(pfn)
-    
+
     return(A)
   }
+
 
 read_fit <-
   function(ifile)

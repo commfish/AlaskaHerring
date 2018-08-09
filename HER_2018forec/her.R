@@ -2,7 +2,7 @@
 # HER - ADFG's new herring model. Original ADMB code written by SJD Martell. Helper
 # files and documentation contributed by M. Rudd.
 
-# Libraries/source files
+# Libraries/source files ----
 
 library(R2admb) # run ADMB in R
 library(tidyverse)
@@ -10,6 +10,8 @@ library(data.table)
 
 source("R/tools.r")
 source("R/helper.r") 
+
+# LS results ----
 
 # LS 2018 forecast results
 LS_forec <- read_csv("HER_2018forec/LS_2018forec_results.csv")
@@ -21,6 +23,8 @@ LS_byyear$surv_est_spB <- c(35000,30000,29500,23500,38500,31000,25000,46000,5850
                              43351,37150,14941,34990,40827,28611,34942,44554,57988,58756,40366,55769,
                              69907,101305,66111,84501,247088,110946,126230,161904,62518,103267,48561, 
                              58183,77973,46919)
+
+# Run model in ADMB ----
 
 # Can't figure out how to put file path directly from project root into the
 # compile_admb() function
@@ -43,14 +47,14 @@ run_admb("her", verbose = TRUE)
 # Run
 # > her
 
-# Diagnostics
+# Diagnostics ----
 P <- read_fit("her")
 P[["nopar"]]
 P[["nlogl"]]
 P[["logDetHess"]]
 P[["maxgrad"]]
 
-# Results
+# Results ----
 
 D <- read_admb("her")
 
@@ -173,24 +177,8 @@ ggplot() +
   labs(x = '\nAge', y = 'Proportion-at-age\n') 
 
 
-# read in likelihood profile
-prof <- readMat(string="Profile likelihood", file="Linf_pro.plt", nrow=87)
-profk <- readMat(string="Profile likelihood", file="k_prof.plt", nrow=85)
 
-prof %>% 
-  data.frame() %>% 
-  select(Linf = X1, like = X2) %>% 
-  mutate(nll = -log(like)) -> prof
-
-prof %>% 
-  mutate(min_nll = min(nll),
-         ci_95 = min_nll + 0.5 * qchisq(p = 0.95, df = 1)) %>% 
-  filter(nll == min_nll) -> ci
-
-ggplot(data = prof, aes(x = Linf, y = nll)) +
-  geom_line() +
-  geom_hline(yintercept = ci$ci_95, colour = "red", lty = 2) +
-  geom_vline(xintercept = ci$Linf, colour = "red", lty = 2)
+# Steve's stuff ----
 
 # Read in the data from the model report, par, and cor files.
 # D <- read.admb("HER_2018forec/her") # read.admb() from globals.r

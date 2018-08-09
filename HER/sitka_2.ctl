@@ -10,9 +10,9 @@
 ##  init  lower   upper    est  prior
 ## value  bound   bound    phz   type     p1    p2   # PARAMETER              ##
 ## —————————————————————————————————————————————————————————————————————————— ##
-## -1.05   -6.79    1.00      1      0  -1.05  0.05   # log_natural_mortality  (original, p1 too high?)
+   -1.05   -6.79    1.00      1      0  -1.05  0.05   # log_natural_mortality  (original, p1 too high?)
 ## -1.05   -6.79    1.00      1      0  -6.7  0.05   # log_natural_mortality  (alternative p1)
-  -0.7985  -5.00    5.00      1      1  -0.7985  0.4  # log_natural_mortality (same as iscam)
+## -0.7985  -5.00    5.00      1      1  -0.7985  0.4  # log_natural_mortality (same as iscam)
     4.60   -6.00   12.00      1      0      0     0   # log_rinit
     5.60   -6.00   12.00      1      0      0     0   # log_rbar
     6.00   -6.00   12.00      2      0      0     0   # log_ro
