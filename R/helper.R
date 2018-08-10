@@ -79,42 +79,42 @@ tickr <- function(
 
 # Functions from SJD Martell, formerly in globals.r
 
-# read_admb <-
-#   function(ifile)
-#   {
-#     ret=read_fit(ifile)
-# 
-#     fn=paste(ifile,'.rep', sep='')
-#     A=read_rep(fn)
-#     A$fit=ret
-# 
-#     pfn=paste(ifile,'.psv',sep='')
-#     if(file.exists(pfn))
-#       A$post.samp=read_psv(pfn)
-# 
-#     return(A)
-#   }
-
 read_admb <-
   function(ifile)
   {
-    fn=paste(ifile,'.rep', sep = '')
+    ret=read_fit(ifile)
+
+    fn=paste(ifile,'.rep', sep='')
     A=read_rep(fn)
+    A$fit=ret
 
-    if(file.exists(paste(ifile, '.cov', sep = ''))) {
-
-      ret = read_fit(ifile)
-      A$fit = ret
-    } else {
-      A$fit="Not_converged"
-    }
-
-    pfn=paste(ifile,'.psv',sep = '')
+    pfn=paste(ifile,'.psv',sep='')
     if(file.exists(pfn))
       A$post.samp=read_psv(pfn)
 
     return(A)
   }
+
+# read_admb <-
+#   function(ifile)
+#   {
+#     fn=paste(ifile,'.rep', sep = '')
+#     A=read_rep(fn)
+# 
+#     if(file.exists(paste(ifile, '.cov', sep = ''))) {
+# 
+#       ret = read_fit(ifile)
+#       A$fit = ret
+#     } else {
+#       A$fit="Not_converged"
+#     }
+# 
+#     pfn=paste(ifile,'.psv',sep = '')
+#     if(file.exists(pfn))
+#       A$post.samp=read_psv(pfn)
+# 
+#     return(A)
+#   }
 
 
 read_fit <-

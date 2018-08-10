@@ -42,9 +42,11 @@ diags
 *.prf
 *.r02
 *.plt
+*.pin
 
-# retrospective analysis folder
+# retrospective and simulation analysis folders
 run_retro
+simulations
 
 # other file types we don't want to track
 *.xlsx
