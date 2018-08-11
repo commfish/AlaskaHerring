@@ -215,6 +215,7 @@ kable(data.frame(Parameter = c("Block-specific M", "Log mean M", "Log mean M"),
 
 ## Lingering questions
 
++  How do you deal with retrospectives with time-varying parameters (time blocks) when your peels overlap with a change in block?
 +  What does the value() fxn do and when do you have to use it?
 +  How do you get likelihood profiles for time-varing parameters?
 +  If a parameter has both an upper bound and a lower bound, as well as parameters for a uniform prior, what are the actual bounds for estimation?
@@ -241,13 +242,13 @@ kable(data.frame(Parameter = c("Block-specific M", "Log mean M", "Log mean M"),
 ## HER variable definitions
 
 ### Model dimensions
-$dat_syr$: first year of data
-$day_nyr$: last year of data
-$mod_syr$: first year of model
-$mod_nyr$: last year of model
+$dat\_syr$: first year of data
+$day\_nyr$: last year of data
+$mod\_syr$: first year of model
+$mod\_nyr$: last year of model
 $sage$: first age class
 $nage$: plus group age class
-$rec_syr$: first year of recruitment (e.g. if mod_syr = 1971, rec_syr = 1974)
+$rec\_syr$: first year of recruitment (e.g. if mod_syr = 1971, rec_syr = 1974)
 $h$: time blocks
 
 
@@ -268,28 +269,28 @@ $nSlxCols$: number of columns in selectivity design matrix (*FLAG - fixed at 9?*
 $nSlxBlks$: number of selectivity blocks/patterns 
 $selex\_cont$: matrix of controls to be read in from control file.
 $nSelType$: type of selectivity curve (currently only logistic), vector (1,$nSlxBlks$) 
-$nslx_phz$: phase of estimation for each block, vector (1,$nSlxBlks$) 
-$nslx_rows$: number of row for $log\_slx\_pars$, vector (1,$nSlxBlks$) 
-$nslx_cols$: number of columns for $log\_slx\_pars$, vector (1,$nSlxBlks$)
-$nslx_syr$: start year for each selectivity block, vector (1,$nSlxBlks$)
-$nslx_nyr$: vector (1,nSlxBlks)
+$nslx\_phz$: phase of estimation for each block, vector (1,$nSlxBlks$) 
+$nslx\_rows$: number of row for $log\_slx\_pars$, vector (1,$nSlxBlks$) 
+$nslx\_cols$: number of columns for $log\_slx\_pars$, vector (1,$nSlxBlks$)
+$nslx\_syr$: start year for each selectivity block, vector (1,$nSlxBlks$)
+$nslx\_nyr$: vector (1,nSlxBlks)
 $log\_slx\_pars$: 
 
 ### Time series data
-$data_catch$: catch in short tons (Year, Catch, log.se)
-$data_sp_waa$: spawner weight-at-age in grams (Year, weight-at-age)
-$data_cm_waa$: commercial catch weight-at-age in grams (Year, weight-at-age)
-$data_cm_comp$: commercial catch composition (Year, age proporitons)
-$data_sp_comp$: spawn sample age composition (Year, age proportions)
-$data_egg_dep$: egg deposition survey in trillions of eggs (Year, Index, log.se)
-$avg_sp_waa$: Average weight-at-age in grams of spawning biomass *FLAG - check the dimensions here*
+$data\_catch$: catch in short tons (Year, Catch, log.se)
+$data\_sp\_waa$: spawner weight-at-age in grams (Year, weight-at-age)
+$data\_cm\_waa$: commercial catch weight-at-age in grams (Year, weight-at-age)
+$data\_cm\_comp$: commercial catch composition (Year, age proporitons)
+$data\_sp\_comp$: spawn sample age composition (Year, age proportions)
+$data\_egg\_dep$: egg deposition survey in trillions of eggs (Year, Index, log.se)
+$avg\_sp\_waa$: Average weight-at-age in grams of spawning biomass *FLAG - check the dimensions here*
 
 ### Population parameters
-$log_natural_mortality$: mean natural mortality in log space (keeps estimate positive); theta(1)
-$log_rinit$: log initial average age-3 recruitment for ages 3-8+ in dat_syr; theta(2)
+$log\_natural\_mortality$: mean natural mortality in log space (keeps estimate positive); theta(1)
+$log\_rinit$: log initial average age-3 recruitment for ages 3-8+ in dat_syr; theta(2)
 $nFecBlocks$: number of fecundity blocks
-$fec_slope$: slope of regression line in fecundity relationship
-$fec_inter$: intercept of regression line in fecundity relationship
+$fec\_slope$: slope of regression line in fecundity relationship
+$fec\_inter$: intercept of regression line in fecundity relationship
 
 ### Variables
 $ro$: equilibrium recruitment
