@@ -181,7 +181,7 @@ DATA_SECTION
         iyr ++;
       }while(iyr <= nFecBlockYears(h));
     }
-//    COUT(Eij);
+   COUT(Eij);
  END_CALCS
 
 // |---------------------------------------------------------------------------|
@@ -647,7 +647,7 @@ PROCEDURE_SECTION
   nll_total = sum(nll) + sum(penll) + sum(calcPriors()) + fpen;
 
   if(DEBUG_FLAG){
-    // COUT(f);
+    COUT(nll_total);
     COUT(nll);
     COUT(penll);
     COUT(calcPriors());
@@ -1174,6 +1174,7 @@ FUNCTION void calcSpawningStockRecruitment()
     // spawning biomass after the fishery
     ssb(i) = Oij(i) * data_sp_waa(i)(sage,nage);
   }
+
   
 
   // average natural mortality
@@ -1261,6 +1262,7 @@ FUNCTION void calcEggSurveyResiduals()
   resd_egg_dep.initialize();
   for(int i = mod_syr; i <= mod_nyr; i++){
     pred_egg_dep(i) = (0.5 * Oij(i)) * Eij(i); // proportion female * proportion numbers at age * number of eggs
+    cout<<Eij(i)<<endl;
     // for years with egg data, calculate residuals in log space
     if(data_egg_dep(i,2) > 0){
       resd_egg_dep(i) = log(data_egg_dep(i,2)) - log(pred_egg_dep(i));
@@ -1338,6 +1340,7 @@ FUNCTION void calcObjectiveFunction()
 
   // Negative loglikelihood for egg deposition data
   dvector std_egg_dep = TINY + column(data_egg_dep,3)(t1,t2);
+  COUT(resd_egg_dep)
   nll(3) = dnorm(resd_egg_dep,std_egg_dep);
 
   // Negative loglikelihood for milt mile day
