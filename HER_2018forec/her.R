@@ -88,7 +88,7 @@ tot_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
 
 df <- data.frame(Year = D[["year"]], 
                  spB = D[["ssb"]] / 0.90718, # convert to short tons
-                 catch = D[["data_catch"]][10:45, 2]#[nyr + 1, tot_yrs, 1), 2] # just the column of catch, already in short tons
+                 catch = D[["data_catch"]][10:47, 2]#[nyr + 1, tot_yrs, 1), 2] # just the column of catch, already in short tons
 ) %>% 
   mutate(matB = spB + catch,
          Model = "HER") %>% 
@@ -101,7 +101,7 @@ df <- data.frame(Year = D[["year"]],
               gather("Biomass", "tons", -c(Model, Year)))
 
 srv_index <- data.frame(Year = LS_byyear$year,
-                      srv_spB = LS_byyear$surv_est_sp_B,
+                      srv_spB = LS_byyear$surv_est_spB,
                       Model = "Historical survey index")
 
 df %>% filter(Biomass %in% c("spB")) -> df
@@ -134,11 +134,11 @@ ggplot(df, aes(x = Year, y = recruits, colour = Model, shape = Model)) +
   labs(x = "", y = "Age-3 recruits (millions)\n")
 
 # 3. Egg deposition
-df <- as.data.frame(D[["data_egg_dep"]][10:45, ])#[seq(tot_yrs - nyr + 1, tot_yrs, 1), ]) 
+df <- as.data.frame(D[["data_egg_dep"]][10:47, ])#[seq(tot_yrs - nyr + 1, tot_yrs, 1), ]) 
 colnames(df) <- c("Year", "obs", "log_se")
 df %>% filter(Year >= D[["mod_syr"]]) %>% 
   bind_cols(data.frame(HER = D[["pred_egg_dep"]],
-                       LS = LS_byyear$tot_est_egg[1:36]))%>% 
+                       LS = LS_byyear$tot_est_egg[1:38]))%>% 
   gather("Model", "trillions", -c(Year, obs, log_se)) -> df
 
 ggplot(df, aes(x = Year)) +
@@ -157,21 +157,28 @@ ggplot(df, aes(x = Year)) +
 df <- data.frame(spawnage_comp_obs = D[["data_sp_comp"]])
 colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
 df %>% 
-  filter(Year >= 1980 & Year <= 2015) %>% 
+  filter(Year >= 1980 ) %>%
   gather("Age", "proportion", -Year) %>% 
-  mutate(Src = "Observed") -> obs
+  mutate(Src = "Observed",
+         Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
+                      labels = c("3", "4", "5", "6", "7", "8+"))) -> obs
 
 df <- data.frame(Year = D[["year"]],
                  spawnage_comp_pred = D[["pred_sp_comp"]])
 colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
 df %>% 
   gather("Age", "proportion", -Year) %>% 
-  mutate(Src = "Predicted") -> pred
+  mutate(Predicted = "HER",
+         Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
+                      labels = c("3", "4", "5", "6", "7", "8+"))) %>% 
+  bind_rows(LS_byage %>% 
+              select(Year, Age, proportion = spawnage_comp_est) %>% 
+              mutate(Predicted = "LS") ) -> pred
 
 ggplot() +
   geom_bar(data = obs, aes(x = Age, y = proportion), 
            stat = "identity", colour = "lightgrey", fill = "lightgrey") +
-  geom_line(data = pred, aes(x = Age, y = proportion, group = 1), size = 1) +
+  geom_line(data = pred, aes(x = Age, y = proportion, colour = Predicted, group = Predicted), size = 1) +
   facet_wrap(~ Year, dir = "v", ncol = 5) +
   scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
   labs(x = '\nAge', y = 'Proportion-at-age\n') 
