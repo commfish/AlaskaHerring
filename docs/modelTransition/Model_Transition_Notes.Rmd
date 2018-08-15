@@ -19,14 +19,60 @@ HER:  ADFG's adaptation of HAM
 ## Objectives from Jane's workplan
 
 HER (Martell’s age-structured herring model) for Sitka: 
+
+The ADMB and R code for HER is contained in the AlaskaHerring repository:  https://github.com/commfish/AlaskaHerring. I have met with S. Dressel and S. Miller approximately biweekly since the end of May keeping them apprised of my progress, changes to the model, and any challenges that have come up along the way. I have kept Github updated, including notes from our meetings. S. Dressel expressed concern that I would not complete my objectives my August 31. I requested that any further modifications to my Work Plan be discussed August 15. We have a meeting planned for August 15.
+
+-	Population dynamics equations and forecast 
+
+There are several differences between HER and LS that should be addressed. First is assumptions about maturity and whether the catch is assumed to 100% mature (LS assumed 100% mature, HER does not). Second is the quantities of interest derived in HER. HER does not currently output spawning biomass or abundance or these quantities at age. I attempted to do this before and ran into convergence issues. HER does not currently conduct the forecast using short tons. Also the forecast equations should be checked once the correct quantities have been derived. Finally, and maybe most importantly, HER estimates small deviations for natural mortality and recruitment, i.e. these are not allowed to vary in a reasonable way. We have told Steve about this problem. Sherri and Jane discussed possibly meeting with Steve via Skype/Gchat or in person in Seattle during one of Jane’s trips.
+
+-	Jane’s role with herring in the Fall 
+
+Jane proposes meeting with Sherri and Ben when Ben gets back to the field. Ideas and topics to discuss include: level of interaction with LS, data meetings, review meetings, updating LS figures with final model results, and assisting 
+
 1.  Update report file
+
+The HER report file now contains all data, estimated parameters, posterior samples, derived quantities of interest, model diagnostics, and convergence criteria.
+
 2.  Generate graphics and tables
+
+This is an on-going and iterative process. I received preliminary feedback from S. Dressel and S. Miller on figures and visualizing parameter estimates for time-varying parameters during our last herring meeting.  Preliminary figures can be found at https://github.com/commfish/AlaskaHerring/tree/master/HER_2018forec/figs 
+
 3.  Conduct retrospective analysis
+
+This item has been completed. Code for the retrospective analysis and calculation of Mohn’s rho can be found at https://github.com/commfish/AlaskaHerring/blob/master/R/retrospective.R. 
+
 4.  Add feature to examine likelihood profiles 
+
+I spent about a week (July 12-16) trying to complete this task. On July 18 I formally asked B. Williams and S. Dressel to remove this task from my list of deliverables. The motivation for examining likelihood profiles, which are the minimum negative log-likelihoods for a range of values of a single parameter, is generally two-fold: 1) calculating confidence intervals, and 2) examining properties of the likelihood surface (e.g. smoothness/steepness of the parameter space, presence of local minima, etc.). In Bayesian analyses, both of these are replaced by examining the posterior distribution. 
+
+The standard ADMB procedure for calculating likelihood profiles is proving very difficult to apply to HER. According to Ben Bolker’s chapter on likelihood, specifically pages 31-35, it’s not surprising that I’m encountering difficulty estimating likelihood profile surfaces for such a complex model. He points out that likelihood profiles are not used for variance estimation of such complex models, and that instead the second derivatives of the log-likelihood as a function of the parameters (aka the Hessian matrix) are used.  From here the Hessian, the ‘negative of the expected value’ of the Hessian (the Fisher information matrix), and the ‘Fisher evaluated at the maximum likelihood estimate’ (the observed information matrix) represent the curvature of the likelihood surface along a particular axis. This will tell us everything we need to know about model fit and uncertainty. Perhaps in Andre’s course we will learn more about how to utilize the Hessian to explore parameter space, but at the moment I feel ill-equipped to venture out into the Hessian, the Fisher information, or the observed information matrix alone. I think instead that an examination of the posteriors will give us all the information we need to know.
+
+S. Dressel said that it was fine to drop the likelihood profiles for now. She would like me to pursue this topic during Punt’s course, which I agreed to. 
+
 5.  Estimate variance using MCMC on *quantities of interest*
+
+This objective can be split into a series of smaller objectives: 1) determining quantities of interest, 2) generating output files for posterior samples on quantities, 3) writing R code for implementing MCMC in ADMB, including determining number of iterations and proper thinning, and 4) writing R code for testing convergence diagnostics, variance estimation, and visualization of results.
+
+To date, we have completed objectives 1 and 2, and most of 3. One roadblock to this is the fact that the population dynamics model for HER has several differences that have made it challenging to derive specific quantities of interest. For example, the assumptions about catch being mature are different in the least-squares (LS) and HER models. Jane has been in contact with S. Dressel and S. Miller about this via email since July 30, and we are working towards a solution.
+
+Jane identified the ‘adnuts’ package, written by Cole Monnahan, a past UW PhD student, as a viable option for running HER in a Bayesian framework. The methods and motivation for the ‘adnuts’ package was published this year in PlosOne and was coauthored by the lead developer of TMB, Kasper Kristensen. The workhorse algorithm NUTS (no U-turn sampler) was originally developed by Hoffman and Gelman (2014). Both of these papers have been added to the references directory.
+
+The ‘adnuts’ package came out of Monnahan’s dissertation, which focused on advancing Bayesian methods in fisheries science. Traditional MCMC methods when applied to complicated models (i.e., age- and length-structured stock assessments or hierarchical models) are slow and inefficient. During the heyday of ADMB, most assessments relied on frequentist methods for inference. Consequently ADMB’s existing infrastructure for implementing Bayesian methods is pretty rudimentary. In terms of testing, in Monnahan’s second chapter, he tested the existing Bayesian algorithms compared to NUTS for 6 stock assessment models.
+
+Benefits of the ‘adnuts’ package include: 1) the framework, functions, and capabilities are similar to what is contemporaneously used for TMB and STAN models; and 2) early explorations suggest that it greatly increases our ability to do MCMC sampling via multiple choices for algorithms, the ability to execute multiple chains (oddly not a built-in feature in ADMB), built-in diagnostic features, and the choice to change starting values (ADMB defaults to MLE estimates, which can be problematic if converging at a local minima). There are also other bells and whistles like the ability to run chains on multiple cores and an argument for setting time duration that will stop sampling after the set time (especially useful for model testing and running your model overnight). 
+
+
 6.  Run simulation test
+
+The simulation approach used is called “self-testing,” where the same model (with known parameters) is used to generate data and then estimate parameters based on the simulated data. This approach should generate exact parameter estimates in the case where data are generated with no simulated observation errors. The step-by-step code and documentation is written in R/simulations.R. Currently it is written to condition/fit the model to the Sitka data then use these parameter values to estimate data and then re-estimate parameters. Currently the simulation self-tests perfectly, but does not include any observation or process error. This would be a future development and perhaps something to ask S. Martell about.  
+
 7.  Goal of a side-by-side comparison of 2018 forecast (2017 data)
+
+I am developing an Rmarkdown file for this purpose. It is a work in progress. Currently HER does not converge using a similar parameterization to the LS model. S. Dressel and I emailed S. Martell our specific issues and concerns August 7, and we are waiting for a reply. Comparison figures have been developed for spawning biomass, egg deposition, recruitment, and spawning age compositions.
+
     +  Document any differences in underlying model structure or assumptions
+
     +  Compare *quantities of interest* and explore differences
 
 ### What are the *quantities of interest* for variance:

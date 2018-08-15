@@ -65,12 +65,24 @@ D$ghl
 df <- data.frame(D[["year"]], 
                  D[["Mij"]])
 colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
-write.table(df,sep="\t", row.names=FALSE, col.names=FALSE)
+
+df %>% 
+  distinct(Year, M = `3`) %>% 
+  group_by(M) %>% 
+  summarize(Blocks = paste0(min(Year), "-", max(Year))) %>% 
+  select(Blocks, M) -> blocks_M
+
+write.table(df,sep="\t", row.names=FALSE)
 
 #Print out maturity
 df <- data.frame(D[["year"]], 
                  D[["mat"]])
 colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
+
+df %>%
+  distinct(`3`, `4`, `5`, `6`, `7`, `8`) %>% 
+  
+
 write.table(df,sep="\t", row.names=FALSE, col.names=FALSE)
 
 #Print out selectivity
@@ -114,7 +126,10 @@ ggplot() +
   #scale_colour_grey() +
   theme(legend.position = c(0.1, 0.8)) +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
-  labs(x = "", y = "Spawning biomass (short tons)\n")
+  labs(x = "", y = "Spawning biomass (short tons)\n") -> spbiomass_plot
+
+ggsave("figs/compare_spbiomass_plot.png", plot = spbiomass_plot, dpi = 300, height = 4, width = 6, units = "in")
+
 
 # 2. Recruitment
 df <- data.frame(Year = seq(D[["mod_syr"]] + D[["sage"]],
@@ -131,7 +146,9 @@ ggplot(df, aes(x = Year, y = recruits, colour = Model, shape = Model)) +
   # scale_colour_grey() +
   theme(legend.position = c(0.1, 0.8)) +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
-  labs(x = "", y = "Age-3 recruits (millions)\n")
+  labs(x = "", y = "Age-3 recruits (millions)\n") -> recruit_plot
+
+ggsave("figs/compare_recruit_plot.png", plot = recruit_plot, dpi = 300, height = 4, width = 6, units = "in")
 
 # 3. Egg deposition
 df <- as.data.frame(D[["data_egg_dep"]][10:47, ])#[seq(tot_yrs - nyr + 1, tot_yrs, 1), ]) 
@@ -150,8 +167,10 @@ ggplot(df, aes(x = Year)) +
   # scale_colour_grey() +
   theme(legend.position = c(0.1, 0.8)) +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  labs(x = "", y = "Eggs spawned (trillions)\n") -> eggdep_plot
 
-  labs(x = "", y = "Eggs spawned (trillions)\n")
+ggsave("figs/compare_eggdep_plot.png", plot = eggdep_plot, dpi = 300, height = 4, width = 6, units = "in")
+
 
 # 4. spawn age comps, cast net
 df <- data.frame(spawnage_comp_obs = D[["data_sp_comp"]])
@@ -168,22 +187,24 @@ df <- data.frame(Year = D[["year"]],
 colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
 df %>% 
   gather("Age", "proportion", -Year) %>% 
-  mutate(Predicted = "HER",
+  mutate(Model = "HER",
          Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
                       labels = c("3", "4", "5", "6", "7", "8+"))) %>% 
   bind_rows(LS_byage %>% 
               select(Year, Age, proportion = spawnage_comp_est) %>% 
-              mutate(Predicted = "LS") ) -> pred
+              mutate(Model = "LS") ) -> pred
 
 ggplot() +
   geom_bar(data = obs, aes(x = Age, y = proportion), 
            stat = "identity", colour = "lightgrey", fill = "lightgrey") +
-  geom_line(data = pred, aes(x = Age, y = proportion, colour = Predicted, group = Predicted), size = 1) +
+  geom_line(data = pred, aes(x = Age, y = proportion, colour = Model, 
+                             linetype = Model, group = Model), size = 0.8) +
   facet_wrap(~ Year, dir = "v", ncol = 5) +
   scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
-  labs(x = '\nAge', y = 'Proportion-at-age\n') 
+  labs(x = '\nAge', y = 'Proportion-at-age\n') +
+  theme(legend.position = "bottom") -> spcomp_barplot
 
-
+ggsave("figs/compare_spcomp_barplot.png", plot = spcomp_barplot, dpi = 300, height = 8, width = 6, units = "in")
 
 # Steve's stuff ----
 
