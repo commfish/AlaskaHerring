@@ -36,7 +36,7 @@
 #- First year for model (mod_syr)
 	1980
 #- Last year for model (mod_nyr)
-	2015
+	2017
 #- Youngest age class in model (sage)
 	3
 #- Plus group age class in the model (nage)
@@ -49,7 +49,7 @@
 #- Number of Fecundity blocks
 	4
 #- terminal block year for change in Fecundity
-	1984	1998	2002 	2015
+	1984	1998	2002 	2017
 #- Slope of the regression line
 	195.314028 222.55 226.1260221 198.78295
 #- Intercept of regression line
