@@ -230,7 +230,6 @@ LS_forec %>%
                                          paste0("**", biom, "**"), biom)) %>% 
   select(Age, `Mature biomass (*t*)` = biom, `Weight-at-age (*g*)`, `Proportion mature`) -> forec_age
 
-write_csv
 # For HER:
 
 # Wait on this b/c HER doesn't currently output forecast numbers or biomass at
@@ -395,7 +394,7 @@ df %>%
   left_join(data.frame(Year = seq(D[["mod_syr"]] + D[["sage"]],
                                   D[["mod_nyr"]] + 1, 1),
                        ssb = D[["spawners"]]), by = "Year") %>% 
-  mutate(SR2 = so * ssb * exp(- beta * ssb)) %>% 
+  # mutate(SR2 = so * ssb * exp(- beta * ssb)) %>% 
   filter(Year >= D[["mod_syr"]] + D[["sage"]]) -> df
 
 ggplot(df, aes(x = ssb)) +
@@ -451,7 +450,7 @@ data.frame(Year = D[["year"]],
   geom_point() +
   facet_wrap(~ Model, ncol = 1) +
   labs(x = "\nYear", y = "Residuals\n") +
-  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) -> egg_resids
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) -> egg_resids
 
 ggsave("figs/compare_eggresids.png", plot = egg_resids, dpi = 300, height = 5, width = 6, units = "in")
 
@@ -467,6 +466,7 @@ LS_byyear %>%
   labs(x = NULL, y = "Eggs spawned (trillions)\n", shape = NULL, linetype = NULL) -> obsfit
 
 # residuals
+axis <- tickr(LS_byyear, year, 5)
 LS_byyear %>% 
   ggplot(aes(x = year, y = res_tot_egg)) + 
   geom_hline(yintercept = 0, colour = "grey", size = 1) +
@@ -504,13 +504,15 @@ data.frame(Year = D[["year"]],
                size = 0.2, colour = "grey") +
   geom_point() +
   labs(x = "\nYear", y = "Residuals\n") +
-  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) -> resids
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) -> resids
 
 cowplot::plot_grid(obsfit, resids, align = "hv", nrow = 2) -> eggdep_plot
 
 ggsave("figs/HER/eggdep_plot.png", plot = eggdep_plot, dpi = 300, height = 5, width = 6, units = "in")
 
 # Survival blocks ----
+
+# Comparison ----
 
 df <- data.frame(D[["year"]], 
                  D[["Mij"]])
@@ -560,74 +562,177 @@ ggplot(df, aes(x = Year, y = survival,  colour = Model, linetype = Model)) +
 
 ggsave("figs/compare_survival.png", plot = survival_plot, dpi = 300, height = 4, width = 6, units = "in")
 
-# Maturity ----
+# For LS:
 
+ggplot(LS_byage, aes(x = Year, y = survival)) +
+  geom_vline(xintercept = c(1998.5, 2014.5), colour = "lightgrey", linetype = 3) +
+  geom_line(size = 1) +
+  geom_point() +
+  lims(y = c(0, 1)) +
+  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) +
+  labs(x = "", y = "Survival\n") -> survival_plot
+
+ggsave("figs/LS/survival.png", plot = survival_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+# For HER:
+
+df <- data.frame(D[["year"]], 
+                 D[["Mij"]])
+colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
+
+df %>% select(Year, M = `3`) %>% 
+  mutate(survival = exp(-M)) -> df
+
+ggplot(df, aes(x = Year, y = survival)) +
+  geom_vline(xintercept = c(1998.5, 2014.5), colour = "lightgrey", linetype = 3) +
+  geom_line(size = 1) +
+  geom_point() +
+  lims(y = c(0, 1)) +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  labs(x = "", y = "Survival\n") -> survival_plot
+
+ggsave("figs/HER/survival.png", plot = survival_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+# Maturity/Selectivity ----
+
+# Comparison:
+
+# First HER data
 df <- data.frame(D[["year"]], 
                  D[["mat"]])
 colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
-write.table(df,sep="\t", row.names=FALSE)
+df %>% mutate(param = "Maturity") -> df
 
-df %>% 
-  gather("Age", "maturity", -Year) %>% 
-  mutate(Model = "HER",
-         Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
-                      labels = c("3", "4", "5", "6", "7", "8+"))) %>% 
-  bind_rows(LS_byage %>% 
-              select(Year, Age, maturity) %>% 
-              mutate(Model = "LS")) %>% 
-  group_by(Model, Age, maturity) %>% 
-  summarise(min = min(Year),
-            max = max(Year)) %>% 
-  mutate(`Maturity blocks` = paste0(min, "-", max),
-         combos = paste0(Model, " ", `Maturity blocks`)) -> df
-
-ggplot(df, aes(x = Age, y = maturity, colour = Model)) + 
-  geom_line(aes(linetype = `Maturity blocks`,  group = combos)) +
-  scale_colour_grey() +
-  lims(y = c(0, 1)) +
-  labs(x = "\nAge", y = "Maturity\n") +
-  theme(legend.position = c(0.8, 0.6)) -> maturity_plot
-
-ggsave("figs/compare_maturity.png", plot = maturity_plot, dpi = 300, height = 4, width = 6, units = "in")
-
-# Selectivity ----
-
-# number of yrs in the model 
 nyr <- D[["mod_nyr"]] - D[["mod_syr"]] + 1
 
-df <- data.frame(D[["year"]], 
+df2 <- data.frame(D[["year"]], 
                  D[["Sij"]][1:nyr, ]) # change number of rows
-colnames(df) <- c("Year", paste(D[['sage']]:D[['nage']]))
-# write.table(df,sep="\t", row.names=FALSE)
+colnames(df2) <- c("Year", paste(D[['sage']]:D[['nage']]))
+df2 %>% mutate(param = "Selectivity") %>% 
+  bind_rows(df) -> df
 
 df %>% 
-  gather("Age", "selectivity", -Year) %>% 
-  mutate(Model = "HER",
-         Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
+  gather("Age", "proportion", -c(Year, param)) %>% 
+  mutate(Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
                       labels = c("3", "4", "5", "6", "7", "8+")),
          # To make sure selectivity is differentiable, it was scaled to have a
          # mean of 1 across all ages. This was done in log space by substracting
          # the mean from the vector of age-specific selectivities. See Tech Doc
-         # p 11. *FLAG* here's an attempt to normalize it from 0 to 1.
-         selectivity2 = ( selectivity - min(selectivity) ) / ( max(selectivity) - min(selectivity) ) ) %>%
-  bind_rows(LS_byage %>% 
-              select(Year, Age, selectivity = gear_select) %>% 
-              mutate(Model = "LS")) %>% 
-  group_by(Model, Age, selectivity, selectivity2, selectivity3) %>% 
-  summarise(min = min(Year),
-            max = max(Year)) %>% 
-  mutate(`Selectivity blocks` = paste0(min, "-", max),
-         combos = paste0(Model, " ", `Selectivity blocks`)) -> df
+         # p 11. Here we normalize it from 0 to 1.
+         proportion = ifelse(param == "Selectivity", (proportion - 0)/(max(proportion) - 0), 
+                             proportion)) %>% 
+  group_by(Age, param, proportion) %>% 
+  mutate(min = min(Year),
+         max = max(Year),
+         `Time blocks` = paste0(min, "-", max)) %>% 
+  group_by(param) %>% 
+  mutate(Model = "HER",
+         combos = paste0(Model, " ", `Time blocks`)) -> her_matsel
 
-ggplot(df, aes(x = Age, y = selectivity, colour = Model)) + 
-  geom_line(aes(linetype = `Selectivity blocks`, group = combos)) +
-  geom_line(aes(x = Age, y = selectivity2, group = Model), colour = "black", linetype = 2) +
-  scale_colour_grey() +
-  lims(y = c(0, 1.8)) +
-  labs(x = "\nAge", y = "Selectivity\n") +
-  theme(legend.position = c(0.8, 0.25)) -> selectivity_plot
+# LS data 
+LS_byage %>% 
+  select(Year, Age, Maturity = maturity, Selectivity = gear_select) %>% 
+  mutate(Model = "LS") %>% 
+  gather("param", "proportion", -c(Year, Age, Model)) %>% 
+  group_by(Age, param, proportion) %>% 
+  mutate(min = min(Year),
+         max = max(Year),
+         `Time blocks` = paste0(min, "-", max)) %>% 
+  group_by(param) %>% 
+  mutate(combos = paste0(Model, " ", `Time blocks`)) -> ls_matsel
 
-ggsave("figs/compare_selectivity.png", plot = selectivity_plot, dpi = 300, height = 4, width = 6, units = "in")
+bind_rows(ls_matsel, her_matsel) -> matsel
+
+# In order to get separate legends for time block, this is split into separate
+# figures and then recombined.
+matsel %>% filter(param == "Maturity") -> par
+
+ggplot(par, aes(x = Age, y = proportion)) + 
+  geom_line(aes(linetype = `Time blocks`, colour = Model, group = `combos`)) +
+  geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
+  expand_limits(y = 0) +
+  scale_color_grey() +
+  labs(x = "\nAge", y = "Proportion\n", linetype = "Time blocks") +
+  ggtitle(paste0(par$param[1])) +
+  theme(legend.position = c(0.7, 0.25),
+        legend.spacing.y = unit(0, "cm"),
+        plot.title = element_text(hjust = 0.5)) -> mat
+
+matsel %>% filter(param == "Selectivity") -> par
+
+ggplot(par, aes(x = Age, y = proportion)) + 
+  geom_line(aes(linetype = `Time blocks`, colour = Model, group = `combos`)) +
+  geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
+  expand_limits(y = 0) +
+  scale_color_grey() +
+  labs(x = "\nAge", y = NULL, linetype = "Time blocks") +
+  scale_y_continuous(breaks = seq(0, max(par$proportion), .25)) +
+  ggtitle(paste0(par$param[1])) +
+  theme(legend.position = c(0.7, 0.25),
+        legend.spacing.y = unit(0, "cm"),
+        plot.title = element_text(hjust = 0.5)) -> sel
+
+cowplot::plot_grid(mat, sel, align = "h", nrow = 1) -> matsel_plot
+
+ggsave("figs/compare_mat_sel.png", plot = matsel_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+# For HER
+
+her_matsel %>% filter(param == "Maturity") -> par
+
+ggplot(par, aes(x = Age, y = proportion)) + 
+  geom_line(aes(linetype = `Time blocks`, group = `Time blocks`)) +
+  geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
+  expand_limits(y = 0) +
+  labs(x = "\nAge", y = "Proportion\n", linetype = "Time blocks") +
+  ggtitle(paste0(par$param[1])) +
+  theme(legend.position = c(0.7, 0.2),
+        plot.title = element_text(hjust = 0.5)) -> mat
+
+her_matsel %>% filter(param == "Selectivity") -> par
+
+ggplot(par, aes(x = Age, y = proportion)) + 
+  geom_line(aes(linetype = `Time blocks`, group = `Time blocks`)) +
+  geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
+  expand_limits(y = 0) +
+  labs(x = "\nAge", y = NULL, linetype = "Time blocks") +
+  scale_y_continuous(breaks = seq(0, max(par$proportion), .25)) +
+  ggtitle(paste0(par$param[1])) +
+  theme(legend.position = c(0.7, 0.2),
+        plot.title = element_text(hjust = 0.5)) -> sel
+
+cowplot::plot_grid(mat, sel, align = "h", nrow = 1) -> matsel_plot
+
+ggsave("figs/HER/mat_sel.png", plot = matsel_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+# For LS
+
+ls_matsel %>% filter(param == "Maturity") -> par
+
+ggplot(par, aes(x = Age, y = proportion)) + 
+  geom_line(aes(linetype = `Time blocks`, group = `Time blocks`)) +
+  geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
+  expand_limits(y = 0) +
+  labs(x = "\nAge", y = "Proportion\n", linetype = "Time blocks") +
+  ggtitle(paste0(par$param[1])) +
+  theme(legend.position = c(0.7, 0.2),
+        plot.title = element_text(hjust = 0.5)) -> mat
+
+her_matsel %>% filter(param == "Selectivity") -> par
+
+ggplot(par, aes(x = Age, y = proportion)) + 
+  geom_line(aes(linetype = `Time blocks`, group = `Time blocks`)) +
+  geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
+  expand_limits(y = 0) +
+  labs(x = "\nAge", y = NULL, linetype = "Time blocks") +
+  scale_y_continuous(breaks = seq(0, max(par$proportion), .25)) +
+  ggtitle(paste0(par$param[1])) +
+  theme(legend.position = c(0.7, 0.2),
+        plot.title = element_text(hjust = 0.5)) -> sel
+
+cowplot::plot_grid(mat, sel, align = "h", nrow = 1) -> matsel_plot
+
+ggsave("figs/LS/mat_sel.png", plot = matsel_plot, dpi = 300, height = 4, width = 6, units = "in")
 
 # Age comps bubbleplot ----
 

@@ -21,6 +21,7 @@ if(!require("R2admb"))   install.packages("R2admb") # run admb from r
 if(!require("ggthemes"))   install.packages("ggthemes") # access to 150 colour palettes from canva.com design school, among other things
 if(!require("scales"))   install.packages("scales") # add comma to ggplot axis with scale_y_countinuous(label = comma)
 if(!require("ggrepel"))   install.packages("ggrepel") # readable labels with geom_text_repel()
+if(!require("gridExtra"))   install.packages("gridExtra") # tableGrob()
 
 
 # https://www.canva.com/learn/100-color-combinations/
