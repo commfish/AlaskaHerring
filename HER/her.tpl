@@ -1743,6 +1743,8 @@ REPORT_SECTION
   REPORT(spawners);
   REPORT(recruits);
   REPORT(pred_egg_dep);
+  REPORT(so);
+  REPORT(beta);
 
 // Numbers-at-age of various flavors.
   REPORT(Nij);
@@ -1750,6 +1752,7 @@ REPORT_SECTION
   REPORT(Pij);
   REPORT(Cij);
   REPORT(pred_sp_comp);
+  REPORT(pred_cm_comp);
 
 // Selectivity and vulnerable proportion-at-age.
   REPORT(Sij);

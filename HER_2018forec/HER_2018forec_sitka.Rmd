@@ -147,7 +147,7 @@ ggsave("figs/HER/eggdep_plot.png", plot = eggdep_plot, dpi = 300, height = 5, wi
 
 
 if(sum(as.data.frame(D[["ft"]])) == 0) {
-  # if TRUE, model wsa conditioned on catch, so just plot observed catch
+  # if TRUE, model was conditioned on catch, so just plot observed catch
   df <- as.data.frame(D[["data_catch"]])[1:2] 
   colnames(df) <- c("Year", "obs")
   

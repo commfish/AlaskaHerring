@@ -131,9 +131,7 @@ cowplot::plot_grid(retro1, retro2, align = "hv", nrow = 2) -> retro_plot
 
 
 setwd(main_dir)
-ggsave("HER_2018forec/figs/HER/retrospective.png", 
-       plot = retro_plot, 
-       dpi = 300, height = 6, width = 6, units = "in")
+ggsave("HER/figs/HER/retrospective.png", plot = retro_plot, dpi = 300, height = 6, width = 6, units = "in")
 
 # Alaska Fisheries Science Center and Hurtado-Ferro et al. (2015) Mohn's rho
 # https://www.afsc.noaa.gov/REFM/stocks/Plan_Team/2013/Sept/Retrospectives_2013_final3.pdf

@@ -20,6 +20,9 @@ if(!require("cowplot"))   install.packages("cowplot") # plot_grid and so much el
 if(!require("R2admb"))   install.packages("R2admb") # run admb from r
 if(!require("ggthemes"))   install.packages("ggthemes") # access to 150 colour palettes from canva.com design school, among other things
 if(!require("scales"))   install.packages("scales") # add comma to ggplot axis with scale_y_countinuous(label = comma)
+if(!require("ggrepel"))   install.packages("ggrepel") # readable labels with geom_text_repel()
+
+
 # https://www.canva.com/learn/100-color-combinations/
 # http://makeadifferencewithdata.com/wp-content/uploads/2016/12/color-palettes.txt
 # if(!require("scales"))   install.packages("scales") # used to expand colour palettes

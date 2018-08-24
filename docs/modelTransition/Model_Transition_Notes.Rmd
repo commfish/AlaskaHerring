@@ -71,32 +71,31 @@ The simulation approach used is called “self-testing,” where the same model 
 
 I am developing an Rmarkdown file for this purpose. It is a work in progress. Currently HER does not converge using a similar parameterization to the LS model. S. Dressel and I emailed S. Martell our specific issues and concerns August 7, and we are waiting for a reply. Comparison figures have been developed for spawning biomass, egg deposition, recruitment, and spawning age compositions.
 
-    +  Document any differences in underlying model structure or assumptions
+-  Document any differences in underlying model structure or assumptions
 
-    +  Compare *quantities of interest* and explore differences
+-  Compare *quantities of interest* and explore differences
 
 ### What are the *quantities of interest* for variance:
-~Mature biomass (pre-fishery)~
-~~Spawning stock biomass (post-fishery)~~
-~~Forecast mature biomass~~
-~~Natural mortality/survival~~
-Recruitment
-Maturity
-Selectivity
-Catch - I added this, but it only works when conditioning on effort (conditioning on catch assumes zero variance)
-*Egg deposition?*
+-  ~~Mature biomass (pre-fishery)~~
+-  ~~Spawning stock biomass (post-fishery)~~
+-  ~~Forecast mature biomass~~
+-  ~~Natural mortality/survival~~
+-  Recruitment
+-  Maturity
+-  Selectivity
+-  Catch - I added this, but it only works when conditioning on effort (conditioning on catch assumes zero variance)
+-  Egg deposition
 
 ### What are the *quantities of interest* for side-by-side:
-Mature biomass (pre-fishery)
-Spawning stock biomass (post-fishery)
-Forecast mature biomass
-Natural mortality
-Recruitment
-Maturity
-Selectivity
-Catch
-Age compositions (residuals)
-Egg depositions
+-  Mature biomass (pre-fishery)
+-  Spawning stock biomass (post-fishery)
+-  Forecast mature biomass
+-  Natural mortality
+-  Recruitment
+-  Maturity
+-  Selectivity
+-  Age compositions (residuals)
+-  Egg depositions
 
 
 ## Work log and action items
@@ -261,6 +260,7 @@ kable(data.frame(Parameter = c("Block-specific M", "Log mean M", "Log mean M"),
 
 ## Lingering questions
 
++  MLE likelihoods: in Andre's course, learn how to utilize the Hessian to explore parameter space (how to do likeihood profiles for stock assessment parameters)
 +  How do you deal with retrospectives with time-varying parameters (time blocks) when your peels overlap with a change in block?
 +  What does the value() fxn do and when do you have to use it?
 +  How do you get likelihood profiles for time-varing parameters?

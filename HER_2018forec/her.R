@@ -18,13 +18,55 @@ LS_forec <- read_csv("HER_2018forec/LS_2018forec_results.csv")
 LS_byage <- read_csv("HER_2018forec/LS_2018forec_results_byage.csv")
 LS_byyear <- read_csv("HER_2018forec/LS_2018forec_results_byyear.csv")
 
+# Recruitment (age-3 abundance) and associated residuals in LS_byyear should be
+# NA in the first three years, it is currently 0.
+LS_byyear %>% 
+  mutate(SR = ifelse(year %in% c(1980, 1981, 1982), NA, SR),
+         res_SR = ifelse(year %in% c(1980, 1981, 1982), NA, res_SR)) -> LS_byyear
+
+# LS results of year minus one, two, and three year estimates and forecast of
+# pre-fishery mature biomass. "Tidied" version of the data in
+# S:\Region1Shared-DCF\Research\Herring-Dive Fisheries\Herring\Year 2018
+# Forecasts\Forecast Models\Sitka\best_model.57_321
+# FINAL\ADMB\sitka_graphics.ctl
+LS_yearminus <- read_csv("HER_2018forec/yearminus_matbio.csv")
+
 # in SPAWN folder, numbers from excel spread sheet for spawn deposition.
 LS_byyear$surv_est_spB <- c(35000,30000,29500,23500,38500,31000,25000,46000,58500,27000,23000,23500,
                              43351,37150,14941,34990,40827,28611,34942,44554,57988,58756,40366,55769,
                              69907,101305,66111,84501,247088,110946,126230,161904,62518,103267,48561, 
                              58183,77973,46919)
+# survey estimated mature biomass (add catch to survey estimated spawning biomass)
+LS_byyear %>% 
+  mutate(surv_est_matbio = surv_est_spB + tcb) -> LS_byyear
 
-# Run model in ADMB ----
+# b/c the output wasn't easily accessible in the LS summary csv's, I rewrote the
+# threshold and ghl calculation for visualization purposes. The harvest_thresh and thresh_denom are from
+# the 2018 sitka forecast model best model folder in sitka.ctl 
+
+harvest_thresh <- 25000 # Harvest Threshold (tons)
+thresh_denom <- 20000 # Threshold calculation denominator (tons)
+                                                                 
+LS_byyear %>% 
+  mutate(# Defined in regulation, if below there is no fishery
+         Threshold = ifelse(year <= 1996, 7500,
+                            ifelse (year <= 2009, 20000, 25000))) -> LS_byyear
+
+# GHL calculation:
+LS_forec %>% 
+  summarize(tot_mat_B_tons = sum(for_mat_baa_tons)) %>% 
+  mutate(year = max(LS_byyear$year) + 1,
+         threshold = (2 + 8 * tot_mat_B_tons / thresh_denom) / 100,
+         hr = ifelse(tot_mat_B_tons < harvest_thresh, 0, 
+                     ifelse(threshold >= 0.2, 0.2, threshold)),
+         GHL = ifelse(hr == 0.2, 0.2 * tot_mat_B_tons,
+                      threshold * tot_mat_B_tons),
+         # Defined in regulation
+         Threshold = ifelse(year <= 1996, 7500,
+                            ifelse (year <= 2009, 20000, 25000)),
+         `Spawning biomass forecast` = tot_mat_B_tons - GHL) -> LS_ghl
+
+  # Run model in ADMB ----
 
 # Can't figure out how to put file path directly from project root into the
 # compile_admb() function
@@ -61,40 +103,11 @@ D <- read_admb("her")
 D$fore_sb
 D$ghl
 
-#Print out natural mortality
-df <- data.frame(D[["year"]], 
-                 D[["Mij"]])
-colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
 
-df %>% 
-  distinct(Year, M = `3`) %>% 
-  group_by(M) %>% 
-  summarize(Blocks = paste0(min(Year), "-", max(Year))) %>% 
-  select(Blocks, M) -> blocks_M
+# Spawning biomass ----
 
-write.table(df,sep="\t", row.names=FALSE)
+# post-fishery
 
-#Print out maturity
-df <- data.frame(D[["year"]], 
-                 D[["mat"]])
-colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
-
-df %>%
-  distinct(`3`, `4`, `5`, `6`, `7`, `8`) %>% 
-  
-
-write.table(df,sep="\t", row.names=FALSE, col.names=FALSE)
-
-#Print out selectivity
-# number of yrs in the model 
-nyr <- D[["mod_nyr"]] - D[["mod_syr"]] + 1
-
-df <- data.frame(D[["year"]], 
-                 D[["Sij"]][1:nyr, ]) # change number of rows
-colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
-write.table(df,sep="\t", row.names=FALSE, col.names=FALSE)
-
-# 1. Time series of mature biomass (pre-fishery) and spawning biomass (post-fishery)
 tot_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
 
 
@@ -120,37 +133,290 @@ df %>% filter(Biomass %in% c("spB")) -> df
 
 axisx <- tickr(df, Year, 5)
 ggplot() +
-  geom_point(data = df, aes(x = Year, y = tons, colour = Model, linetype = Model, shape = Model)) +
-  geom_line(data = df, aes(x = Year, y = tons, colour = Model, linetype = Model, shape = Model)) +
-  geom_point(data = srv_index, aes(x = Year, y = srv_spB), shape = "*", size = 5) +
-  #scale_colour_grey() +
-  theme(legend.position = c(0.1, 0.8)) +
+  # geom_point(data = df, aes(x = Year, y = tons, colour = Model, linetype = Model, shape = Model), size = 1) +
+  geom_line(data = df, aes(x = Year, y = tons, colour = Model, linetype = Model), size = 1) +
+  geom_point(data = srv_index, aes(x = Year, y = srv_spB, shape = "Historical estimates from survey")) +
+  scale_shape_manual(values = 1) +
+  scale_colour_grey() +
+  theme(legend.position = c(0.25, 0.7)) +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
-  labs(x = "", y = "Spawning biomass (short tons)\n") -> spbiomass_plot
+  scale_y_continuous(labels = scales::comma) +
+  labs(x = "", y = "Spawning biomass (tons)\n", shape = "Data") -> spbiomass_plot
 
 ggsave("figs/compare_spbiomass_plot.png", plot = spbiomass_plot, dpi = 300, height = 4, width = 6, units = "in")
 
+# LS past model comparison ----
 
-# 2. Recruitment
-df <- data.frame(Year = seq(D[["mod_syr"]] + D[["sage"]],
-                      D[["mod_nyr"]] + 1, 1),
-           recruits = D[["recruits"]],
-           Model = "HER") %>% 
+# bind past estimates/forecast of mature biomass with current
+LS_yearminus %>% 
   bind_rows(LS_byyear %>% 
-  select(Year = year, recruits = init_age_3) %>% #
-  mutate(Model = "LS"))
+              select(Year = year, matbio_tons = tot_mat_B_tons) %>% 
+              mutate(type = "estimate",
+                     year_minus = 0),
+            # current year forecast
+            LS_forec %>% 
+              summarize(matbio_tons = sum(for_mat_baa_tons)) %>% 
+              mutate(Year = max(LS_byyear$year) + 1,
+                     type = "forecast",
+                     year_minus = 0)) %>% 
+  group_by(year_minus) %>% 
+  mutate(`Forecast model` = as.character(max(Year))) %>% 
+  ungroup() %>% 
+  mutate(`Forecast model` = fct_rev(factor(`Forecast model`)),
+         label = ifelse(type == "forecast", 
+                        prettyNum(matbio_tons, big.mark = ",", digits = 1), NA)) -> df
+tickryr <- data.frame(Year = 1980:2020)
+axisf <- tickr(tickryr, Year, 5)
+ggplot() +
+  geom_line(data = df, aes(x = Year, y = matbio_tons, 
+                           colour = `Forecast model`, linetype = `Forecast model`)) +
+  geom_point(data = df %>% filter(type == "forecast"), 
+             aes(x = Year, y = matbio_tons, colour = `Forecast model`)) +
+  geom_point(data = LS_byyear, 
+             aes(x = year, y = surv_est_matbio,   shape = "Historical estimates from survey")) +
+  geom_text_repel(data = df, aes(x = Year, y = matbio_tons, label = label, colour = `Forecast model`),
+                  size = 2) +
+  scale_shape_manual(values = 1) +
+  scale_colour_grey() +
+  theme(legend.position = c(0.25, 0.8),
+        legend.spacing.y = unit(0, "cm")) +
+  scale_x_continuous(limits = c(min(tickryr$Year), max(tickryr$Year)),
+                                breaks = axisf$breaks, labels = axisf$labels) +
+  scale_y_continuous(limits = c(0, max(LS_yearminus$matbio_tons) * 1.1),
+                     labels = scales::comma) +
+  labs(x = "", y = "Spawning biomass (tons)\n", shape = NULL) -> past_matbio
 
-ggplot(df, aes(x = Year, y = recruits, colour = Model, shape = Model)) +
+ggsave("figs/LS/compare_past_matbio.png", plot = past_matbio, dpi = 300, height = 4, width = 6, units = "in")
+
+# Catch  ----
+
+# For LS:
+LS_byyear %>%
+  select(year, Catch = tcb, `Spawning biomass` = tot_sp_B_tons, Threshold) %>% 
+  full_join(LS_ghl %>% select(year, `Spawning biomass forecast`, GHL, Threshold)) %>% 
+  gather("var", "value", -c(year, Threshold)) %>% 
+  mutate(var = factor(var, ordered = TRUE, 
+                      levels = c("Spawning biomass", "Spawning biomass forecast", "Catch", "GHL"))) -> df
+
+axisb <- tickr(df, year, 5)
+ggplot(df, aes(x = year)) +
+  geom_bar(aes(y = value, fill = var), colour = "black", size = 0.2, stat = "identity") +
+  geom_line(aes(y = Threshold, linetype = "Threshold"), size = 1) +
+  scale_fill_manual(values = c("white", "grey85", "grey50", "grey20")) +
+  theme(legend.position = c(0.2, 0.8),
+        legend.spacing.y = unit(0, "cm")) +
+  scale_x_continuous(breaks = axisb$breaks, labels = axisb$labels) +
+  scale_y_continuous(labels = scales::comma, 
+                     breaks = seq(0, 125000, 10000)) +
+  labs(x = "", y = "Biomass (tons)\n", linetype = NULL, fill = NULL) -> catch_plot
+
+ggsave("figs/LS/biomasscatch_barplot.png", plot = catch_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+# For HER:
+
+# Wait on this b/c currently mature biomass is not forecasted.
+
+# Forecasted comps ----
+
+# Comparison:
+
+# For LS:
+
+LS_forec %>% 
+  mutate(biom = prettyNum(for_mat_baa_tons, digits = 1, big.mark=","),
+         `Weight-at-age (*g*)` = formatC(round(for_waa, 1), small.interval = 1),
+         `Proportion mature` = formatC(round(for_mat_prop, 2), small.interval = 2),
+         biom = ifelse(for_mat_baa_tons == max(for_mat_baa_tons), 
+                                         paste0("**", biom, "**"), biom)) %>% 
+  select(Age, `Mature biomass (*t*)` = biom, `Weight-at-age (*g*)`, `Proportion mature`) -> forec_age
+
+write_csv
+# For HER:
+
+# Wait on this b/c HER doesn't currently output forecast numbers or biomass at
+# age
+
+# Recruitment ----
+
+# Comparison: 
+
+# Age-3 recruits compared recruitment estimated from Ricker
+df <- data.frame(Year = D[["years"]],
+                 age3 = D[["Nij"]][, 1]) %>% 
+  left_join(data.frame(Year = seq(D[["mod_syr"]] + D[["sage"]],
+                                  D[["mod_nyr"]] + 1, 1),
+                       SR = D[["recruits"]],
+                       ssb = D[["spawners"]],
+                       resids = D[["resd_rec"]]), by = "Year") %>% 
+  mutate(Model = "HER") %>% 
+  bind_rows(
+    LS_byyear %>% 
+      select(Year = year, age3 = init_age_3, SR, resids = res_SR) %>% 
+      mutate(Model = "LS"))
+
+axisr <- tickr(df, Year, 5)
+ggplot(df, aes(x = Year, colour = Model, shape = Model, linetype = Model)) +
+  geom_line(aes(y = SR)) +
+  geom_point(aes(y = age3), alpha = 0.9) +
+  scale_colour_grey() +
+  scale_x_continuous(breaks = axisr$breaks, labels = axisr$labels) +
+  scale_y_continuous(labels = scales::comma) + 
+  theme(legend.position = c(0.1, 0.85)) +
+  labs(x = "\nYear", y = "Age-3 recruits (millions)\n") -> recruits
+
+ggsave("figs/compare_recruit_plot.png", plot = recruits, dpi = 300, height = 4, width = 6, units = "in")
+
+# Compare residuals
+ggplot(df, aes(x = Year, y = resids)) + 
+  geom_hline(yintercept = 0, colour = "grey", size = 1) +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = resids), 
+               size = 0.2, colour = "grey") +
   geom_point() +
-  geom_line() +
-  # scale_colour_grey() +
-  theme(legend.position = c(0.1, 0.8)) +
+  facet_wrap(~ Model, ncol = 1) +
+  labs(x = "\nYear", y = "Residuals\n") +
+  scale_x_continuous(breaks = axisr$breaks, labels = axisr$labels) -> rec_resids
+
+ggsave("figs/compare_recruitresids.png", plot = rec_resids, dpi = 300, height = 5, width = 6, units = "in")
+
+# compare spawner recruit curves
+LS_byyear %>% 
+  select(Year = year) %>% 
+  filter(Year >= min(Year) + 3) %>% 
+  bind_cols(LS_byyear %>% 
+              # shift spawners up by 3 years 
+              filter(year <= max(year) - 3) %>% 
+              select(tot_sp_B_tons)) %>% 
+  mutate(Model = "LS") %>% 
+  right_join(df) %>% 
+  mutate(ssb = ifelse(is.na(ssb), tot_sp_B_tons, ssb)) -> df
+
+ggplot(df, aes(x = ssb, colour = Model, shape = Model, linetype = Model)) +
+  geom_line(aes(y = SR), size = 1) +
+  geom_point(aes(y = age3)) +
+  scale_colour_manual(values = c("black", "darkgrey")) + 
+  theme(legend.position = c(0.1, 0.85)) +
+  scale_x_continuous(labels = scales::comma) +
+  scale_y_continuous(labels = scales::comma) +
+  geom_text_repel(aes(y = age3, label = Year), size = 2) +
+  labs(x = "\nSpawning stock biomass (tons)", 
+       y = "Age-3 recruits (millions)\n") -> sr_curve
+
+ggsave("figs/compare_srcurves.png", plot = sr_curve, dpi = 300, height = 6, width = 7, units = "in")
+
+# For LS:
+
+# Age-3 recruits compared recruitment estimated from Ricker
+LS_byyear %>% 
+  ggplot(aes(x = year)) +
+  geom_line(aes(y = SR, linetype = "Ricker model"), colour = "grey", size = 1) +
+  geom_point(aes(y = init_age_3, colour = "ASA model")) +
+  theme(legend.position = c(0.15, 0.75),
+        legend.key = element_rect(size = 0.5),
+        legend.key.size = unit(0.8, 'lines'),
+        legend.spacing.y = unit(0, "cm")) +
+  scale_colour_manual(values = "black") +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
-  labs(x = "", y = "Age-3 recruits (millions)\n") -> recruit_plot
+  scale_y_continuous(labels = scales::comma) +
+  labs(x = "\nYear", y = "Age-3 recruits (millions)\n", 
+       colour = NULL, linetype = NULL) -> recruits
 
-ggsave("figs/compare_recruit_plot.png", plot = recruit_plot, dpi = 300, height = 4, width = 6, units = "in")
+# residuals
+LS_byyear %>% 
+  ggplot(aes(x = year, y = res_SR)) + 
+  geom_hline(yintercept = 0, colour = "grey", size = 1) +
+  geom_segment(aes(x = year, xend = year, y = 0, yend = res_SR), 
+               size = 0.2, colour = "grey") +
+  geom_point() +
+  labs(x = "\nYear", y = "Residuals\n") +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) -> resids
 
-# 3. Egg deposition
+# spawner-recruit curve
+LS_byyear %>% 
+  select(year, SR, init_age_3) %>% 
+  filter(year >= min(year) + 3) %>% 
+  bind_cols(LS_byyear %>% 
+              # shift spawners up by 3 years 
+              select(year, tot_sp_B_tons) %>% 
+              filter(year <= max(year) - 3) %>% 
+              select(- year)) %>% 
+ggplot(aes(x = tot_sp_B_tons)) +
+  geom_line(aes(y = SR, linetype = "Ricker model"), 
+            colour = "grey", size = 1) +
+  geom_point(aes(y = init_age_3, colour = "ASA model")) +
+  theme(legend.position = c(0.15, 0.75),
+        legend.key = element_rect(size = 0.5),
+        legend.key.size = unit(0.8, 'lines'),
+        legend.spacing.y = unit(0, "cm")) +
+  scale_colour_manual(values = "black") +
+  scale_x_continuous(labels = scales::comma) +
+  scale_y_continuous(labels = scales::comma) +
+  geom_text_repel(aes(y = init_age_3, label = year), size = 2) +
+  labs(x = "\nSpawning stock biomass (tons)", y = "Age-3 recruits (millions)\n",
+       linetype = NULL, colour = NULL) -> sr_curve
+
+cowplot::plot_grid(recruits, resids, sr_curve, align = "hv", nrow = 3) -> recruit_plot
+
+ggsave("figs/LS/recruit_plot.png", plot = recruit_plot, dpi = 300, height = 8, width = 6, units = "in")
+
+# For HER:
+
+# Age-3 recruits compared recruitment estimated from Ricker
+df <- data.frame(Year = D[["years"]],
+                 age3 = D[["Nij"]][, 1]) %>% 
+  left_join(data.frame(Year = seq(D[["mod_syr"]] + D[["sage"]],
+                            D[["mod_nyr"]] + 1, 1),
+                 SR = D[["recruits"]],
+                 resids = D[["resd_rec"]]), by = "Year")
+
+axisr <- tickr(df, Year, 5)
+ggplot(df, aes(x = Year)) +
+  geom_line(aes(y = SR, linetype = "Ricker model"), colour = "grey", size = 1) +
+  geom_point(aes(y = age3, colour = "ASA model")) +
+  scale_colour_manual(values = "black") +
+  scale_x_continuous(breaks = axisr$breaks, labels = axisr$labels) +
+  scale_y_continuous(labels = scales::comma) + 
+  theme(legend.position = c(0.15, 0.75)) +
+  labs(x = "\nYear", y = "Age-3 recruits (millions)\n", colour = NULL,
+       linetype = NULL) -> recruits
+
+# residuals
+ggplot(df, aes(x = Year, y = resids)) + 
+  geom_hline(yintercept = 0, colour = "grey", size = 1) +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = resids), 
+               size = 0.2, colour = "grey") +
+  geom_point() +
+  labs(x = "\nYear", y = "Residuals\n") +
+  scale_x_continuous(breaks = axisr$breaks, labels = axisr$labels) -> resids
+
+# spawner-recruit curve
+df %>% 
+  # Join the spawners to the recruitment years they're associated to (brood year =
+  # recruitment year - 3)
+  left_join(data.frame(Year = seq(D[["mod_syr"]] + D[["sage"]],
+                                  D[["mod_nyr"]] + 1, 1),
+                       ssb = D[["spawners"]]), by = "Year") %>% 
+  mutate(SR2 = so * ssb * exp(- beta * ssb)) %>% 
+  filter(Year >= D[["mod_syr"]] + D[["sage"]]) -> df
+
+ggplot(df, aes(x = ssb)) +
+  geom_line(aes(y = SR, linetype = "Ricker model"), 
+            colour = "grey", size = 1) +
+  geom_point(aes(y = age3, colour = "ASA model")) +
+  scale_colour_manual(values = "black") +
+  theme(legend.position = c(0.15, 0.75)) +
+  scale_x_continuous(labels = scales::comma) +
+  scale_y_continuous(labels = scales::comma) +
+  geom_text_repel(aes(y = age3, label = Year), size = 2) +
+  labs(x = "\nSpawning stock biomass (tons)", y = "Age-3 recruits (millions)\n",
+       linetype = NULL, colour = NULL) -> sr_curve
+
+cowplot::plot_grid(recruits, resids, sr_curve, align = "hv", nrow = 3) -> recruit_plot
+
+ggsave("figs/HER/recruit_plot.png", plot = recruit_plot, dpi = 300, height = 8, width = 6, units = "in")
+
+# Egg deposition ----
+
+# Comparison:
 df <- as.data.frame(D[["data_egg_dep"]][10:47, ])#[seq(tot_yrs - nyr + 1, tot_yrs, 1), ]) 
 colnames(df) <- c("Year", "obs", "log_se")
 df %>% filter(Year >= D[["mod_syr"]]) %>% 
@@ -159,20 +425,405 @@ df %>% filter(Year >= D[["mod_syr"]]) %>%
   gather("Model", "trillions", -c(Year, obs, log_se)) -> df
 
 ggplot(df, aes(x = Year)) +
-  geom_point(aes(y = obs), shape = "*", size = 5) +
   geom_line(aes(y = trillions, colour = Model,
-                linetype = Model, shape = Model)) +
-  geom_point(aes(y = trillions, colour = Model,
-                linetype = Model, shape = Model)) +
-  # scale_colour_grey() +
-  theme(legend.position = c(0.1, 0.8)) +
+                linetype = Model), size = 1) +  
+  geom_point(aes(y = obs, shape = "Historical estimates from survey")) +
+  scale_shape_manual(values = 1) +
+  scale_color_grey() +
+  theme(legend.position = c(0.25, 0.7)) +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
-  labs(x = "", y = "Eggs spawned (trillions)\n") -> eggdep_plot
+  labs(x = "", y = "Eggs spawned (trillions)\n", shape = "Data") -> eggdep_plot
 
 ggsave("figs/compare_eggdep_plot.png", plot = eggdep_plot, dpi = 300, height = 4, width = 6, units = "in")
 
+# Compare resids
 
-# 4. spawn age comps, cast net
+data.frame(Year = D[["year"]],
+                 resids = D[["resd_egg_dep"]],
+                 Model = "HER") %>% 
+  bind_rows(LS_byyear %>% 
+              select(Year = year, resids = res_tot_egg) %>% 
+              mutate(Model = "LS")) %>% 
+  ggplot(aes(x = Year, y = resids)) + 
+  geom_hline(yintercept = 0, colour = "grey", size = 1) +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = resids), 
+               size = 0.2, colour = "grey") +
+  geom_point() +
+  facet_wrap(~ Model, ncol = 1) +
+  labs(x = "\nYear", y = "Residuals\n") +
+  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) -> egg_resids
+
+ggsave("figs/compare_eggresids.png", plot = egg_resids, dpi = 300, height = 5, width = 6, units = "in")
+
+# For LS:
+LS_byyear %>% 
+  rename(Year = year) %>% 
+  ggplot(aes(x = Year)) +
+  geom_line(aes(y = tot_est_egg, linetype = "Estimated from model"), size = 1, colour = "grey") +
+  scale_colour_manual(values = "grey") +
+  geom_point(aes(y = tot_obs_egg, shape = "Historical estimates from survey")) +
+  theme(legend.position = c(0.25, 0.7)) +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  labs(x = NULL, y = "Eggs spawned (trillions)\n", shape = NULL, linetype = NULL) -> obsfit
+
+# residuals
+LS_byyear %>% 
+  ggplot(aes(x = year, y = res_tot_egg)) + 
+  geom_hline(yintercept = 0, colour = "grey", size = 1) +
+  geom_segment(aes(x = year, xend = year, y = 0, yend = res_tot_egg), 
+               size = 0.2, colour = "grey") +
+  geom_point() +
+  labs(x = "\nYear", y = "Residuals\n") +
+  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) -> resids
+
+cowplot::plot_grid(obsfit, resids, align = "hv", nrow = 2) -> eggdep_plot
+
+ggsave("figs/LS/eggdep_plot.png", plot = eggdep_plot, dpi = 300, height = 5, width = 6, units = "in")
+
+# For HER:
+
+df <- as.data.frame(D[["data_egg_dep"]][ , 1:2])
+colnames(df) <- c("Year", "obs")
+df %>% 
+  filter(Year >= D[["mod_syr"]]) %>% 
+  mutate(pred = D[["pred_egg_dep"]]) %>% 
+  ggplot(aes(x = Year)) +
+  geom_line(aes(y = pred, linetype = "Estimated from model"), size = 1, colour = "grey") +
+  scale_colour_manual(values = "grey") +
+  geom_point(aes(y = obs, shape = "Historical estimates from survey")) +
+  theme(legend.position = c(0.25, 0.7)) +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  labs(x = NULL, y = "Eggs spawned (trillions)\n", shape = NULL, linetype = NULL) -> obsfit
+
+# residuals
+data.frame(Year = D[["year"]],
+                 resids = D[["resd_egg_dep"]]) %>% 
+  ggplot(aes(x = Year, y = resids)) + 
+  geom_hline(yintercept = 0, colour = "grey", size = 1) +
+  geom_segment(aes(x = Year, xend = Year, y = 0, yend = resids), 
+               size = 0.2, colour = "grey") +
+  geom_point() +
+  labs(x = "\nYear", y = "Residuals\n") +
+  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) -> resids
+
+cowplot::plot_grid(obsfit, resids, align = "hv", nrow = 2) -> eggdep_plot
+
+ggsave("figs/HER/eggdep_plot.png", plot = eggdep_plot, dpi = 300, height = 5, width = 6, units = "in")
+
+# Survival blocks ----
+
+df <- data.frame(D[["year"]], 
+                 D[["Mij"]])
+colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
+write.table(df,sep="\t", row.names=FALSE)
+
+# Table summary
+df %>%
+  select(Year, M = `3`) %>%
+  mutate(HER = exp(-M)) %>% 
+  select(-M) %>% 
+  left_join(LS_byage %>% 
+              select(Year, LS = survival), by = "Year") %>% 
+  group_by(LS, HER) %>% 
+  mutate(Blocks = paste0(min(Year), "-", max(Year))) %>% 
+  distinct(Blocks, HER, LS) %>% 
+  select(Blocks, HER, LS) -> survival_blks
+
+survival_blks[c(2:3)] <- lapply(survival_blks[,c(2:3)], prettyNum, digits = 4, big.mark=",")
+
+# Add in LS estimates
+df %>%
+  select(Year, M = `3`) %>% 
+  mutate(survival = exp(-M),
+         Model = "HER") %>% 
+  bind_rows(LS_byage %>% 
+              select(Year, survival) %>% 
+              mutate(Model = "LS")) -> df
+
+# Figure summary
+tickr(LS_byage, Year, 5) -> axis
+ggplot(df, aes(x = Year, y = survival,  colour = Model, linetype = Model)) +
+  geom_vline(xintercept = c(1998.5, 2014.5), colour = "lightgrey", linetype = 3, alpha = 0.4) +
+  geom_line(size = 1) +
+  # geom_point() +
+  lims(y = c(0, 1)) +
+  annotation_custom(tableGrob(survival_blks, rows = NULL, 
+                              theme = ttheme_minimal(base_size = 8, base_colour = "black", base_family = "Times",
+                                                     parse = FALSE, #core = list(fg_params = list(hjust = 1)),
+                                                     # colhead = list(fg_params = list(hjust = 1)), 
+                                                     padding = unit(c(4, 4), "mm"))), 
+                    xmin = 1980, xmax = 2015, ymin = 0.1, ymax = 0.35) +
+  scale_colour_grey() +
+  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) +
+  labs(x = "", y = "Survival\n") +
+  theme(legend.position = c(0.1, 0.8)) -> survival_plot
+
+ggsave("figs/compare_survival.png", plot = survival_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+# Maturity ----
+
+df <- data.frame(D[["year"]], 
+                 D[["mat"]])
+colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
+write.table(df,sep="\t", row.names=FALSE)
+
+df %>% 
+  gather("Age", "maturity", -Year) %>% 
+  mutate(Model = "HER",
+         Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
+                      labels = c("3", "4", "5", "6", "7", "8+"))) %>% 
+  bind_rows(LS_byage %>% 
+              select(Year, Age, maturity) %>% 
+              mutate(Model = "LS")) %>% 
+  group_by(Model, Age, maturity) %>% 
+  summarise(min = min(Year),
+            max = max(Year)) %>% 
+  mutate(`Maturity blocks` = paste0(min, "-", max),
+         combos = paste0(Model, " ", `Maturity blocks`)) -> df
+
+ggplot(df, aes(x = Age, y = maturity, colour = Model)) + 
+  geom_line(aes(linetype = `Maturity blocks`,  group = combos)) +
+  scale_colour_grey() +
+  lims(y = c(0, 1)) +
+  labs(x = "\nAge", y = "Maturity\n") +
+  theme(legend.position = c(0.8, 0.6)) -> maturity_plot
+
+ggsave("figs/compare_maturity.png", plot = maturity_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+# Selectivity ----
+
+# number of yrs in the model 
+nyr <- D[["mod_nyr"]] - D[["mod_syr"]] + 1
+
+df <- data.frame(D[["year"]], 
+                 D[["Sij"]][1:nyr, ]) # change number of rows
+colnames(df) <- c("Year", paste(D[['sage']]:D[['nage']]))
+# write.table(df,sep="\t", row.names=FALSE)
+
+df %>% 
+  gather("Age", "selectivity", -Year) %>% 
+  mutate(Model = "HER",
+         Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
+                      labels = c("3", "4", "5", "6", "7", "8+")),
+         # To make sure selectivity is differentiable, it was scaled to have a
+         # mean of 1 across all ages. This was done in log space by substracting
+         # the mean from the vector of age-specific selectivities. See Tech Doc
+         # p 11. *FLAG* here's an attempt to normalize it from 0 to 1.
+         selectivity2 = ( selectivity - min(selectivity) ) / ( max(selectivity) - min(selectivity) ) ) %>%
+  bind_rows(LS_byage %>% 
+              select(Year, Age, selectivity = gear_select) %>% 
+              mutate(Model = "LS")) %>% 
+  group_by(Model, Age, selectivity, selectivity2, selectivity3) %>% 
+  summarise(min = min(Year),
+            max = max(Year)) %>% 
+  mutate(`Selectivity blocks` = paste0(min, "-", max),
+         combos = paste0(Model, " ", `Selectivity blocks`)) -> df
+
+ggplot(df, aes(x = Age, y = selectivity, colour = Model)) + 
+  geom_line(aes(linetype = `Selectivity blocks`, group = combos)) +
+  geom_line(aes(x = Age, y = selectivity2, group = Model), colour = "black", linetype = 2) +
+  scale_colour_grey() +
+  lims(y = c(0, 1.8)) +
+  labs(x = "\nAge", y = "Selectivity\n") +
+  theme(legend.position = c(0.8, 0.25)) -> selectivity_plot
+
+ggsave("figs/compare_selectivity.png", plot = selectivity_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+# Age comps bubbleplot ----
+
+# Bubble plots, just observations (data, no predictions)
+
+# For LS:
+
+axisy <- tickr(LS_byage, Year, 5)
+LS_byage %>% 
+  melt(id.vars = c("Year", "Age"), measure.vars = c("spawnage_comp_obs", "catchage_comp_obs"), variable.name = "Source", value.name = "proportion") %>% 
+  mutate(Source = factor(Source, labels = c("Cast net survey", "Commercial fishery"))) %>% 
+  ggplot(aes(x = Age, y = Year, size = proportion)) +
+  geom_hline(yintercept = seq(1980, 2010, by = 10), colour = "grey", linetype = 3, alpha = 0.7) +  
+  geom_point(shape = 21, colour = "black", fill = "black") +
+  scale_size(range = c(0, 4)) +
+  facet_wrap(~ Source) +
+  xlab('\nAge') +
+  ylab('') +
+  guides(size = FALSE) +
+  scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels) -> agecomps_bubbleplot
+
+ggsave("figs/LS/catchcomps_bubbleplot.png", plot = agecomps_bubbleplot, dpi = 300, height = 5, width = 6, units = "in")
+
+# Same figure but using HER:
+df <- data.frame("Commercial fishery",
+                 D[["data_cm_comp"]]) # change number of rows
+colnames(df) <- c("Source", "Year", paste(D[['sage']]:D[['nage']]))
+sp <- data.frame("Cast net survey",
+                 D[["data_sp_comp"]]) # change number of rows
+colnames(sp) <- c("Source", "Year", paste(D[['sage']]:D[['nage']]))
+df <- bind_rows(df, sp); rm(sp)
+
+df %>% 
+  filter(Year >= 1980) %>% 
+    melt(id.vars = c("Year", "Source"), variable.name = "Age", value.name = "obs") %>% 
+  mutate(Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
+               labels = c("3", "4", "5", "6", "7", "8+"))) -> her_agecomps
+
+axisy <- tickr(her_agecomps, Year, 5)
+
+ggplot(her_agecomps, aes(x = Age, y = Year, size = obs)) + #*FLAG* could swap size with proportion_scaled
+  geom_hline(yintercept = seq(1980, 2010, by = 10), colour = "grey", linetype = 3, alpha = 0.7) +  
+  geom_point(shape = 21, colour = "black", fill = "black") +
+  scale_size(range = c(0, 4)) +
+  facet_wrap(~ Source) +
+  xlab('\nAge') +
+  ylab('') +
+  guides(size = FALSE) +
+  # scale_x_continuous(breaks = unique(df$Age), labels = unique(df$Age)) +
+  scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels) -> agecomps_bubbleplot
+
+ggsave("figs/HER/catchcomps_bubbleplot.png", plot = agecomps_bubbleplot, dpi = 300, height = 5, width = 6, units = "in")
+
+# Residuals age comps ----
+
+# For LS:
+LS_byage %>% 
+  select(Year, Age, obs = catchage_comp_obs, pred = catchage_comp_est) %>% 
+  mutate(Source = "Commercial fishery") %>% 
+  bind_rows(LS_byage %>% 
+              select(Year, Age, obs = spawnage_comp_obs, pred = spawnage_comp_est) %>% 
+              mutate(Source = "Cast net survey")) %>% 
+  group_by(Source) %>% 
+  mutate(raw = obs - pred,
+         # positive or negative
+         `Model performance` = ifelse(raw >= 0, "Predicted less than observed", "Predicted greater than observed"),
+         # sample size
+         n = length(obs),
+         # Raw
+         resid = abs(raw),
+         # Deviance residual http://data.princeton.edu/wws509/notes/c3s8.html,
+         # deviance residual has the same direction as raw residual
+         dev_resid = sqrt(2 * (obs * log(obs / pred ) + (n - obs) * log((n - obs)/(n - pred)))),
+         direction = ifelse(raw >= 0, 1, -1),
+         dev = direction * dev_resid,
+         # Pearson's residuals
+         pearson = (obs - pred)/ sqrt(var(pred))) -> df
+
+ggplot(df, aes(x = Age, y = Year, size = pearson,
+             fill = `Model performance`)) + 
+  geom_hline(yintercept = seq(1980, 2010, by = 10), colour = "grey", linetype = 3, alpha = 0.7) +  
+  geom_point(shape = 21, colour = "black") +
+  scale_size(range = c(0, 4)) +
+  facet_wrap(~ Source) +
+  labs(x = '\nAge', y = '') +
+  guides(size = FALSE) +
+  scale_fill_manual(values = c("white", "black")) +
+  scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels) +
+  theme(legend.position = "bottom") -> agecomps_residplot
+
+ggsave("figs/LS/agecomps_residplot.png", plot = agecomps_residplot, dpi = 300, height = 5, width = 6, units = "in")
+
+# Same figure for HER
+
+# Model predictions and residuals
+predcm <- data.frame("Commercial fishery",
+                     D[["year"]],
+                     D[["pred_cm_comp"]]) # change number of rows
+colnames(predcm) <- c("Source", "Year", paste(D[['sage']]:D[['nage']]))
+
+predsp <- data.frame("Cast net survey",
+                     D[["year"]],
+                     D[["pred_sp_comp"]]) # change number of rows
+colnames(predsp) <- c("Source", "Year", paste(D[['sage']]:D[['nage']]))
+df <- bind_rows(predcm, predsp); rm(predcm, predsp)
+
+df %>% 
+  melt(id.vars = c("Year", "Source"), variable.name = "Age", value.name = "pred") %>% 
+  mutate(Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
+                      labels = c("3", "4", "5", "6", "7", "8+"))) %>% 
+  # join to observed age comps df
+  left_join(her_agecomps) %>%
+  group_by(Source) %>% 
+  mutate(raw = obs - pred,
+         # positive or negative
+         `Model performance` = ifelse(raw >= 0, "Predicted less than observed", "Predicted greater than observed"),
+         # sample size
+         n = length(obs),
+         # Raw
+         resid = abs(raw),
+         # Deviance residual http://data.princeton.edu/wws509/notes/c3s8.html,
+         # deviance residual has the same direction as raw residual
+         dev_resid = sqrt(2 * (obs * log(obs / pred ) + (n - obs) * log((n - obs)/(n - pred)))),
+         direction = ifelse(raw >= 0, 1, -1),
+         dev = direction * dev_resid,
+         # Pearson's residuals
+         pearson = (obs - pred)/ sqrt(var(pred))) -> her_agecomps
+
+ggplot(her_agecomps, aes(x = Age, y = Year, size = pearson,
+               fill = `Model performance`)) + 
+  geom_hline(yintercept = seq(1980, 2010, by = 10), colour = "grey", linetype = 3, alpha = 0.7) +  
+  geom_point(shape = 21, colour = "black") +
+  scale_size(range = c(0, 3)) +
+  facet_wrap(~ Source) +
+  labs(x = '\nAge', y = '') +
+  guides(size = FALSE) +
+  scale_fill_manual(values = c("white", "black")) +
+  scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels) +
+  theme(legend.position = "bottom") -> agecomps_residplot
+
+ggsave("figs/HER/agecomps_residplot.png", plot = agecomps_residplot, dpi = 300, height = 5, width = 6, units = "in")
+
+# Barplot age comps ----
+
+LS_byage %>% # fishery 
+  ggplot() +
+  geom_bar(aes(x = Age, y = catchage_comp_obs), 
+           stat = "identity", colour = "grey", fill = "lightgrey",
+           width = 0.8, position = position_dodge(width = 0.5)) +
+  geom_line(aes(x = Age, y = catchage_comp_est, group = 1), size = 0.6) +
+  facet_wrap(~ Year, dir = "v", ncol = 5) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
+  labs(x = '\nAge', y = 'Proportion-at-age\n') -> catchage_barplot
+
+ggsave("figs/LS/catchage_comps_barplot.png", plot = catchage_barplot, dpi = 300, height = 8, width = 6, units = "in")
+
+LS_byage %>% # cast net
+  ggplot() +
+  geom_bar(aes(x = Age, y = spawnage_comp_obs), 
+           stat = "identity", colour = "grey", fill = "lightgrey") +
+  geom_line(aes(x = Age, y = spawnage_comp_est, group = 1), size = 0.6) +
+  facet_wrap(~ Year, dir = "v", ncol = 5) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
+  labs(x = '\nAge', y = 'Proportion-at-age\n') -> spawnage_barplot
+
+ggsave("figs/LS/spawnage_comps_barplot.png", plot = spawnage_barplot, dpi = 300, height = 8, width = 6, units = "in")
+
+# Same figs for HER
+her_agecomps %>% # fishery
+  filter(Source == "Commercial fishery") %>% 
+  ggplot() + 
+  geom_bar(aes(x = Age, y = obs), 
+           stat = "identity", colour = "grey", fill = "lightgrey",
+           width = 0.8, position = position_dodge(width = 0.5)) +
+  geom_line(aes(x = Age, y = pred, group = 1), size = 0.6) +
+  facet_wrap(~ Year, dir = "v", ncol = 5) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
+  labs(x = '\nAge', y = 'Proportion-at-age\n') -> catchage_barplot
+
+ggsave("figs/HER/catchage_comps_barplot.png", plot = catchage_barplot, dpi = 300, height = 8, width = 6, units = "in")
+
+her_agecomps %>% # survey
+  filter(Source == "Cast net survey") %>% 
+  ggplot() + 
+  geom_bar(aes(x = Age, y = obs), 
+           stat = "identity", colour = "grey", fill = "lightgrey",
+           width = 0.8, position = position_dodge(width = 0.5)) +
+  geom_line(aes(x = Age, y = pred, group = 1), size = 0.6) +
+  facet_wrap(~ Year, dir = "v", ncol = 5) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
+  labs(x = '\nAge', y = 'Proportion-at-age\n') -> spawnage_barplot
+
+ggsave("figs/HER/spawnage_comps_barplot.png", plot = spawnage_barplot, dpi = 300, height = 8, width = 6, units = "in")
+
+# Compare spawning comps ----
+
 df <- data.frame(spawnage_comp_obs = D[["data_sp_comp"]])
 colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
 df %>% 
@@ -196,15 +847,58 @@ df %>%
 
 ggplot() +
   geom_bar(data = obs, aes(x = Age, y = proportion), 
-           stat = "identity", colour = "lightgrey", fill = "lightgrey") +
+           stat = "identity", colour = "grey", fill = "white", size = 0.4,
+           width = 0.8, position = position_dodge(width = 0.5)) +
   geom_line(data = pred, aes(x = Age, y = proportion, colour = Model, 
                              linetype = Model, group = Model), size = 0.8) +
   facet_wrap(~ Year, dir = "v", ncol = 5) +
+  # scale_colour_grey() +
+  scale_colour_manual(values = c("black", "darkgrey")) +
   scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
   labs(x = '\nAge', y = 'Proportion-at-age\n') +
   theme(legend.position = "bottom") -> spcomp_barplot
 
 ggsave("figs/compare_spcomp_barplot.png", plot = spcomp_barplot, dpi = 300, height = 8, width = 6, units = "in")
+
+
+# Compare catch comps ----
+
+#commercial catch age comps, purse seine
+df <- data.frame(comage_comp_obs = D[["data_cm_comp"]])
+colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
+df %>% 
+  filter(Year >= 1980 ) %>%
+  gather("Age", "proportion", -Year) %>% 
+  mutate(Src = "Observed",
+         Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
+                      labels = c("3", "4", "5", "6", "7", "8+"))) -> obs
+
+df <- data.frame(Year = D[["year"]],
+                 comage_comp_pred = D[["pred_cm_comp"]])
+colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
+df %>% 
+  gather("Age", "proportion", -Year) %>% 
+  mutate(Model = "HER",
+         Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
+                      labels = c("3", "4", "5", "6", "7", "8+"))) %>% 
+  bind_rows(LS_byage %>% 
+              select(Year, Age, proportion = catchage_comp_est) %>% 
+              mutate(Model = "LS") ) -> pred
+
+ggplot() +
+  geom_bar(data = obs, aes(x = Age, y = proportion), 
+           stat = "identity", colour = "grey", fill = "white", size = 0.4,
+           width = 0.8, position = position_dodge(width = 0.5)) +
+  geom_line(data = pred, aes(x = Age, y = proportion, colour = Model, 
+                             linetype = Model, group = Model), size = 0.8) +
+  # scale_colour_grey() +
+  scale_colour_manual(values = c("black", "darkgrey")) +
+  facet_wrap(~ Year, dir = "v", ncol = 5) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
+  labs(x = '\nAge', y = 'Proportion-at-age\n') +
+  theme(legend.position = "bottom") -> catchcomp_barplot
+
+ggsave("figs/compare_catchcomp_barplot.png", plot = catchcomp_barplot, dpi = 300, height = 8, width = 6, units = "in")
 
 # Steve's stuff ----
 
@@ -536,7 +1230,68 @@ abline(h=median(natural_ps[,1]), col="red")
 plot(natural_ps[,2])
 abline(h=median(natural_ps[,2]), col="red")
 
-## from tech doc:
-## 1) first fit to sitka data
-## 2) save .par file as her.pin
-D$
+# Derive SR params ----
+
+# I wrote this code to derive phie and thus so and beta parameters from the stock
+# recruitment relationship because I was unable to pull beta from D via
+# D[["beta"]] (rounding issue?)
+
+df <- as.data.frame(D[["data_sp_waa"]])
+colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
+df %>% 
+  gather("Age", "weight", -Year) %>% 
+  filter(Year >= D[["mod_syr"]]) %>% 
+  group_by(Age) %>% 
+  summarise(waa = mean(weight)) -> waa_bar
+
+df <- as.data.frame(D[["mat"]])
+colnames(df) <- c(paste(D[['sage']] : D[['nage']]))
+df %>% 
+  mutate(Year = D[["year"]]) %>% 
+  gather("Age", "maturity", -Year) %>% 
+  filter(Year >= D[["mod_syr"]]) %>% 
+  group_by(Age) %>% 
+  summarise(mat = mean(maturity)) -> mat_bar
+
+df <- as.data.frame(D[["Mij"]])
+colnames(df) <- c(paste(D[['sage']] : D[['nage']]))
+df %>% 
+  mutate(Year = D[["year"]]) %>% 
+  gather("Age", "mort", -Year) %>% 
+  filter(Year >= D[["mod_syr"]]) %>% 
+  #group_by(Age) %>% 
+  summarise(mort = mean(mort)) %>% 
+  pull(mort) -> mort_bar
+
+lx <- c(1:6)
+
+lx[1] <- 1
+
+for(i in 2:6){
+  lx[i] <- lx[i-1] * exp(-mort_bar)
+}
+# plus group
+lx[6] = lx[6] / (1 - exp(-mort_bar))
+lx  
+
+waa_bar %>% 
+  left_join(mat_bar) %>% 
+  mutate(lx = lx,
+         fec = waa * mat,
+         phi = lx * fec) %>% 
+  summarize(phie = sum(phi)) %>% 
+  pull(phie) -> phie
+
+# From .par file 
+log_ro <- D[["theta"]][4] # theta(4)
+log_reck <- D[["theta"]][5]  # theta(5)
+
+ro <- exp(log_ro) # equilibrium recruitment
+reck <-  exp(log_reck) + 1.0 # recruitment compensation ratio
+
+# stock-recruit parameters
+so <- reck/phie;
+beta <- log(reck) / (ro * phie) # beta = (reck - 1.0)/(ro *phiE)
+
+so; beta
+D[["so"]];D[["beta"]]
