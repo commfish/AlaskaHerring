@@ -1172,7 +1172,7 @@ FUNCTION void calcSpawningStockRecruitment()
     //sp_B(i) = (sp_Nij(i) - Cij(i)) * data_sp_waa(i)(sage,nage);
 
     //mature numbers-at-age after the fishery
-    sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
+    sp_Nij(i) = elem_prod(mat(i),Nij(i))-Cij(i);
     // spawning biomass after the fishery
     sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
   }
