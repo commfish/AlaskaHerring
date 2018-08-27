@@ -497,6 +497,7 @@ PARAMETER_SECTION
   // +1 is for one year of forecast
   matrix Nij(mod_syr,mod_nyr+1,sage,nage); // numbers-at-age N(syr,nyr,sage,nage)
   matrix sp_Nij(mod_syr,mod_nyr+1,sage,nage);// post-fishery mature numbers-at-age (syr,nyr,sage,nage)
+  matrix mat_Nij(mod_syr,mod_nyr+1,sage,nage);// pre-fishery mature numbers-at-age (syr,nyr,sage,nage)
   matrix Pij(mod_syr,mod_nyr+1,sage,nage); // numbers-at-age P(syr,nyr,sage,nage) post harvest.
   matrix Sij(mod_syr,mod_nyr+1,sage,nage); // selectivity-at-age 
   matrix Qij(mod_syr,mod_nyr+1,sage,nage); // vulnerable proportions-at-age
@@ -1167,14 +1168,16 @@ FUNCTION void calcSpawningStockRecruitment()
   */
   for(int i = mod_syr; i <= mod_nyr; i++){
     // mature numbers at age before the fishery
-    //sp_Nij(i) = elem_prod(mat(i),Nij(i));
-    // spawning biomass after the fishery
-    //sp_B(i) = (sp_Nij(i) - Cij(i)) * data_sp_waa(i)(sage,nage);
-
-    //mature numbers-at-age after the fishery
-    sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
+    mat_Nij(i) = elem_prod(mat(i),Nij(i));
+    // mature numbers at age post fishery
+    sp_Nij(i) = mat_Nij(i) - Cij(i);
     // spawning biomass after the fishery
     sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
+
+    //mature numbers-at-age after the fishery
+    //sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
+    // spawning biomass after the fishery
+    //sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
   }
 
   
@@ -1751,6 +1754,7 @@ REPORT_SECTION
 // Numbers-at-age of various flavors.
   REPORT(Nij);
   REPORT(sp_Nij);
+  REPORT(mat_Nij);
   REPORT(Pij);
   REPORT(Cij);
   REPORT(pred_sp_comp);
