@@ -754,7 +754,7 @@ LS_byage %>%
   guides(size = FALSE) +
   scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels) -> agecomps_bubbleplot
 
-ggsave("figs/LS/catchcomps_bubbleplot.png", plot = agecomps_bubbleplot, dpi = 300, height = 5, width = 6, units = "in")
+ggsave("figs/LS/agecomps_bubbleplot.png", plot = agecomps_bubbleplot, dpi = 300, height = 5, width = 6, units = "in")
 
 # Same figure but using HER:
 df <- data.frame("Commercial fishery",
@@ -784,7 +784,7 @@ ggplot(her_agecomps, aes(x = Age, y = Year, size = obs)) + #*FLAG* could swap si
   # scale_x_continuous(breaks = unique(df$Age), labels = unique(df$Age)) +
   scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels) -> agecomps_bubbleplot
 
-ggsave("figs/HER/catchcomps_bubbleplot.png", plot = agecomps_bubbleplot, dpi = 300, height = 5, width = 6, units = "in")
+ggsave("figs/HER/agecomps_bubbleplot.png", plot = agecomps_bubbleplot, dpi = 300, height = 5, width = 6, units = "in")
 
 # Residuals age comps ----
 
@@ -798,7 +798,7 @@ LS_byage %>%
   group_by(Source) %>% 
   mutate(raw = obs - pred,
          # positive or negative
-         `Model performance` = ifelse(raw >= 0, "Predicted less than observed", "Predicted greater than observed"),
+         `Model performance` = ifelse(raw >= 0, "Observed greater than estimated", "Observed less than estimated"),
          # sample size
          n = length(obs),
          # Raw
@@ -811,7 +811,8 @@ LS_byage %>%
          # Pearson's residuals
          pearson = (obs - pred)/ sqrt(var(pred))) -> df
 
-ggplot(df, aes(x = Age, y = Year, size = pearson,
+axis <- tickr(LS_byyear, year, 5)
+ggplot(df, aes(x = Age, y = Year, size = resid,
              fill = `Model performance`)) + 
   geom_hline(yintercept = seq(1980, 2010, by = 10), colour = "grey", linetype = 3, alpha = 0.7) +  
   geom_point(shape = 21, colour = "black") +
@@ -820,10 +821,10 @@ ggplot(df, aes(x = Age, y = Year, size = pearson,
   labs(x = '\nAge', y = '') +
   guides(size = FALSE) +
   scale_fill_manual(values = c("white", "black")) +
-  scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels) +
+  scale_y_continuous(breaks = axis$breaks, labels = axis$labels) +
   theme(legend.position = "bottom") -> agecomps_residplot
 
-ggsave("figs/LS/agecomps_residplot.png", plot = agecomps_residplot, dpi = 300, height = 5, width = 6, units = "in")
+ggsave("figs/LS/LS_agecomps_residplot.png", plot = agecomps_residplot, dpi = 300, height = 5, width = 6, units = "in")
 
 # Same figure for HER
 
@@ -848,7 +849,7 @@ df %>%
   group_by(Source) %>% 
   mutate(raw = obs - pred,
          # positive or negative
-         `Model performance` = ifelse(raw >= 0, "Predicted less than observed", "Predicted greater than observed"),
+         `Model performance` = ifelse(raw >= 0, "Observed greater than estimated", "Observed less than estimated"),
          # sample size
          n = length(obs),
          # Raw
@@ -861,7 +862,7 @@ df %>%
          # Pearson's residuals
          pearson = (obs - pred)/ sqrt(var(pred))) -> her_agecomps
 
-ggplot(her_agecomps, aes(x = Age, y = Year, size = pearson,
+ggplot(her_agecomps, aes(x = Age, y = Year, size = resid,
                fill = `Model performance`)) + 
   geom_hline(yintercept = seq(1980, 2010, by = 10), colour = "grey", linetype = 3, alpha = 0.7) +  
   geom_point(shape = 21, colour = "black") +
@@ -873,7 +874,7 @@ ggplot(her_agecomps, aes(x = Age, y = Year, size = pearson,
   scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels) +
   theme(legend.position = "bottom") -> agecomps_residplot
 
-ggsave("figs/HER/agecomps_residplot.png", plot = agecomps_residplot, dpi = 300, height = 5, width = 6, units = "in")
+ggsave("figs/HER/HER_agecomps_residplot.png", plot = agecomps_residplot, dpi = 300, height = 5, width = 6, units = "in")
 
 # Barplot age comps ----
 

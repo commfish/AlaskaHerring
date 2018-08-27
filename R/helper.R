@@ -22,6 +22,7 @@ if(!require("ggthemes"))   install.packages("ggthemes") # access to 150 colour p
 if(!require("scales"))   install.packages("scales") # add comma to ggplot axis with scale_y_countinuous(label = comma)
 if(!require("ggrepel"))   install.packages("ggrepel") # readable labels with geom_text_repel()
 if(!require("gridExtra"))   install.packages("gridExtra") # tableGrob()
+if(!require("captioner"))   install.packages("captioner") #numbering, ordering, & creating captions for tables and figures
 
 
 # https://www.canva.com/learn/100-color-combinations/
@@ -214,4 +215,105 @@ colr <-
     col.rgb<-col2rgb(col.pal)/255
     rgb(t(col.rgb),alpha=a)
   }
+
+#fig_nums, tbl_nums, and appendix_nums fxns created fromm captioner() fxn in
+#'captioner' library, which I've tweaked below, changed separator from a colon
+#to period) - these fxns are used for autonumbering figs and tables in text and
+#creating captions.
+
+captioner <- function (prefix = "Figure", auto_space = TRUE, levels = 1, 
+                       type = NULL, infix = ".") {
+  check_class(prefix, "character")
+  check_class(auto_space, "logical")
+  check_class(levels, "numeric")
+  check_class(infix, "character")
+  if (is.null(type)) {
+    type <- c(rep("n", times = levels))
+  }
+  else if (length(type) < levels) {
+    type[(length(type) + 1):levels] <- "n"
+  }
+  else if (length(type) > levels) {
+    type <- type[1:levels]
+  }
+  if (!all(type %in% c("n", "c", "C"))) {
+    stop("Invalid 'type' value used.  Expecting 'n', 'c', or 'C'.")
+  }
+  if (auto_space) {
+    prefix <- paste(prefix, " ")
+  }
+  force(levels)
+  force(prefix)
+  force(infix)
+  OBJECTS <- list(name = NULL, caption = NULL, number = list(list()))
+  OBJECTS$number[[1]][which(type == "n")] <- 1
+  OBJECTS$number[[1]][which(type == "c")] <- "a"
+  OBJECTS$number[[1]][which(type == "C")] <- "A"
+  function(name, caption = "", display = "full", level = FALSE, 
+           cite = FALSE, num = FALSE) {
+    if (level > levels) {
+      stop("Level too large.")
+    }
+    objects <- OBJECTS
+    if (any(objects$name == name)) {
+      obj_ind <- match(name, objects$name)
+      if (objects$caption[obj_ind] == "") {
+        objects$caption[obj_ind] <- caption
+      }
+      else {
+        caption <- objects$caption[obj_ind]
+      }
+    }
+    else {
+      obj_ind <- length(objects$name) + 1
+      if (length(objects$number) == length(objects$name)) {
+        if (level) {
+          objects$number[[obj_ind]] <- increment(objects$number[[obj_ind - 
+                                                                   1]], level)
+        }
+        else {
+          objects$number[[obj_ind]] <- increment(objects$number[[obj_ind - 
+                                                                   1]], levels)
+        }
+      }
+      objects$name[obj_ind] <- name
+      objects$caption[obj_ind] <- caption
+    }
+    assign("OBJECTS", objects, envir = parent.env(environment()))
+    obj_num <- paste(objects$number[[obj_ind]], collapse = infix)
+    if (cite) {
+      .Deprecated(new = "display", old = "cite")
+      return(paste0(prefix, obj_num))
+    }
+    if (num) {
+      .Deprecated(new = "display", old = "num")
+      return(obj_num)
+    }
+    if (display == FALSE) {
+      return(invisible())
+    }
+    #FLAG: Jane changed ": " to ". "
+    else if (display == "full" || display == "f") {
+      return(paste0(prefix, obj_num, ". ", caption))
+    }
+    else if (display == "cite" || display == "c") {
+      return(paste0(prefix, obj_num))
+    }
+    else if (display == "num" || display == "n") {
+      return(obj_num)
+    }
+    else {
+      warning("Invalid display mode used.  Caption was still saved.")
+      return(invisible())
+    }
+  }
+}
+
+fig <- captioner(prefix = "Figure")
+
+tbl <- captioner(prefix = "Table")
+
+appendix_tbl <- captioner(prefix = "Table") #Numbers tables in the appendix
+
+appendix_fig <- captioner(prefix = "Figure") #Numbers figures in the appendix
 

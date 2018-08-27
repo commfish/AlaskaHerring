@@ -1,0 +1,205 @@
+---
+title: "A comparison of LS and HER for the 2018 forecast"
+output: word_document
+---
+
+```{r setup, include = FALSE, echo = FALSE,message = FALSE,warning = FALSE}
+
+knitr::opts_chunk$set(echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+# year of forecast, generalizes email for a given year
+YEAR <- 2018
+
+# YEAR - 1 forecast (forecast from last year's assessment
+PAST_FOREC <- 73245
+
+source("../helper.r")
+
+figpath <- "../../HER/figs/"
+```
+
+# Background
+
+## LS
+
+## HER
+
+# Model convergence
+
+```{r read_her}
+
+# Diagnostics ----
+P <- read_fit("../../HER/her")
+nopar <- P[["nopar"]]
+nlogl <- P[["nlogl"]]
+# P[["logDetHess"]]
+P[["maxgrad"]]
+
+# Results ----
+
+D <- read_admb("../../HER/her")
+
+D$fore_sb
+D$ghl
+
+```
+
+The version of 
+
+# Population trends
+
+## Catch and biomass
+
+`r fig('biomasscatch_barplot', display = "cite")`
+
+```{r 'biomasscatch_barplot', echo=FALSE}
+include_graphics(paste0(figpath, "LS/biomasscatch_barplot.png"))
+```
+
+`r fig('biomasscatch_barplot', caption = paste0('Stacked bar graph of spawning biomass (white), spawning biomass forecast (light grey), catch (dark grey), and the GHL (black). The threshold (black line) is the biomass level defined in regulation below which no fishery occurs. The harvest (or GHL) plus the spawning biomass equals the mature biomass. If there is no catch (or GHL), the spawning biomass (or spawning biomass forecast) equals the mature biomass (or mature biomass forecast). '))`
+
+`r fig('compare_spbiomass_plot', display = "cite")`
+
+```{r 'compare_spbiomass_plot', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "compare_spbiomass_plot.png"))
+```
+
+`r fig('compare_spbiomass_plot', caption = paste0('Model-estimated spawning biomass in HER (black solid line) and LS (grey dashed line) compared to historical estimates from the survey (open circles) that convert survey egg deposition to biomass using age composition and weight-at-age data.'))`
+
+`r fig('compare_past_matbio', display = "cite")`
+
+
+```{r 'compare_past_matbio', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "LS/compare_past_matbio.png"))
+```
+
+`r fig('compare_past_matbio', caption = paste0('Model-estimated spawning biomass from the ", YEAR, " and previous three forecast models compared to historical estimates from the survey (open circles) that convert survey egg deposition to biomass using age composition and weight-at-age data.'))`
+
+## Egg deposition
+
+`r fig('compare_eggdep_plot', display = "cite")`
+
+```{r 'compare_eggdep_plot', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "compare_eggdep_plot.png"))
+```
+
+`r fig('compare_eggdep_plot', caption = paste0('Model-estimated egg deposition (number of eggs spawned in trillions) in HER (black solid line) and LS (grey dashed line) compared to historical estimates from the survey (open circles).'))`
+
+`r fig('compare_eggresids', display = "cite")`
+
+```{r 'compare_eggresids', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "compare_eggresids.png"))
+```
+
+`r fig('compare_eggresids', caption = paste0('A comparison of HER (top panel) and LS (bottom panel) egg deposition residuals calculated as the difference between survey and model-estimated egg deposition on the logarithmic scale.'))`
+
+## Forecast
+
+# Age Compositions 
+
+## Composition data
+
+`r fig('agecomps_bubbleplot', display = "cite")`
+
+```{r 'agecomps_bubbleplot', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "HER/agecomps_bubbleplot.png"))
+```
+
+`r fig('agecomps_bubbleplot', caption = paste0('Cast net survey (left panel) and commercial seine fishery (right panel) age compositions by year.'))`
+
+## Residuals
+
+Raw residuals
+
+`r fig('HER_agecomps_residplot', display = "cite")`
+
+```{r 'HER_agecomps_residplot', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "HER/HER_agecomps_residplot.png"))
+```
+
+`r fig('HER_agecomps_residplot', caption = paste0('Cast net survey (left panel) and commercial seine fishery (right panel) age composition residuals for the HER model. A positive residual (white) indicates that the observed value is greater than the model estimate, and negative (black) means the opposite. The size of the circle is relative to the size of the residual.'))`
+`r fig('LS_agecomps_residplot', display = "cite")`
+
+```{r 'LS_agecomps_residplot', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "LS/LS_agecomps_residplot.png"))
+```
+
+`r fig('LS_agecomps_residplot', caption = paste0('Cast net survey (left panel) and commercial seine fishery (right panel) age composition residuals for the LS model. A positive residual (white) indicates that the observed value is greater than the model estimate, and negative (black) means the opposite. The size of the circle is relative to the size of the residual.'))`
+
+## Comparison of fits
+
+`r fig('compare_catchcomp_barplot', display = "cite")`
+
+```{r 'compare_catchcomp_barplot', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "compare_catchcomp_barplot.png"))
+```
+
+`r fig('compare_catchcomp_barplot', caption = paste0('Proportion-at-age observed in the commercial seine fishery (white bars) compared to model-estimated proportion-at-age in HER (black solid lines) and LS (grey dashed lines).'))`
+
+`r fig('compare_spcomp_barplot', display = "cite")`
+
+```{r 'compare_spcomp_barplot', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "compare_spcomp_barplot.png"))
+```
+
+`r fig('compare_spcomp_barplot', caption = paste0('Proportion-at-age observed in the cast net survey (white bars) compared to model-estimated proportion-at-age in HER (black solid lines) and LS (grey dashed lines).'))`
+
+# Recruitment
+
+`r fig('compare_recruit_plot', display = "cite")`
+
+```{r 'compare_recruit_plot', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "compare_recruit_plot.png"))
+```
+
+`r fig('compare_recruit_plot', caption = paste0('A comparison of estimated age-3 recruits in millions from the Ricker model (lines) and age-structured model (points) in HER (black solid line and circles) and LS (grey dashed line and triangles).'))`
+
+`r fig('compare_recruitresids', display = "cite")`
+
+```{r 'compare_recruitresids', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "compare_recruitresids.png"))
+```
+
+`r fig('compare_recruitresids', caption = paste0('A comparison of HER (top panel) and LS (bottom panel) recruitment residuals calculated as the difference between age-3 recruits in the age-structured model and Ricker model on the logarithmic scale.'))`
+
+`r fig('compare_srcurves', display = "cite")`
+
+```{r 'compare_srcurves', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "compare_srcurves.png"))
+```
+
+`r fig('compare_srcurves', caption = paste0('A comparison of annual estimates of age-3 recruits (millions) versus spawning stock biomass (tons) in the age-structured model (points) and  Ricker model (lines) between HER (black circles and curve) and LS (grey triangles and dashed curve).'))`
+
+# Time-varying parameters
+
+`r fig('compare_survival', display = "cite")`
+
+```{r 'compare_survival', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "compare_survival.png"))
+```
+
+`r fig('compare_survival', caption = paste0('A comparison of HER (black solid line) and LS (grey dashed line) model estimates of survival by time block.'))`
+
+`r fig('compare_mat_sel', display = "cite")`
+
+```{r 'compare_mat_sel', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "compare_mat_sel.png"))
+```
+
+`r fig('compare_mat_sel', caption = paste0('A comparison of HER (black) and LS (grey) model estimates of maturity (left panel) and selectivity (right panel) by time block.'))`
+
+# HER retrospective behavior
+
+`r fig('retrospective', display = "cite")`
+
+```{r 'retrospective', echo=FALSE, out.width = '100%'}
+include_graphics(paste0(figpath, "HER/retrospective.png"))
+```
+
+`r fig('retrospective', caption = paste0('Retrospective analysis of HER estimates of spawning stock biomass (tons) on the left, and the percent difference of each peel from the terminal year on the right.'))`
+
+# HER simulation
+
+The simulation approach used is called "self-testing," where the model is used to generate simulated data with known parameters and then the simulated data is used to estimate parameters. This approach should generate exact parameter estimates in the case where data are generated with no simulated observation errors.

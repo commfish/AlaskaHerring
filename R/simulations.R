@@ -1,6 +1,6 @@
 # Simulation test 
 
-# This approach to simulation-estimation is called "self-testing," where both the same model
+# This approach to simulation-estimation is called "self-testing," where the same model
 # is used to generate the data and fitting the model to data. This approach
 # should generate exact parameter estimates in the case where data are generated with no
 # simulated observation errors.
