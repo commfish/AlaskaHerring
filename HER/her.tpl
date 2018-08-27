@@ -496,7 +496,7 @@ PARAMETER_SECTION
 // |---------------------------------------------------------------------------|
   // +1 is for one year of forecast
   matrix Nij(mod_syr,mod_nyr+1,sage,nage); // numbers-at-age N(syr,nyr,sage,nage)
-  matrix Oij(mod_syr,mod_nyr+1,sage,nage);// mature numbers-at-age O(syr,nyr,sage,nage)
+  matrix sp_Nij(mod_syr,mod_nyr+1,sage,nage);// post-fishery mature numbers-at-age (syr,nyr,sage,nage)
   matrix Pij(mod_syr,mod_nyr+1,sage,nage); // numbers-at-age P(syr,nyr,sage,nage) post harvest.
   matrix Sij(mod_syr,mod_nyr+1,sage,nage); // selectivity-at-age 
   matrix Qij(mod_syr,mod_nyr+1,sage,nage); // vulnerable proportions-at-age
@@ -1167,14 +1167,14 @@ FUNCTION void calcSpawningStockRecruitment()
   */
   for(int i = mod_syr; i <= mod_nyr; i++){
     // mature numbers at age before the fishery
-    //Oij(i) = elem_prod(mat(i),Nij(i));
+    //sp_Nij(i) = elem_prod(mat(i),Nij(i));
     // spawning biomass after the fishery
-    //ssb(i) = (Oij(i) - Cij(i)) * data_sp_waa(i)(sage,nage);
+    //sp_B(i) = (sp_Nij(i) - Cij(i)) * data_sp_waa(i)(sage,nage);
 
     //mature numbers-at-age after the fishery
-    Oij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
+    sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
     // spawning biomass after the fishery
-    sp_B(i) = Oij(i) * data_sp_waa(i)(sage,nage);
+    sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
   }
 
   
@@ -1241,9 +1241,9 @@ FUNCTION void calcAgeCompResiduals()
     }
 
     // spawning age-comp prediction
-    // tiny is added to Oij so that none are zero
+    // tiny is added to sp_Nij so that none are zero
     // but must divide by sum including tiny to recalculate the proportions to sum to 1.
-    pred_sp_comp(i) = (Oij(i)+TINY) / sum(Oij(i)+TINY); // proportion numbers-at-age after the fishery
+    pred_sp_comp(i) = (sp_Nij(i)+TINY) / sum(sp_Nij(i)+TINY); // proportion numbers-at-age after the fishery
     // in the years with spawner survey comp data, calculate residuals
     if( data_sp_comp(i,sage) >= 0 ){
       resd_sp_comp(i) = data_sp_comp(i)(sage,nage) - pred_sp_comp(i);
@@ -1263,7 +1263,7 @@ FUNCTION void calcEggSurveyResiduals()
   */
   resd_egg_dep.initialize();
   for(int i = mod_syr; i <= mod_nyr; i++){
-    pred_egg_dep(i) = (0.5 * Oij(i)) * Eij(i); // proportion female * proportion numbers at age * number of eggs
+    pred_egg_dep(i) = (0.5 * sp_Nij(i)) * Eij(i); // proportion female * proportion numbers at age * number of eggs
     cout<<Eij(i)<<endl;
     // for years with egg data, calculate residuals in log space
     if(data_egg_dep(i,2) > 0){
@@ -1750,7 +1750,7 @@ REPORT_SECTION
 
 // Numbers-at-age of various flavors.
   REPORT(Nij);
-  REPORT(Oij);
+  REPORT(sp_Nij);
   REPORT(Pij);
   REPORT(Cij);
   REPORT(pred_sp_comp);
