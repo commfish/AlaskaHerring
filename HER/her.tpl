@@ -1168,16 +1168,16 @@ FUNCTION void calcSpawningStockRecruitment()
   */
   for(int i = mod_syr; i <= mod_nyr; i++){
     // mature numbers at age before the fishery
-    mat_Nij(i) = elem_prod(mat(i),Nij(i));
+    // mat_Nij(i) = elem_prod(mat(i),Nij(i));
     // mature numbers at age post fishery
-    sp_Nij(i) = mat_Nij(i) - Cij(i);
+    // sp_Nij(i) = mat_Nij(i) - Cij(i);
     // spawning biomass after the fishery
-    sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
+    // sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
 
     //mature numbers-at-age after the fishery
-    //sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
+    sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
     // spawning biomass after the fishery
-    //sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
+    sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
   }
 
   
