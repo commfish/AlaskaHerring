@@ -112,7 +112,7 @@ tot_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
 
 
 df <- data.frame(Year = D[["year"]], 
-                 spB = D[["ssb"]] / 0.90718, # convert to short tons
+                 spB = D[["sp_B"]] / 0.90718, # convert to short tons
                  catch = D[["data_catch"]][10:47, 2]#[nyr + 1, tot_yrs, 1), 2] # just the column of catch, already in short tons
 ) %>% 
   mutate(matB = spB + catch,
