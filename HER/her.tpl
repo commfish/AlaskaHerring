@@ -467,7 +467,9 @@ PARAMETER_SECTION
   number reck;  // recruitment compensation ratio
   number so;   
   number beta;
-  number fore_sb; //spawning biomass
+  number fore_sb; // forecasted spawning biomass
+  number fore_matb; // forecasted mature biomass
+  number fore_matn; // forcasted mature abundance
   number fore_vb;  //vulnerable biomass
   number ghl;   // ghl guidline harvest level  
 
@@ -476,7 +478,7 @@ PARAMETER_SECTION
 // | VECTORS
 // |---------------------------------------------------------------------------|
   vector sp_B(mod_syr,mod_nyr); // post-fishery spawning stock biomass.
-
+  vector mat_B(mod_syr,mod_nyr); //pre-fishery mature biomass
 
   vector recruits(rec_syr,mod_nyr+1); // vector of sage recruits predicted by S-R curve.
   vector spawners(rec_syr,mod_nyr+1); //vector of sp_B indexed by brood year.
@@ -491,6 +493,12 @@ PARAMETER_SECTION
   vector pred_catch(mod_syr,mod_nyr);
   vector resd_catch(mod_syr,mod_nyr);
 
+  // numbers and catch-at-age vectors for single forecast year (would be matrix for additional years)
+  vector fore_nj(sage,nage); //numbers-at-age
+  vector fore_cj(sage,nage); //catch-at-age
+  vector fore_matnj(sage,nage); //mature numbers-at-age
+  vector fore_matbj(sage,nage); //mature biomass-at-age
+
 // |---------------------------------------------------------------------------|
 // | MATRIXES
 // |---------------------------------------------------------------------------|
@@ -498,6 +506,8 @@ PARAMETER_SECTION
   matrix Nij(mod_syr,mod_nyr+1,sage,nage); // numbers-at-age N(syr,nyr,sage,nage)
   matrix sp_Nij(mod_syr,mod_nyr+1,sage,nage);// post-fishery mature numbers-at-age (syr,nyr,sage,nage)
   matrix mat_Nij(mod_syr,mod_nyr+1,sage,nage);// pre-fishery mature numbers-at-age (syr,nyr,sage,nage)
+  matrix mat_Bij(mod_syr,mod_nyr+1,sage,nage);// pre-fishery mature biomass-at-age (syr,nyr,sage,nage)
+
   matrix Pij(mod_syr,mod_nyr+1,sage,nage); // numbers-at-age P(syr,nyr,sage,nage) post harvest.
   matrix Sij(mod_syr,mod_nyr+1,sage,nage); // selectivity-at-age 
   matrix Qij(mod_syr,mod_nyr+1,sage,nage); // vulnerable proportions-at-age
@@ -678,18 +688,21 @@ FUNCTION void runForecast()
   int nyr = mod_nyr;
   int pyr = nyr+1; // forecast one additional year
   dvariable fore_rt;  // sage recruits
-
+  dvariable fore_matb_st; // forecast mature biomass in short tons
+  dvariable ghl_mt;
   // numbers and catch-at-age vectors for single forecast year (would be matrix for additional years)
-  dvar_vector fore_nj(sage,nage); //numbers-at-age
-  dvar_vector fore_cj(sage,nage); //catch-at-age
+  // dvar_vector fore_nj(sage,nage); //numbers-at-age
+  // dvar_vector fore_cj(sage,nage); //catch-at-age
 
   fore_rt = so * sp_B(pyr-sage) * exp(-beta*sp_B(pyr-sage)); // ricker stock-recruit curve to forecast one year of recruitment
   fore_nj = Nij(pyr); // abundance at age in forecast year
   fore_nj(sage) = fore_rt; // recruits in forecast year
   fore_vb = fore_nj * elem_prod(Sij(nyr),data_cm_waa(nyr)(sage,nage)); // vulnerable biomass at age
-  // *FLAG* spawning biomass = abundance * survey spawner weight-at-age * proportion mature
-  fore_sb = fore_nj * elem_prod(mat(nyr),data_sp_waa(nyr)(sage,nage)); // spawning biomass at age 
-  sd_forecast_ssb = fore_sb; // save forecast spawning biomass
+  // *FLAG* mature biomass at age = abundance * survey spawner weight-at-age * proportion mature
+  fore_matnj = elem_prod(fore_nj(sage,nage),mat(nyr)); // 
+  fore_matbj = elem_prod(fore_matnj(sage,nage),data_sp_waa(nyr)(sage,nage)); // 
+  fore_matb = sum(fore_matbj); // mature biomass summed over ages
+  sd_forecast_ssb = fore_matb; // save forecast spawning biomass
 
   // *FLAG* writing a function for potential management rules could be used for MSE
   // *FLAG* could output pre-fishery forecast, and post-fishery forecast based on chosen rule
@@ -697,34 +710,38 @@ FUNCTION void runForecast()
   // GHL for pyr
   // sliding scale harvest rate developed for Sitka
   // *FLAG* will need adjustments for stocks besides Sitka
+  double catch_scalar = dMiscCont(1);
+  fore_matb_st = fore_matb / catch_scalar; // return to short tons
+
   double ssb_threshold = dMiscCont(3); 
   double target_hr = dMiscCont(4);
-  dvariable hr = (2.0 + 8.0*fore_sb / dMiscCont(5))/100.0;
+  dvariable hr = (2.0 + 8.0*fore_matb_st / dMiscCont(5))/100.0;
   if( hr > target_hr) {
     hr = target_hr;
-  } else if( fore_sb < ssb_threshold ) {
+  } else if( fore_matb_st < ssb_threshold ) {
     hr = 0.0;
   }
 
-  ghl = hr * fore_sb;
+  ghl = hr * fore_matb_st; // in short tons
+  ghl_mt = catch_scalar * ghl; //back to metric tons
   //cout<<"harvest rate = "<<hr<<" GHL = "<<ghl<<endl;
 
   // update state variables to pyr+1 so you can predict
   // the effect of the 2016 fishery on the 2017 spawning stock.
   // incorporated ghl from this year's catch
   // predicted catch-at-age proportions
-  dvar_vector pa = elem_prod(fore_nj,Sij(nyr));
-  pa /= sum(pa);
+     dvar_vector pa = elem_prod(fore_nj,Sij(nyr));
+     pa /= sum(pa);
   // mean weight of catch
-  dvariable wbar = pa * data_cm_waa(nyr)(sage,nage);
+     dvariable wbar = pa * data_cm_waa(nyr)(sage,nage);
   // forecast catch at age
-  fore_cj = ghl/wbar * pa;
+     fore_cj = ghl_mt/wbar * pa;
   // forecast abundance at age at end of year (after fishing harvest and natural mortality)
-  fore_nj = elem_prod(fore_nj - fore_cj,mfexp(-Mij(nyr)));
+     fore_nj = elem_prod(fore_nj - fore_cj,mfexp(-Mij(nyr)));
   // forecast recruitment
-  fore_nj(sage) = so * sp_B(pyr+1-sage) * exp(-beta*sp_B(pyr-sage));
+     fore_nj(sage) = so * sp_B(pyr+1-sage) * exp(-beta*sp_B(pyr-sage));
   // forecast spawning biomass = abundance * survey spawner weight-at-age * proportion mature
-  fore_sb = fore_nj * elem_prod(mat(nyr),data_sp_waa(nyr)(sage,nage));
+      fore_sb = fore_nj * elem_prod(mat(nyr),data_sp_waa(nyr)(sage,nage));
   sd_projected_ssb = fore_sb;
 
 FUNCTION void writePosteriorSamples()
@@ -1173,8 +1190,13 @@ FUNCTION void calcSpawningStockRecruitment()
     // sp_Nij(i) = mat_Nij(i) - Cij(i);
     // spawning biomass after the fishery
     // sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
+    
+    //mature numbers-at-age before the fishery
+    mat_Nij(i) = elem_prod(mat(i),Nij(i));
+    mat_Bij(i) = elem_prod(mat_Nij(i), data_sp_waa(i)(sage,nage));
+    mat_B(i) = sum(mat_Bij);
 
-    //mature numbers-at-age after the fishery
+    //mature numbers-at-age after the fishery (spawning population)
     sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
     // spawning biomass after the fishery
     sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
@@ -1743,8 +1765,9 @@ REPORT_SECTION
   REPORT(data_catch);
   REPORT(pred_catch);
 
-// SSB, recruits, spawners,
+// SSB, recruits, spawners, mature and spawning biomass
   REPORT(sp_B);
+  REPORT(mat_B);
   REPORT(spawners);
   REPORT(recruits);
   REPORT(pred_egg_dep);
@@ -1755,6 +1778,7 @@ REPORT_SECTION
   REPORT(Nij);
   REPORT(sp_Nij);
   REPORT(mat_Nij);
+  REPORT(mat_Bij);
   REPORT(Pij);
   REPORT(Cij);
   REPORT(pred_sp_comp);
@@ -1795,6 +1819,10 @@ REPORT_SECTION
 // Forecast output
   REPORT(fore_sb);
   REPORT(fore_vb);
+  REPORT(fore_nj);
+  REPORT(fore_matnj);
+  REPORT(fore_matb);
+  REPORT(fore_matbj);
   REPORT(ghl);
 
 // Initial parameter values from simulation studies.

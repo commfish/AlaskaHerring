@@ -119,14 +119,14 @@ Raw residuals
 include_graphics(paste0(figpath, "HER/HER_agecomps_residplot.png"))
 ```
 
-`r fig('HER_agecomps_residplot', caption = paste0('Cast net survey (left panel) and commercial seine fishery (right panel) age composition residuals for the HER model. A positive residual (white) indicates that the observed value is greater than the model estimate, and negative (black) means the opposite. The size of the circle is relative to the size of the residual.'))`
+`r fig('HER_agecomps_residplot', caption = paste0('Cast net survey (left panel) and commercial seine fishery (right panel) age composition residuals for the HER model, calculated as the difference between observed proportion-at-age and estimated proportion-at-age.. A positive residual (white) indicates that the observed value is greater than the model estimate, and negative (black) means the opposite. The size of the circle is relative to the size of the residual.'))`
 `r fig('LS_agecomps_residplot', display = "cite")`
 
 ```{r 'LS_agecomps_residplot', echo=FALSE, out.width = '100%'}
 include_graphics(paste0(figpath, "LS/LS_agecomps_residplot.png"))
 ```
 
-`r fig('LS_agecomps_residplot', caption = paste0('Cast net survey (left panel) and commercial seine fishery (right panel) age composition residuals for the LS model. A positive residual (white) indicates that the observed value is greater than the model estimate, and negative (black) means the opposite. The size of the circle is relative to the size of the residual.'))`
+`r fig('LS_agecomps_residplot', caption = paste0('Cast net survey (left panel) and commercial seine fishery (right panel) age composition residuals for the LS model, calculated as the difference between observed proportion-at-age and estimated proportion-at-age. A positive residual (white) indicates that the observed value is greater than the model estimate, and negative (black) means the opposite. The size of the circle is relative to the size of the residual.'))`
 
 ## Comparison of fits
 
