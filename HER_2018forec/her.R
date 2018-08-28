@@ -100,9 +100,10 @@ P[["maxgrad"]]
 
 D <- read_admb("her")
 
-D$fore_sb
+D$fore_matb
 D$ghl
-
+D$fore_matbj
+D$fore_sb
 
 # Spawning biomass ----
 
@@ -218,23 +219,40 @@ ggsave("figs/LS/biomasscatch_barplot.png", plot = catch_plot, dpi = 300, height 
 
 # Forecasted comps ----
 
-# Comparison:
+# Comparison: forecasted mature biomass, weight-at-age used for forecast,
+# proportion of forecasted biomass that is mature
 
 # For LS:
 
 LS_forec %>% 
-  mutate(biom = prettyNum(for_mat_baa_tons, digits = 1, big.mark=","),
+  mutate(Model = "LS",
+         biom = prettyNum(for_mat_baa_tons, digits = 1, big.mark=","),
          `Weight-at-age (*g*)` = formatC(round(for_waa, 1), small.interval = 1),
          `Proportion mature` = formatC(round(for_mat_prop, 2), small.interval = 2),
          biom = ifelse(for_mat_baa_tons == max(for_mat_baa_tons), 
                                          paste0("**", biom, "**"), biom)) %>% 
-  select(Age, `Mature biomass (*t*)` = biom, `Weight-at-age (*g*)`, `Proportion mature`) -> forec_age
+  select(Model, Age, `Mature biomass (*t*)` = biom, `Weight-at-age (*g*)`, `Proportion mature`) -> LS_forec_age
 
 # For HER:
 
-# Wait on this b/c HER doesn't currently output forecast numbers or biomass at
-# age
+data.frame(Age = D[["sage"]]:D[["nage"]],
+           for_mat_baa_tons = D[["fore_matbj"]],
+           for_waa = D[["data_sp_waa"]][D[["dat_nyr"]] - D[["dat_syr"]] + 1,2:7],
+           for_nj = D[["fore_nj"]],
+           for_matnj = D[["fore_matnj"]]) -> df 
 
+df %>% 
+  mutate(Model = "HER",
+         for_mat_prop = for_matnj/sum(for_nj),
+         Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
+                      labels = c("3", "4", "5", "6", "7", "8+")),
+         biom = prettyNum(for_mat_baa_tons / 0.90718, digits = 1, big.mark=","),
+         `Weight-at-age (*g*)` = formatC(round(for_waa, 1), small.interval = 1),
+         `Proportion mature` = formatC(round(for_mat_prop, 2), small.interval = 2),
+         biom = ifelse(for_mat_baa_tons == max(for_mat_baa_tons), 
+                       paste0("**", biom, "**"), biom)) %>% 
+  select(Age, `Mature biomass (*t*)` = biom, `Weight-at-age (*g*)`, `Proportion mature`) -> HER_forec_age
+  
 # Recruitment ----
 
 # Comparison: 
