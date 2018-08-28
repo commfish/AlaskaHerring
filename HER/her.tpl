@@ -1236,7 +1236,7 @@ FUNCTION void calcSpawningStockRecruitment()
     //mature numbers-at-age before the fishery
     mat_Nij(i) = elem_prod(mat(i),Nij(i));
     mat_Bij(i) = elem_prod(mat_Nij(i), data_sp_waa(i)(sage,nage));
-    mat_B(i) = sum(mat_Bij);
+    mat_B(i) = sum(mat_Bij(i));
 
     //mature numbers-at-age after the fishery (spawning population)
     sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
