@@ -752,22 +752,64 @@ FUNCTION void writePosteriorSamples()
   // example of saving posterior samples of spawning stock biomass
   // rows = number of samples
   // columns = number of years
+
   if(nf==1){
-    // example of saving a time-varying parameter posterior distributions
-    ofstream ofs("sp_B.ps");
+    // mature biomass
+    ofstream ofs("mat_B.ps");
 
-    // example of saving two non-time-varying posterior distributions
-    ofstream ofs2("natural.ps");
-    ofs2 << "natural_mortality\tnatural_survival" << endl;
+    // spawning biomass (post fishery)
+    ofstream ofs1("sp_B.ps");    
+
+    // forecast mature biomass
+    ofstream ofs2("fore_matb.ps");    
+
+    // estimated egg deposition
+    ofstream ofs3("pred_egg_dep.ps");    
+
+    // estimated recruitment
+    ofstream ofs4("recruits.ps");  
+
+    // survival
+    ofstream ofs5("survival.ps");
+    // ofs5 << "survival" << endl;
+
+    // maturity
+    ofstream ofs6("maturity.ps");
+
+    // selectivity
+    ofstream ofs7("selectivity.ps");  
+
+    // predicted catch (only works if model is conditioned on effort)
+    ofstream ofs8("pred_catch.ps");  
+
   }
-  ofstream ofs("sp_B.ps",ios::app);
-  ofs<<sp_B<<endl;
+  ofstream ofs("mat_B.ps",ios::app);
+  ofs<<mat_B<<endl;
 
-  ofstream ofs2("natural.ps",ios::app);
-  ofs2<< exp(log_natural_mortality) << "\t" << exp(-(exp(log_natural_mortality))) << endl;
+  ofstream ofs1("sp_B.ps",ios::app);
+  ofs1<<sp_B<<endl;
 
+  ofstream ofs2("fore_matb.ps",ios::app);
+  ofs2<<fore_matb<<endl;
 
+  ofstream ofs3("pred_egg_dep.ps",ios::app);
+  ofs3<<pred_egg_dep<<endl;
 
+  ofstream ofs4("recruits.ps",ios::app);
+  ofs4<<recruits<<endl;  
+
+  ofstream ofs5("survival.ps",ios::app);
+  //ofs5<< exp(log_natural_mortality) << "\t" << exp(-(exp(log_natural_mortality))) << endl;
+  ofs5<< exp(-(exp(log_natural_mortality))) << endl;
+
+  ofstream ofs6("maturity.ps",ios::app);
+  ofs6<<mat<<endl;  
+
+  ofstream ofs7("selectivity.ps",ios::app);
+  ofs7<<Sij<<endl;  
+
+  ofstream ofs8("pred_catch.ps",ios::app);
+  ofs8<<pred_catch<<endl;  
   
 FUNCTION void runSimulationModel(const int& rseed)
   

@@ -89,6 +89,20 @@ run_admb("her", verbose = TRUE)
 # Run
 # > her
 
+## run MCMC
+run_admb("her", extra.args="-mcmc 10000 -mcsave 10")
+run_admb("her", extra.args="-mceval")
+
+## posterior distributions
+ssb_ps <- read.table("ssb.ps")
+natural_ps <- read.table("natural.ps", header=TRUE)
+
+par(mfrow=c(2,1))
+plot(natural_ps[,1])
+abline(h=median(natural_ps[,1]), col="red")
+plot(natural_ps[,2])
+abline(h=median(natural_ps[,2]), col="red")
+
 # Diagnostics ----
 P <- read_fit("her")
 P[["nopar"]]
@@ -100,10 +114,9 @@ P[["maxgrad"]]
 
 D <- read_admb("her")
 
-D$fore_matb
-D$ghl
-D$fore_matbj
 D$fore_sb
+D$ghl
+
 
 # Spawning biomass ----
 
@@ -113,7 +126,7 @@ tot_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
 
 
 df <- data.frame(Year = D[["year"]], 
-                 spB = D[["sp_B"]] / 0.90718, # convert to short tons
+                 spB = D[["ssb"]] / 0.90718, # convert to short tons
                  catch = D[["data_catch"]][10:47, 2]#[nyr + 1, tot_yrs, 1), 2] # just the column of catch, already in short tons
 ) %>% 
   mutate(matB = spB + catch,
@@ -219,40 +232,23 @@ ggsave("figs/LS/biomasscatch_barplot.png", plot = catch_plot, dpi = 300, height 
 
 # Forecasted comps ----
 
-# Comparison: forecasted mature biomass, weight-at-age used for forecast,
-# proportion of forecasted biomass that is mature
+# Comparison:
 
 # For LS:
 
 LS_forec %>% 
-  mutate(Model = "LS",
-         biom = prettyNum(for_mat_baa_tons, digits = 1, big.mark=","),
+  mutate(biom = prettyNum(for_mat_baa_tons, digits = 1, big.mark=","),
          `Weight-at-age (*g*)` = formatC(round(for_waa, 1), small.interval = 1),
          `Proportion mature` = formatC(round(for_mat_prop, 2), small.interval = 2),
          biom = ifelse(for_mat_baa_tons == max(for_mat_baa_tons), 
                                          paste0("**", biom, "**"), biom)) %>% 
-  select(Model, Age, `Mature biomass (*t*)` = biom, `Weight-at-age (*g*)`, `Proportion mature`) -> LS_forec_age
+  select(Age, `Mature biomass (*t*)` = biom, `Weight-at-age (*g*)`, `Proportion mature`) -> forec_age
 
 # For HER:
 
-data.frame(Age = D[["sage"]]:D[["nage"]],
-           for_mat_baa_tons = D[["fore_matbj"]],
-           for_waa = D[["data_sp_waa"]][D[["dat_nyr"]] - D[["dat_syr"]] + 1,2:7],
-           for_nj = D[["fore_nj"]],
-           for_matnj = D[["fore_matnj"]]) -> df 
+# Wait on this b/c HER doesn't currently output forecast numbers or biomass at
+# age
 
-df %>% 
-  mutate(Model = "HER",
-         for_mat_prop = for_matnj/sum(for_nj),
-         Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
-                      labels = c("3", "4", "5", "6", "7", "8+")),
-         biom = prettyNum(for_mat_baa_tons / 0.90718, digits = 1, big.mark=","),
-         `Weight-at-age (*g*)` = formatC(round(for_waa, 1), small.interval = 1),
-         `Proportion mature` = formatC(round(for_mat_prop, 2), small.interval = 2),
-         biom = ifelse(for_mat_baa_tons == max(for_mat_baa_tons), 
-                       paste0("**", biom, "**"), biom)) %>% 
-  select(Age, `Mature biomass (*t*)` = biom, `Weight-at-age (*g*)`, `Proportion mature`) -> HER_forec_age
-  
 # Recruitment ----
 
 # Comparison: 
