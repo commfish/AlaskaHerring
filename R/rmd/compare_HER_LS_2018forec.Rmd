@@ -26,33 +26,57 @@ figpath <- "../../HER/figs/"
 
 ## HER
 
-# Model convergence
+# Model convergence and forecast values
 
-```{r read_her}
+```{r read_her, echo=FALSE, message=FALSE, warning=FALSE}
 
 # Diagnostics ----
 P <- read_fit("../../HER/her")
-nopar <- P[["nopar"]]
-nlogl <- P[["nlogl"]]
-# P[["logDetHess"]]
-P[["maxgrad"]]
 
 # Results ----
-
 D <- read_admb("../../HER/her")
-
-D$fore_sb
-D$ghl
-
 ```
 
-The version of 
+
+Number of parameters
+`r P$nopar`
+
+Negative log likelihood
+`r prettyNum(P$nlogl, trim=TRUE, big.mark=",")`
+
+Max gradient (values < 0.001 generally indicate convergence) 
+`r prettyNum(P$maxgrad, trim=TRUE, big.mark=",")`
+
+Forecast mature biomass 
+`r prettyNum(D$fore_matb, trim=TRUE, big.mark=",")`
+
+Guideline harvest level
+`r prettyNum(D$ghl, trim=TRUE, big.mark=",")`
+
+## Mature numbers-at-age
+```{r read_matnij, echo=FALSE, message=FALSE, warning=FALSE}
+# Mature numbers at age
+df <- data.frame(D[["years"]], 
+                 D[["mat_Nij"]])
+colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
+
+kable(df)
+```
+
+## Catch numbers-at-age
+```{r read_catchnij, echo=FALSE, message=FALSE, warning=FALSE}
+df <- data.frame(D[["years"]], 
+                 D[["Cij"]])
+colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
+kable(df)
+
+```
 
 # Population trends
 
 ## Catch and biomass
 
-`r fig('biomasscatch_barplot', display = "cite")`
+(`r fig('biomasscatch_barplot', display = "cite")`)
 
 ```{r 'biomasscatch_barplot', echo=FALSE}
 include_graphics(paste0(figpath, "LS/biomasscatch_barplot.png"))
