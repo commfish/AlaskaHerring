@@ -36,6 +36,7 @@ LS_byyear$surv_est_spB <- c(35000,30000,29500,23500,38500,31000,25000,46000,5850
                              43351,37150,14941,34990,40827,28611,34942,44554,57988,58756,40366,55769,
                              69907,101305,66111,84501,247088,110946,126230,161904,62518,103267,48561, 
                              58183,77973,46919)
+
 # survey estimated mature biomass (add catch to survey estimated spawning biomass)
 LS_byyear %>% 
   mutate(surv_est_matbio = surv_est_spB + tcb) -> LS_byyear
@@ -90,25 +91,8 @@ run_admb("her", verbose = TRUE)
 # > her
 
 ## run MCMC
-run_admb("her", extra.args="-mcmc 10000 -mcsave 10")
+run_admb("her", extra.args="-mcmc 50000 -mcsave 10")
 run_admb("her", extra.args="-mceval")
-
-## posterior distributions
-ssb_ps <- read.table("ssb.ps")
-natural_ps <- read.table("natural.ps", header=TRUE)
-
-par(mfrow=c(2,1))
-plot(natural_ps[,1])
-abline(h=median(natural_ps[,1]), col="red")
-plot(natural_ps[,2])
-abline(h=median(natural_ps[,2]), col="red")
-
-# Diagnostics ----
-P <- read_fit("her")
-P[["nopar"]]
-P[["nlogl"]]
-P[["logDetHess"]]
-P[["maxgrad"]]
 
 # Results ----
 
@@ -117,6 +101,189 @@ D <- read_admb("her")
 D$fore_sb
 D$ghl
 
+# Posteriors ----
+
+# For posterior sample output that is structured by year (i.e. number of columns
+# = number of model years and number of rows = number of iterations). Unit_conv
+# is there to deal with the conversion of metric tons to short tons (st = mt /
+# 0.90718)
+ps_byyear <- function(fn = "sp_B", 
+                      syr = D[["mod_syr"]], 
+                      lyr = D[["mod_nyr"]],
+                      unit_conv = 1) {
+  
+  df <- read.table(paste0(fn, ".ps"))
+  df <- as.data.frame(df)
+  colnames(df) <- paste(syr:lyr)
+  
+  df %>% 
+    mutate(iter = row_number()) %>% 
+    gather("Year", "quantity", -iter) %>% 
+    mutate(quantity = quantity / unit_conv) %>% # convert to short tons 
+    group_by(Year) %>% 
+    mutate(mean = mean(quantity),
+           q025 = quantile(quantity, 0.025),
+           q975 = quantile(quantity, 0.975)) %>% 
+    ungroup() %>% 
+    mutate(Year = as.numeric(Year)) -> df
+}
+
+spb_sum <- ps_byyear(fn = "sp_B", syr = D[["mod_syr"]], 
+                     lyr = D[["mod_nyr"]], unit_conv = 0.90718)
+matb_sum <- ps_byyear(fn = "mat_B", syr = D[["mod_syr"]], 
+                      lyr = D[["mod_nyr"]], unit_conv = 0.90718)
+egg_sum <- ps_byyear(fn = "pred_egg_dep", syr = D[["mod_syr"]], 
+                     lyr = D[["mod_nyr"]])
+catch_sum <- ps_byyear(fn = "pred_catch", syr = D[["mod_syr"]], 
+                       lyr = D[["mod_nyr"]])
+recruit_sum <- ps_byyear(fn = "recruits", syr = D[["mod_syr"]] + D[["sage"]],
+                         lyr = D[["mod_nyr"]] + 1)
+
+# Visualize mature biomass posteriors
+axis <- tickr(matb_sum, Year, 5)
+ggplot(matb_sum, aes(x = quantity, y = Year, group = Year)) +
+  geom_posterior(mirror = TRUE, position = position_spread(padding = 0)) +
+  coord_flip() +
+  labs(x = "Mature biomass posterior distribution") + 
+  scale_y_continuous(breaks = axis$breaks, labels = axis$labels) -> post_matb
+
+ggsave("figs/HER/posterior_matbiomass.png", plot = post_matb, dpi = 300, height = 4, width = 6, units = "in")
+
+# For posterior sample output that is structured by age (i.e. number of columns
+# = number of ages, number of rows = number of years * number of iterations)
+ps_byage <- function(fn = "maturity", 
+                     syr = D[["mod_syr"]], 
+                     lyr = D[["mod_nyr"]], 
+                     niter = 5001) {
+    
+    df <- read.table(paste0(fn, ".ps"))
+    df <- as.data.frame(df)
+    colnames(df) <- paste(D[['sage']]:D[['nage']])
+    
+    df %>% 
+      mutate(Year = rep(syr:lyr, niter)) %>% 
+      group_by(Year) %>% 
+      mutate(iter = row_number()) %>% 
+      gather("Age", "value", -c(iter, Year)) %>% 
+      group_by(iter, Age, value) %>% 
+      mutate(min = min(Year),
+             max = max(Year),
+             Blocks = paste0(min, "-", max)) %>% 
+      group_by(Blocks, Age) %>% 
+      mutate(mean = mean(value),
+             q025 = quantile(value, 0.025),
+             q975 = quantile(value, 0.975)) %>% 
+      ungroup() %>% 
+      mutate(Year = as.numeric(Year)) -> df
+}
+
+mat_sum <- ps_byage(fn = "survival", syr = D[["survival"]], 
+                    lyr = D[["mod_nyr"]], niter = 5001)
+
+mat_sum <- ps_byage(fn = "maturity", syr = D[["mod_syr"]], 
+                    lyr = D[["mod_nyr"]], niter = 5001)
+
+sel_sum <- ps_byage(fn = "selectivity", syr = D[["mod_syr"]], 
+                    lyr = D[["mod_nyr"]] + 1, niter = 5001)  
+sel_sum %>% filter(Year != "2018") -> sel_sum
+
+mat_sum %>% 
+  ggplot(aes(x = iter, y = value, group = 1)) +
+  geom_line() +
+  facet_grid(Age ~ Blocks) -> caterpillar_mat
+
+ggsave("figs/HER/caterpillar_mat.png", plot = caterpillar_mat, dpi = 300, height = 8, width = 8, units = "in")
+
+# Posterior distribution of forecasted mature biomass 
+df <- data.frame(read.table("fore_matb.ps"))
+colnames(df) <- "quantity"
+df %>% 
+  mutate(Year = D[["mod_nyr"]] + 1,
+         iter = row_number(),
+         mean = mean(quantity),
+         q025 = quantile(quantity, 0.025),
+         q975 = quantile(quantity, 0.975)) -> fore_matb_sum
+
+fore_matb_sum %>% 
+  ggplot(aes(x = iter, y = quantity)) +
+  geom_hline(aes(yintercept = mean), linetype = 2, colour = "grey") +
+  geom_line() -> caterpillar_forematb
+
+ggsave("figs/HER/caterpillar_forematb.png", plot = caterpillar_forematb, dpi = 300, height = 4, width = 6, units = "in")
+
+fore_matb_sum %>% 
+  ggplot(aes(x = quantity)) +
+  geom_posterior() +
+  labs(x = "\nForecast mature biomass posterior distribution") + 
+  scale_x_continuous(labels = scales::comma) -> post_forematb
+
+ggsave("figs/HER/posterior_forematb.png", plot = post_forematb, dpi = 300, height = 4, width = 6, units = "in")
+
+# Diagnostics ----
+P <- read_fit("her")
+P[["nopar"]]
+P[["nlogl"]]
+P[["logDetHess"]]
+P[["maxgrad"]]
+
+# For Sherri on 2018-08-28 ----
+
+# Mature numbers at age
+df <- data.frame(D[["years"]], 
+                 D[["mat_Nij"]])
+colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
+write.table(df,sep=" ", row.names=FALSE)
+
+# Catch numbers at age
+df <- data.frame(D[["years"]], 
+                 D[["Cij"]])
+colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
+write.table(df,sep=" ", row.names=FALSE)
+
+# Mature biomass ----
+
+# For HER with MCMC variance estimation:
+
+
+# Combine estimates and forecast
+matb_sum %>% 
+  mutate(type = "Estimate") %>% 
+  bind_rows(fore_matb_sum %>% 
+              mutate(type = "Forecast")) %>% 
+  distinct(Year, mean, q025, q975, type) %>% 
+  mutate(Model = "HER") %>% 
+  bind_rows(
+    LS_byyear %>% 
+      select(Year = year, mean = tot_mat_B_tons) %>% 
+      mutate(type = "Estimate") %>% 
+      bind_rows(
+        LS_forec %>% 
+          summarize(mean = sum(for_mat_baa_tons)) %>% 
+          mutate(Year = max(LS_byyear$year) + 1,
+                 type = "Forecast")) %>% 
+      mutate(Model = "LS")) %>% 
+  mutate(label = ifelse(type == "Forecast", 
+                            prettyNum(mean, big.mark = ",", digits = 1), NA)) -> df
+tickryr <- data.frame(Year = 1980:2020)
+axisf <- tickr(tickryr, Year, 5)
+ggplot(df, aes(x = Year)) +
+  geom_ribbon(data = filter(df, !is.na(q025)), aes(x = Year, ymin = q025, ymax = q975),
+              alpha = 0.4, fill = "grey80") +
+  geom_line(aes(y = mean, colour = Model, linetype = Model, group = Model), size = 1) +
+  geom_point(data = LS_byyear, aes(x = year, y = surv_est_matbio, shape = "Historical estimates from survey")) +
+  geom_point(data = df %>% filter(type == "Forecast"), aes(x = Year, y = mean, colour = Model), shape = 8) +
+  geom_text_repel(data = df, aes(x = Year, y = mean, label = label, colour = Model),
+                  size = 3, nudge_x = 1.5, show.legend = FALSE) +
+  scale_shape_manual(values = 1) +
+  scale_colour_grey() +
+  scale_x_continuous(limits = c(min(tickryr$Year), max(tickryr$Year)),
+                     breaks = axisf$breaks, labels = axisf$labels) +
+  scale_y_continuous(#limits = c(0, max(matb_sum$mean)*1.2), 
+                     labels = scales::comma) +
+  labs(x = NULL, y = "Mature biomass (tons)\n", shape = NULL, text = NULL) +
+  theme(legend.position = c(0.25, 0.8)) -> post_matb
+
+ggsave("figs/compare_matbiomass.png", plot = post_matb, dpi = 300, height = 4, width = 6, units = "in")
 
 # Spawning biomass ----
 
@@ -124,12 +291,12 @@ D$ghl
 
 tot_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
 
-
-df <- data.frame(Year = D[["year"]], 
-                 spB = D[["ssb"]] / 0.90718, # convert to short tons
+df <- data.frame(Year = D[["year"]],
+                 matB = D[["mat_B"]] / 0.90718,
+                 spB = D[["sp_B"]] / 0.90718, # convert to short tons
                  catch = D[["data_catch"]][10:47, 2]#[nyr + 1, tot_yrs, 1), 2] # just the column of catch, already in short tons
 ) %>% 
-  mutate(matB = spB + catch,
+  mutate(matB2 = spB + catch,
          Model = "HER") %>% 
   select(-catch) %>% 
   gather("Biomass", "tons", -c(Model, Year)) %>% 
@@ -158,6 +325,23 @@ ggplot() +
   labs(x = "", y = "Spawning biomass (tons)\n", shape = "Data") -> spbiomass_plot
 
 ggsave("figs/compare_spbiomass_plot.png", plot = spbiomass_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+# For HER with MCMC variance estimation:
+
+axisx <- tickr(spb_sum, Year, 5)
+ggplot(data = spb_sum, aes(x = Year)) +  
+  geom_ribbon(aes(ymin = q025, ymax = q975),
+              alpha = 0.4, fill = "grey80") +
+  geom_line(data = df, aes(x = Year, y = tons, colour = Model, linetype = Model), size = 1) +
+  geom_point(data = LS_byyear, aes(x = year, y = surv_est_spB, shape = "Historical estimates from survey")) +
+  scale_colour_grey() +
+  scale_shape_manual(values = 1) +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  scale_y_continuous(labels = scales::comma) +#limits = c(0, max(spb_sum$mean)*1.2), 
+  labs(x = NULL, y = "Spawning biomass (tons)\n", shape = NULL) +
+  theme(legend.position = c(0.25, 0.8)) -> post_ssb
+
+ggsave("figs/compare_spbiomass_mcmc_plot.png", plot = post_ssb, dpi = 300, height = 4, width = 6, units = "in")
 
 # LS past model comparison ----
 
@@ -430,14 +614,23 @@ ggsave("figs/HER/recruit_plot.png", plot = recruit_plot, dpi = 300, height = 8, 
 # Egg deposition ----
 
 # Comparison:
+
+# From S. Dressel's bootstrap, have to add new values each year
+U <- c(1.18, 1.12, 1.10, 0.95, 1.23, 1.13, 0.93, 1.67, 2.51, 0.98, 0.80, 1.259686251, 1.851147636, 1.751126689, 0.560987576, 1.508697833, 1.633749193, 1.695401525, 1.255367509, 2.387620843, 2.795968238, 2.215761696, 1.462234716, 2.289501604, 2.650921062, 6.384923885, 2.279693146, 2.872760889, 29.05686308, 3.863145759, 4.816134565, 4.222205391, 1.634805164, 4.043867944, 1.288746439, 1.332721825, 2.445122264,1.69865191)
+L <- c(1.18, 1.12, 1.10, 0.95, 1.23, 1.13, 0.93, 1.67, 2.51, 0.98, 0.80, 0.985282715, 1.639191663, 1.382705136, 0.48874792, 1.398489625, 1.265029243, 1.286735024, 1.146877561, 1.827147032, 2.534746454, 1.882753246, 1.475607608, 1.863883108, 2.277982827, 3.540565615, 1.707320794, 2.568958439, 14.54490887, 3.237073047, 3.7630828, 3.942674884, 1.578639917, 2.996229014, 1.089460882, 1.154768444, 1.979792303, 1.357551379)
+
 df <- as.data.frame(D[["data_egg_dep"]][10:47, ])#[seq(tot_yrs - nyr + 1, tot_yrs, 1), ]) 
 colnames(df) <- c("Year", "obs", "log_se")
 df %>% filter(Year >= D[["mod_syr"]]) %>% 
+  mutate(upper = obs + U,
+         lower = obs - L) %>% 
   bind_cols(data.frame(HER = D[["pred_egg_dep"]],
                        LS = LS_byyear$tot_est_egg[1:38]))%>% 
-  gather("Model", "trillions", -c(Year, obs, log_se)) -> df
+  gather("Model", "trillions", -c(Year, obs, log_se, upper, lower)) -> df
 
+axisx <- tickr(df, Year, 5)
 ggplot(df, aes(x = Year)) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), colour = "darkgrey", size = 0.001) + 
   geom_line(aes(y = trillions, colour = Model,
                 linetype = Model), size = 1) +  
   geom_point(aes(y = obs, shape = "Historical estimates from survey")) +
@@ -456,8 +649,10 @@ data.frame(Year = D[["year"]],
                  Model = "HER") %>% 
   bind_rows(LS_byyear %>% 
               select(Year = year, resids = res_tot_egg) %>% 
-              mutate(Model = "LS")) %>% 
-  ggplot(aes(x = Year, y = resids)) + 
+              mutate(Model = "LS")) -> df
+
+axisx <- tickr(df, Year, 5)
+ggplot(df, aes(x = Year, y = resids)) + 
   geom_hline(yintercept = 0, colour = "grey", size = 1) +
   geom_segment(aes(x = Year, xend = Year, y = 0, yend = resids), 
                size = 0.2, colour = "grey") +
@@ -500,12 +695,18 @@ df <- as.data.frame(D[["data_egg_dep"]][ , 1:2])
 colnames(df) <- c("Year", "obs")
 df %>% 
   filter(Year >= D[["mod_syr"]]) %>% 
-  mutate(pred = D[["pred_egg_dep"]]) %>% 
+  mutate(upper = obs + U,
+         lower = obs - L,
+         pred = D[["pred_egg_dep"]]) %>% 
   ggplot(aes(x = Year)) +
+  geom_ribbon(data = egg_sum, aes(x = Year, ymin = q025, ymax = q975),
+              fill = "grey80", alpha = 0.4) +
+  # geom_errorbar(aes(ymin = lower, ymax = upper), colour = "black", size = 0.01) + 
   geom_line(aes(y = pred, linetype = "Estimated from model"), size = 1, colour = "grey") +
   scale_colour_manual(values = "grey") +
   geom_point(aes(y = obs, shape = "Historical estimates from survey")) +
-  theme(legend.position = c(0.25, 0.7)) +
+  theme(legend.position = c(0.25, 0.7),
+        legend.spacing.y = unit(0, "cm")) +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
   labs(x = NULL, y = "Eggs spawned (trillions)\n", shape = NULL, linetype = NULL) -> obsfit
 
@@ -690,32 +891,70 @@ cowplot::plot_grid(mat, sel, align = "h", nrow = 1) -> matsel_plot
 
 ggsave("figs/compare_mat_sel.png", plot = matsel_plot, dpi = 300, height = 4, width = 6, units = "in")
 
-# For HER
-
-her_matsel %>% filter(param == "Maturity") -> par
-
-ggplot(par, aes(x = Age, y = proportion)) + 
-  geom_line(aes(linetype = `Time blocks`, group = `Time blocks`)) +
+# For HER with 95% credibility intervals
+mat_sum %>% 
+  distinct(Blocks, Age, mean, q025, q975) %>% 
+  mutate(age = as.numeric(Age)) %>% 
+  ggplot(aes(x = age, y = mean)) + 
+  geom_line(aes(linetype = Blocks, group = Blocks)) +
   geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
   expand_limits(y = 0) +
   labs(x = "\nAge", y = "Proportion\n", linetype = "Time blocks") +
-  ggtitle(paste0(par$param[1])) +
+  geom_ribbon(aes(x = age, ymin = q025, ymax = q975, group = Blocks,
+                  fill = Blocks),
+              alpha = 0.4) +
+  scale_fill_manual(values = c("grey70", "grey75"), guide = FALSE) +
+  scale_x_continuous(labels = c("3", "4", "5", "6", "7", "8+")) +
+  ggtitle("Maturity") +
   theme(legend.position = c(0.7, 0.2),
         plot.title = element_text(hjust = 0.5)) -> mat
 
-her_matsel %>% filter(param == "Selectivity") -> par
+# her_matsel %>% filter(param == "Maturity") -> par
+# 
+# ggplot(par, aes(x = Age, y = proportion)) + 
+#   geom_line(aes(linetype = `Time blocks`, group = `Time blocks`)) +
+#   geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
+#   expand_limits(y = 0) +
+#   labs(x = "\nAge", y = "Proportion\n", linetype = "Time blocks") +
+#   ggtitle(paste0(par$param[1])) +
+#   theme(legend.position = c(0.7, 0.2),
+#         plot.title = element_text(hjust = 0.5)) -> mat
 
-ggplot(par, aes(x = Age, y = proportion)) + 
-  geom_line(aes(linetype = `Time blocks`, group = `Time blocks`)) +
+sel_sum %>% 
+  distinct(Blocks, Age, mean, q025, q975) %>% 
+  mutate(Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
+                      labels = c("3", "4", "5", "6", "7", "8+"))) %>% 
+  # To make sure selectivity is differentiable, it was scaled to have a
+  # mean of 1 across all ages. This was done in log space by substracting
+  # the mean from the vector of age-specific selectivities. See Tech Doc
+  # p 11. Here we normalize it from 0 to 1.
+  mutate_if(is.numeric, funs((. - 0) / max(.) - 0)) %>% 
+  ggplot(aes(x = Age, y = mean)) + 
+  geom_line(aes(linetype = Blocks, group = Blocks)) +
   geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
   expand_limits(y = 0) +
   labs(x = "\nAge", y = NULL, linetype = "Time blocks") +
-  scale_y_continuous(breaks = seq(0, max(par$proportion), .25)) +
-  ggtitle(paste0(par$param[1])) +
+  geom_ribbon(aes(x = 1:length(Age), ymin = q025, ymax = q975, group = Blocks,
+                  fill = Blocks),
+              alpha = 0.4) +
+  scale_fill_manual(values = c("grey70"), guide = FALSE) +
+  ggtitle("Selectivity") +
   theme(legend.position = c(0.7, 0.2),
         plot.title = element_text(hjust = 0.5)) -> sel
 
-cowplot::plot_grid(mat, sel, align = "h", nrow = 1) -> matsel_plot
+# her_matsel %>% filter(param == "Selectivity") -> par
+# 
+# ggplot(par, aes(x = Age, y = proportion)) + 
+#   geom_line(aes(linetype = `Time blocks`, group = `Time blocks`)) +
+#   geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
+#   expand_limits(y = 0) +
+#   labs(x = "\nAge", y = NULL, linetype = "Time blocks") +
+#   scale_y_continuous(breaks = seq(0, max(par$proportion), .25)) +
+#   ggtitle(paste0(par$param[1])) +
+#   theme(legend.position = c(0.7, 0.2),
+#         plot.title = element_text(hjust = 0.5)) -> sel
+
+cowplot::plot_grid(mat, sel, align = "hv", nrow = 1) -> matsel_plot
 
 ggsave("figs/HER/mat_sel.png", plot = matsel_plot, dpi = 300, height = 4, width = 6, units = "in")
 
@@ -1020,222 +1259,6 @@ ggplot() +
 
 ggsave("figs/compare_catchcomp_barplot.png", plot = catchcomp_barplot, dpi = 300, height = 8, width = 6, units = "in")
 
-# Steve's stuff ----
-
-# Read in the data from the model report, par, and cor files.
-# D <- read.admb("HER_2018forec/her") # read.admb() from globals.r
-D <- read_admb("her") # read.admb() from globals.r
-
-# sb.file <- "HER_2018forec/ssb.ps" # Will only exist if you've run -mceval
-sb.file <- "ssb.ps" # Will only exist if you've run -mceval
-if(file.exists(sb.file)){
-  D$post.samp.ssb=read.table(sb.file)
-  colnames(D$post.samp.ssb) <- paste0("year",D$year)
-}
-
-
-plot.catch <- function(D = D, nm = "data_ct_raw",...) {
-  df <- as.data.frame(D[[nm]])
-  colnames(df) <- c("Year","Catch","log.se")
-  z  <- 1.96
-   df <- df %>% 
-    mutate(ln.ct = log(Catch),
-           lci = exp(ln.ct - z*log.se),
-           uci = exp(ln.ct + z*log.se),
-           std = 1.96 * sqrt(log(log.se+1)),
-           lower = Catch - std * Catch,
-           upper = Catch + std * Catch)
-  
-  tickr(df, Year, 5)
-  ggplot(df,aes(Year,Catch)) +
-    geom_point() +
-    geom_pointrange(aes(ymin = lci, ymax = uci),size=0.5,fatten=2) + 
-    labs(x="Year")
-}
-
-
-plot.waa <- function(D=D, nm = "data_sp_waa",...) {
-  df <- as.data.frame(D[[nm]])
-  colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
-  gdf <- 	gather(df,"Age","Weight.at.age",-Year) %>% 
-    transform(Age=as.integer(Age)) %>% 
-    mutate(Cohort=as.factor(Year-Age))
-  
-  ggplot(gdf,aes(Year,Weight.at.age,color=Cohort)) + 
-    geom_line(alpha=0.90) + 
-    geom_point(alpha=0.5,aes(fill=Cohort),show.legend=FALSE,size=0.5) +
-    labs(x="Year",y="Weight-at-age (grams)",color="Cohort") +
-    guides(col = guide_legend(ncol = 9)) +
-    theme(legend.position="bottom") +ggtitle(D$Model)
-}
-
-plot.comp <- function(D=D, nm = "data_cm_comp",...) {
-  df <- as.data.frame(D[[nm]])
-  df[df==-9] <- NA
-  colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
-  gdf <- 	gather(df,"Age","Proportion",-Year) %>%
-    transform(Age=as.integer(Age)) %>%
-    mutate(Cohort=as.factor(Year-Age))
-  
-  ggplot(gdf,aes(Year,Age,color=Cohort)) + 
-    geom_point(alpha=0.5,aes(size=abs(Proportion)),show.legend=FALSE) +
-    scale_size_area(max_size=8) + 
-    labs(x="Year",...) + ggtitle(D$Model)
-}
-
-plot.ssb <- function(D=D){
-  #qplot(D$year,D$ssb/1000,geom="line") + ylim(c(0,NA)) +
-  #labs(x="Year",y="Female Spawning Stock Biomass (1000 mt)")
-  
-  # df <- data.frame(year=seq(D$mod_syr,D$mod_nyr),ssb=D$ssb)
-  # ggplot(df,aes(year,ssb/1000)) +geom_line() + ylim(c(0,NA)) + 
-  # labs(x="Year",y="Female Spawning Stock Biomass (1000 mt)") +
-  # ggtitle(D$Model)
-  
-  
-  id <- grep("sd_ssb",D$fit$names)
-  
-  ssb.df <- data.frame(year=seq(D$mod_syr,D$mod_nyr),
-                       SSB = D$fit$est[id]/1000,
-                       sdSSB = D$fit$std[id]/1000) %>% 
-    mutate(lci=SSB-1.96*sdSSB,uci=SSB+1.96*sdSSB)
-  
-  ggplot(ssb.df,aes(year,SSB)) + 
-    geom_line() +
-    geom_ribbon(aes(x=year,ymin=lci,ymax=uci),alpha=0.15)+
-    labs(x="Year",y="Female Spawning Stock Biomass (1000 mt)") +
-    ggtitle(D$Model)
-  
-  
-}
-
-plot.resd <- function(D=D, nm = "resd_cm_comp", ...) {
-  
-  # Dealing with composition data.
-  if( grepl("comp",nm) ){
-    df <- as.data.frame(cbind(D[['mod_syr']]:D[['mod_nyr']],D[[nm]]))
-    # df[df==-9] <- NA
-    colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
-    gdf <- 	gather(df,"Age","Residual",-Year) %>%
-      transform(Age=as.integer(Age)) %>%
-      mutate(Cohort=as.factor(Year-Age))
-    
-    ggplot(gdf,aes(Year,Age,color=factor(sign(Residual)))) + 
-      geom_point(alpha=0.5,aes(size=abs(Residual)),show.legend=TRUE) +
-      scale_size_area(max_size=8) + 
-      labs(x="Year",color="Sign",size="Residual",...)+
-      ggtitle(D$Model)
-    
-  } else if( grepl("egg",nm) ) {
-    df <- as.data.frame(cbind(D[['year']],D[[nm]]))
-    colnames(df) <- c("Year","Residual")
-    
-    ggplot(df,aes(Year,Residual)) + geom_point() +
-      geom_segment(aes(x = Year, xend = Year, y = 0, 
-                       yend = Residual),data=df,size=0.2) +
-      labs(y="Residual (egg deposition)")+
-      ggtitle(D$Model)
-    
-  } else if( grepl("rec",nm) ) {
-    df <- as.data.frame(cbind(D[['rec_years']],D[[nm]]))
-    colnames(df) <- c("Year","Residual")
-    
-    ggplot(df,aes(Year,Residual)) + geom_point() +
-      geom_segment(aes(x = Year, xend = Year, y = 0, 
-                       yend = Residual),data=df,size=0.2)+
-      labs(y="Residual (recruitment deviation)")+
-      ggtitle(D$Model)
-  } else if( grepl("catch",nm) ) {
-    df <- as.data.frame(cbind(D[['year']],D[[nm]]))
-    colnames(df) <- c("Year","Residual")
-    
-    ggplot(df,aes(Year,Residual)) + geom_point() +
-      geom_segment(aes(x = Year, xend = Year, y = 0, 
-                       yend = Residual),data=df,size=0.2)+
-      labs(y="Residual (commercial catch)") +
-      ggtitle(D$Model)
-  }
-}
-
-plot.ft <- function(D) {
-  id <- grep("log_ft_pars",D$fit$names)
-  log.ft.mle <- D$fit$est[id]
-  log.ft.std <- D$fit$std[id]
-  
-  df <- data.frame(Year=D$year,Ft = exp(log.ft.mle),
-                   lci = exp(log.ft.mle-1.96*log.ft.std),
-                   uci = exp(log.ft.mle+1.96*log.ft.std))
-  
-  ggplot(df,aes(Year,Ft)) + geom_line() + 
-    geom_ribbon(aes(x=Year,ymin=lci,ymax=uci),alpha=0.15)+
-    labs(y="Instantaneous fishing mortality") + 
-    ggtitle(D$Model)
-  
-}
-
-plot.ft.post <- function(D=D) {
-  
-  # if(is.null(D$post.samp)) return()
-  ps <- D$post.samp
-  ix <- sample(1:ncol(ps),1000,replace=TRUE)
-  ps <- ps[ix,]
-  colnames(ps) <- D$fit$names[1:ncol(ps)]	
-  
-  # select the log_ft_pars columns
-  px <- ps[,grepl("log_ft_pars",colnames(ps))]
-  yr <- seq(D$mod_syr,D$mod_nyr)	
-  px <- as.data.frame(px)
-  colnames(px) <- paste(yr)
-  
-  # gather
-  gx <- gather(px,Year,Value)
-  # plot
-  ggplot(gx,aes(Year,exp(Value))) +
-    geom_violin(alpha=0.25,fill="red",size=0.15,
-                draw_quantiles = c(0.25, 0.5, 0.75)) +
-    labs(x="Year",y="Average fishing mortality rate (ft)")+
-    ylim(c(0,NA))+
-    scale_x_discrete(breaks=seq(D$mod_syr,D$mod_nyr,by=5))
-  
-}
-
-# Spawning stock biomass posterior samples
-plot.ssb.post <- function(D = D) {
-  ssb.ps <- D$post.samp.ssb
-  colnames(ssb.ps) <- paste(D$year)
-  df <- gather(ssb.ps, Year, SSB) %>% 
-    group_by(Year) %>% 
-    summarize(median = median(SSB) / 1000,
-              q025 = quantile(SSB, 0.025) / 1000,
-              q975 = quantile(SSB, 0.975) / 1000)
-  
-  # ggplot(df, aes(Year, SSB / 1000)) + 
-  #   geom_violin(alpha = 0.25, fill = "steel blue", size = 0.25,
-  #               draw_quantiles = c(0.25, 0.5, 0.75)) +
-  #   ylim(c(0, NA)) + 
-  #   labs(x = "Year", y = "Spawning Stock Biomass (1000 t)\n") +
-  #   scale_x_discrete(breaks = seq(D$mod_syr, D$mod_nyr, by = 5))
-
-  ggplot(df, aes(x = Year, y = SSB / 1000)) + 
-    geom_line() +
-    ylim(c(0, NA)) + 
-    labs(x = "Year", y = "Spawning Stock Biomass (1000 t)\n") +
-    scale_x_discrete(breaks = seq(D$mod_syr, D$mod_nyr, by = 5))
-  
-  ggplot() +
-    # geom_point( aes(x = Year, y = median)) +
-    # geom_line( aes(x = Year, y = median, group = 1)) +
-    geom_ribbon(data = df, 
-                aes(x = Year, ymin = q025, ymax = q975),
-                colour = "black", fill = "grey") #+, 
-                # alpha = 0.2, fill = "grey") +
-    # labs(x = "\nYear",
-    #      y = "Spawning stock biomass (1000 t)\n") +
-    # # theme(legend.position = "none") +
-    # xlim(c(0, 130)) 
-    
-  # }
-}
 
 # Egg deposition 
 plot.eggdepfit <- function(D = D, sfx = "egg_dep", fit = TRUE) {
@@ -1265,22 +1288,7 @@ plot.eggdepfit <- function(D = D, sfx = "egg_dep", fit = TRUE) {
 }
 
 
-# ---------------------------------------------------------------------------- #
-# PLOTS FOR DATA SECTION
-# ---------------------------------------------------------------------------- #
-# prefix with d for data
-# d1 » catch time series
-# d2 » spawn weight-at-age
-# d3 » commercial weight-at-age
-# d4 » commercial age-proportions
-# d5 » spawn sample age-proportions
-# d6 » Survey- and model-estimated egg deposition
-d1 <- plot.catch(D, nm = "data_ct_raw", y = "Catch (tons)")
-d2 <- plot.waa(D, nm = "data_sp_waa")
-d3 <- plot.waa(D, nm = "data_cm_waa")
-d4 <- plot.comp(D, nm = "data_cm_comp")
-d5 <- plot.comp(D, nm = "data_sp_comp")
-d6 <- plot.eggdepfit(D, sfx = "egg_dep", fit = TRUE)
+plot.eggdepfit(D, sfx = "egg_dep", fit = TRUE)
 plot.ssb(D)
 
 plot.ssb.post(D)
