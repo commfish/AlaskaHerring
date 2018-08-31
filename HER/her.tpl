@@ -800,7 +800,7 @@ FUNCTION void writePosteriorSamples()
 
   ofstream ofs5("survival.ps",ios::app);
   //ofs5<< exp(log_natural_mortality) << "\t" << exp(-(exp(log_natural_mortality))) << endl;
-  ofs5<< exp(-(exp(Mij))) << endl;
+  ofs5<< exp(-Mij) << endl;
 
   ofstream ofs6("maturity.ps",ios::app);
   ofs6<<mat<<endl;  

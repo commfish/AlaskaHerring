@@ -92,7 +92,7 @@ for(i in 1:length(retro)){
   # D <- read_rep(name)
   
   SSB_ls[[i]] <- data.frame(Year = D[["year"]], 
-                         spB = D[["ssb"]] / 0.90718,
+                         spB = D[["sp_B"]] / 0.90718,
                          retro = paste0("retro_", retro[i])) # convert to short tons
 }
 

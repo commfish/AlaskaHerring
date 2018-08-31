@@ -177,8 +177,9 @@ ps_byage <- function(fn = "maturity",
       mutate(Year = as.numeric(Year)) -> df
 }
 
-mat_sum <- ps_byage(fn = "survival", syr = D[["survival"]], 
-                    lyr = D[["mod_nyr"]], niter = 5001)
+# surv_sum <- ps_byage(fn = "survival", syr = D[["survival"]], 
+#                     lyr = D[["mod_nyr"]], niter = 5001)
+# surv_sum <- read.table(paste0("survival.ps"))
 
 mat_sum <- ps_byage(fn = "maturity", syr = D[["mod_syr"]], 
                     lyr = D[["mod_nyr"]], niter = 5001)
@@ -226,24 +227,10 @@ P[["nlogl"]]
 P[["logDetHess"]]
 P[["maxgrad"]]
 
-# For Sherri on 2018-08-28 ----
-
-# Mature numbers at age
-df <- data.frame(D[["years"]], 
-                 D[["mat_Nij"]])
-colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
-write.table(df,sep=" ", row.names=FALSE)
-
-# Catch numbers at age
-df <- data.frame(D[["years"]], 
-                 D[["Cij"]])
-colnames(df) <- c("Year",paste(D[['sage']]:D[['nage']]))
-write.table(df,sep=" ", row.names=FALSE)
 
 # Mature biomass ----
 
 # For HER with MCMC variance estimation:
-
 
 # Combine estimates and forecast
 matb_sum %>% 
@@ -1259,7 +1246,7 @@ ggplot() +
 
 ggsave("figs/compare_catchcomp_barplot.png", plot = catchcomp_barplot, dpi = 300, height = 8, width = 6, units = "in")
 
-
+# Steve's stuff ----
 # Egg deposition 
 plot.eggdepfit <- function(D = D, sfx = "egg_dep", fit = TRUE) {
   data <- paste0("data_", sfx)

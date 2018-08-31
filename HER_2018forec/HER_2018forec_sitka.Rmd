@@ -520,7 +520,7 @@ Rodionov, S., and Overland, J.E. (2005) Application of a sequential regime shift
 
 
  
- Figures 
+# Figures 
  
 Figure 1: Survey-estimated spawning biomass plus catch (tons), model-estimated mature biomass (tons), and model-estimated mature biomass forecast (tons). Survey-estimated eggs were converted to biomass using year-specific age composition and weight at age over the time series (i.e. survey-estimated spawning biomass matches the spawn deposition file for each year).
 

@@ -3,6 +3,8 @@ title: "A comparison of LS and HER for the 2018 forecast"
 output: word_document
 ---
 
+MOST RECENT MODEL VERSION
+
 ```{r setup, include = FALSE, echo = FALSE,message = FALSE,warning = FALSE}
 
 knitr::opts_chunk$set(echo = FALSE,
