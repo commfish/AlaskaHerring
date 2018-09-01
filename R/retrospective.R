@@ -135,8 +135,8 @@ ggsave("HER/figs/HER/retrospective.png", plot = retro_plot, dpi = 300, height = 
 
 # Alaska Fisheries Science Center and Hurtado-Ferro et al. (2015) Mohn's rho
 # https://www.afsc.noaa.gov/REFM/stocks/Plan_Team/2013/Sept/Retrospectives_2013_final3.pdf
-# mean over all peels (Estimate in peel year - reference estimate (current
-# year's estimate) / reference estimate)
+# # mean over all peels (Estimate in peel year - reference estimate (current
+# # year's estimate) / reference estimate)
 
 bind_cols(SSB %>% 
             filter(Year == max(Year)) %>% 
@@ -149,8 +149,10 @@ bind_cols(SSB %>%
           SSB %>% 
             mutate(m = (spB - term_spB) / term_spB ) %>% 
             ungroup() %>% 
-            summarize(mrho = mean(m)) ) -> rhos
+            summarize(woods_rho = mean(m)) ) -> rhos
 
+setwd(main_dir)
+write_csv(x = rhos, path = "HER/retrospective_rhos.csv")
 # Interpretation of Mohn's Rho (Hurtado-Ferro et al 2015):
 # Given that the variability of Mohn’s rdepends on life history, and that the
 # statistic appears insensitive to F, we propose the following rule of thumb

@@ -98,7 +98,7 @@ run_admb("her", extra.args="-mceval")
 
 D <- read_admb("her")
 
-D$fore_sb
+D$fore_matb
 D$ghl
 
 # Posteriors ----
@@ -367,9 +367,9 @@ ggplot() +
         legend.spacing.y = unit(0, "cm")) +
   scale_x_continuous(limits = c(min(tickryr$Year), max(tickryr$Year)),
                                 breaks = axisf$breaks, labels = axisf$labels) +
-  scale_y_continuous(limits = c(0, max(LS_yearminus$matbio_tons) * 1.1),
+  scale_y_continuous(#limits = c(0, max(LS_yearminus$matbio_tons) * 1.1),
                      labels = scales::comma) +
-  labs(x = "", y = "Spawning biomass (tons)\n", shape = NULL) -> past_matbio
+  labs(x = "", y = "Mature biomass (tons)\n", shape = NULL) -> past_matbio
 
 ggsave("figs/LS/compare_past_matbio.png", plot = past_matbio, dpi = 300, height = 4, width = 6, units = "in")
 
@@ -396,29 +396,6 @@ ggplot(df, aes(x = year)) +
   labs(x = "", y = "Biomass (tons)\n", linetype = NULL, fill = NULL) -> catch_plot
 
 ggsave("figs/LS/biomasscatch_barplot.png", plot = catch_plot, dpi = 300, height = 4, width = 6, units = "in")
-
-# For HER:
-
-# Wait on this b/c currently mature biomass is not forecasted.
-
-# Forecasted comps ----
-
-# Comparison:
-
-# For LS:
-
-LS_forec %>% 
-  mutate(biom = prettyNum(for_mat_baa_tons, digits = 1, big.mark=","),
-         `Weight-at-age (*g*)` = formatC(round(for_waa, 1), small.interval = 1),
-         `Proportion mature` = formatC(round(for_mat_prop, 2), small.interval = 2),
-         biom = ifelse(for_mat_baa_tons == max(for_mat_baa_tons), 
-                                         paste0("**", biom, "**"), biom)) %>% 
-  select(Age, `Mature biomass (*t*)` = biom, `Weight-at-age (*g*)`, `Proportion mature`) -> forec_age
-
-# For HER:
-
-# Wait on this b/c HER doesn't currently output forecast numbers or biomass at
-# age
 
 # Recruitment ----
 
@@ -1245,6 +1222,52 @@ ggplot() +
   theme(legend.position = "bottom") -> catchcomp_barplot
 
 ggsave("figs/compare_catchcomp_barplot.png", plot = catchcomp_barplot, dpi = 300, height = 8, width = 6, units = "in")
+
+
+# Weight-at-age ----
+
+df <- as.data.frame(D[["data_cm_waa"]])
+colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
+df <-	df %>% 
+  gather("Age", "weight", -Year) %>% 
+  mutate(age = as.integer(Age),
+         Cohort = as.factor(Year - age))
+
+# 1) by cohort
+
+# Create a better colour palette (lots of options, see helper.r library ggthemes)
+pal <- ggthemes::canva_pal("Warm and cool")(4) 
+
+# Axis ticks for plot (see helper.r tickr() fxn for details)
+axis <- tickr(df, Year, 5)
+ggplot(df, aes(Year, weight, colour = Cohort)) +
+  geom_line(size = 1) +#alpha = 0.90) +
+  geom_point(aes(fill = Cohort), show.legend = FALSE, size = 1) +
+  labs(x = "Year", y = "Weight-at-age (grams)\n", colour = "Cohort") +
+  guides(colour = guide_legend(ncol = 9)) +
+  scale_colour_manual(values = colorRampPalette(pal)(n_distinct(df$Cohort))) +
+  theme(legend.position = "bottom") +
+  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) -> waa_cohort_plot
+
+ggsave("figs/waa_cohort_plot.png", plot = waa_cohort_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+# 2) by age
+df %>% 
+  group_by(Age) %>% 
+  summarize(mean_weight = mean(weight)) -> means
+
+ggplot(df, aes(Year, weight, group = Age, colour = Age)) + 
+  geom_line() + 
+  geom_point() +
+  geom_hline(data = means, aes(colour = Age, yintercept = mean_weight), alpha = 0.4, linetype = 2) + 
+  labs(x = "Year", y = "Weight-at-age (grams)\n", colour = "Age") +
+  theme(legend.position = "bottom") +
+  scale_colour_manual(values = colorRampPalette(pal)(n_distinct(df$Age))) +
+  guides(colour = guide_legend(nrow = 1)) +
+  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) -> waa_plot
+
+ggsave("figs/waa_plot.png", plot = waa_plot, dpi = 300, height = 4, width = 6, units = "in") 
+
 
 # Steve's stuff ----
 # Egg deposition 
