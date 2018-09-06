@@ -52,7 +52,6 @@ simulations
 *.xlsx
 *.xlsm
 *.docx
-*.html
 
 # Windows thumbnail cache files
 Thumbs.db

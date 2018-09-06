@@ -36,7 +36,7 @@ The ADMB and R code for HER is contained in the AlaskaHerring repository:  https
 
 7.  Goal of a side-by-side comparison of 2018 forecast (2017 data)
 
-I am developing an Rmarkdown file for this purpose. It is a work in progress. Currently HER does not converge using a similar parameterization to the LS model. S. Dressel and I emailed S. Martell our specific issues and concerns August 7, and we are waiting for a reply. Comparison figures have been developed for spawning biomass, egg deposition, recruitment, and spawning age compositions.
+An Rmarkdown file for this purpose. It is a work in progress. Currently HER does not fill particularly well (residual patterns in the biomass and portions of the age comps) using the parameterization from the best-fitting LS model.  Comparison figures have been developed for spawning biomass, egg deposition, recruitment, and spawning age compositions.
 
 -  Document any differences in underlying model structure or assumptions
 
@@ -47,27 +47,27 @@ I am developing an Rmarkdown file for this purpose. It is a work in progress. Cu
 -  ~~Spawning stock biomass (post-fishery)~~
 -  ~~Forecast mature biomass~~
 -  ~~Natural mortality/survival~~
--  Recruitment
--  Maturity
--  Selectivity
--  Catch - I added this, but it only works when conditioning on effort (conditioning on catch assumes zero variance)
--  Egg deposition
+-  ~~Recruitment~~ *FLAG* do this for ASA-estimated age-3 numbers, not Ricker-estimated age-3 numbers
+-  ~~Maturity~~
+-  ~~Selectivity~~
+-  ~~Catch~~ - I added this, but it only works when conditioning on effort (conditioning on catch assumes zero variance)
+-  ~~Egg deposition~~
 
 ### What are the *quantities of interest* for side-by-side:
--  Mature biomass (pre-fishery)
--  Spawning stock biomass (post-fishery)
--  Forecast mature biomass
--  Natural mortality
--  Recruitment
--  Maturity
--  Selectivity
--  Age compositions (residuals)
--  Egg depositions
+-  ~~Mature biomass (pre-fishery)~~
+-  ~~Spawning stock biomass (post-fishery)~~
+-  ~~Forecast mature biomass~~
+-  ~~Natural mortality~~
+-  ~~Recruitment~~
+-  ~~Maturity~~
+-  ~~Selectivity~~
+-  ~~Age compositions (residuals)~~
+-  ~~Egg depositions~~
 
 
 ## Work log and action items
 
-### Meetings and individual hours worked
+### Meetings and individual hours worked (after June 6, Jane was on Herring full time)
 
 Sara and Jane Meeting 2018-04-10 0900-1200
 Jane 2018-04-12 1400-1630 
@@ -75,6 +75,12 @@ Jane 2018-04-13 0800-1200
 Sherri, Sara, Jane Meeting 2018-04-13 1330-1630
 Jane 2018-04-16 0800-1200
 Sherri, Sara, Jane Meeting 2018-05-10 1500-1615
+Sherri, Sara, Jane Meeting 2018-06-26 1530-1600
+Sherri, Sara, Jane Meeting 2018-07-17 1400-1600
+Sherri, Sara, Jane Meeting 2018-08-01 1400-1600
+Sherri, Sara, Jane Meeting 2018-08-15 1400-1600
+Sherri, Sara, Jane Meeting 2018-08-21 1300-1530 - model workflow
+Sherri, Sara, Jane Meeting 2018-08-30 1400-1600
 
 ### Jane to do (from 7/17 meeting)
 1.  ~~Send Sherri PMRN literature.~~
@@ -306,15 +312,15 @@ $resd\_rec$: vector of residual process error (log-normal) (rec_syr,mod_nyr+1)
 $pred\_egg\_dep$: model predicted egg deposition (mod_syr,mod_nyr)
 $resd\_egg\_dep$: residual egg deposition (obs - pred) (mod_syr,mod_nyr)
 
-$pred\_mileday$: model predicted mile days of milt *egg dep is derived from this so it's not currently used* (mod_syr,mod_nyr)
-$resd\_mileday$: residual mile days(mod_syr,mod_nyr)
-$pred\_catch$: predicted catch (mod_syr,mod_nyr)
-$resd\_catch$: residual catch (mod_syr,mod_nyr)
-
-$mbar$: average natural mortality
-$mat\_bar$: average maturity
-$wa$: extracted annual vector of commercial catch weight-at-age
-$wbar$: average weight of catch
+$pred\_mileday$: model predicted mile days of milt *egg dep is derived from this so it's not currently used* (mod_syr,mod_nyr)  
+$resd\_mileday$: residual mile days(mod_syr,mod_nyr)  
+$pred\_catch$: predicted catch (mod_syr,mod_nyr)  
+$resd\_catch$: residual catch (mod_syr,mod_nyr)  
+ 
+$mbar$: average natural mortality  
+$mat\_bar$: average maturity  
+$wa$: extracted annual vector of commercial catch weight-at-age  
+$wbar$: average weight of catch  
 
 ### Matrices 
 
