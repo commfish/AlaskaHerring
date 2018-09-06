@@ -3,9 +3,9 @@ title: "A comparison of the LS and HER models for the 2018 Sitka herring forecas
 author: "Jane Sullivan"
 date: "August 2018"
 output:
+  word_document: default
   html_document:
     df_print: paged
-  word_document: default
 ---
 
 
