@@ -69,18 +69,18 @@ An Rmarkdown file for this purpose. It is a work in progress. Currently HER does
 
 ### Meetings and individual hours worked (after June 6, Jane was on Herring full time)
 
-Sara and Jane Meeting 2018-04-10 0900-1200
-Jane 2018-04-12 1400-1630 
-Jane 2018-04-13 0800-1200
-Sherri, Sara, Jane Meeting 2018-04-13 1330-1630
-Jane 2018-04-16 0800-1200
-Sherri, Sara, Jane Meeting 2018-05-10 1500-1615
-Sherri, Sara, Jane Meeting 2018-06-26 1530-1600
-Sherri, Sara, Jane Meeting 2018-07-17 1400-1600
-Sherri, Sara, Jane Meeting 2018-08-01 1400-1600
-Sherri, Sara, Jane Meeting 2018-08-15 1400-1600
-Sherri, Sara, Jane Meeting 2018-08-21 1300-1530 - model workflow
-Sherri, Sara, Jane Meeting 2018-08-30 1400-1600
+Sara and Jane Meeting 2018-04-10 0900-1200  
+Jane 2018-04-12 1400-1630   
+Jane 2018-04-13 0800-1200  
+Sherri, Sara, Jane Meeting 2018-04-13 1330-1630  
+Jane 2018-04-16 0800-1200  
+Sherri, Sara, Jane Meeting 2018-05-10 1500-1615  
+Sherri, Sara, Jane Meeting 2018-06-26 1530-1600  
+Sherri, Sara, Jane Meeting 2018-07-17 1400-1600  
+Sherri, Sara, Jane Meeting 2018-08-01 1400-1600  
+Sherri, Sara, Jane Meeting 2018-08-15 1400-1600  
+Sherri, Sara, Jane Meeting 2018-08-21 1300-1530 - model workflow  
+Sherri, Sara, Jane Meeting 2018-08-30 1400-1600  
 
 ### Jane to do (from 7/17 meeting)
 1.  ~~Send Sherri PMRN literature.~~
