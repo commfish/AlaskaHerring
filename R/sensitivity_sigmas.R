@@ -55,7 +55,7 @@ std <- paste0(name,".std") # for checking model convergence in loop
 # 
 
 # Values of sigmaR (precR) and sigmaM over which to run a sensitivity analysis:
-sigmaR_vec <- seq(0.3, 1.7, by = 0.2)
+sigmaR_vec <- seq(0.3, 1.6, by = 0.2)
 precR_vec <- round(1/(sigmaR_vec^2), 3)
 sigmaM_vec <- c(0.001, 0.005, 0.010, 0.050, 0.100, 0.500)
 
@@ -161,9 +161,9 @@ for(i in 1:length(check$fn)){
                               nll = D[["fit"]]$nlogl,
                               maxgrad = D[["fit"]]$maxgrad,
                               nopar = D[["fit"]]$nopar,
-                              ghl = D[["ghl"]],
-                              fore_sb = D[["fore_sb"]] / 0.90718,
-                              fore_matb = D[["fore_matb"]] / 0.90718,
+                              ghl = D[["ghl"]], # Already in short tons
+                              fore_sb = D[["fore_sb"]] / 0.90718, # convert to short tons
+                              fore_matb = D[["fore_matb"]] / 0.90718, # convert to short tons
                               rinit = exp(D[["theta"]][2]),
                               rbar = exp(D[["theta"]][3]))
   
@@ -246,7 +246,7 @@ matsel %>% filter(!fn %in% high_maxgrad) -> matsel
 # Colour palettes ----
 
 # For showing sigmaR gradient
-palR <- colorRampPalette(c("#fdd0a2","#fa9fb5", "#4a1486"))
+palR <- colorRampPalette(c("#bfd3e6","#8c6bb1", "#4d004b"))
 sigmaR_cols <- palR(length(sigmaR_vec))
 
 # For showing sigmaM gradient
@@ -353,19 +353,19 @@ natmat %>% mutate(sigmaR = round(sqrt(1/precR), 1)) -> natmat
 # increasing sigmaM has dramatic effects on time-varying M
 ggplot(natmat, aes(x = `Time blocks`, y = survival, 
                    group = sigmaM, colour = sigmaM)) +
+  geom_line(size = 1) + 
   geom_point(size = 1.3) + 
-  geom_line(size = 1.3) + 
   scale_colour_manual(values = sigmaM_cols) +
   facet_wrap(~sigmaR) +
   labs(colour = "sigmaM", y = "Survival")
 
-ggsave(paste0(figdir, "/survival_sigmaM.png"), dpi = 300, height = 6, width = 8, units = "in")
+ggsave(paste0(figdir, "/survival_sigmaM.png"), dpi = 300, height = 4, width = 8, units = "in")
 
 # sigmaR has an affect on M at values of sigmaM < 0.01 (low sigmaR results in
 # higher survival), but the affect is swamped at high values of sigmaM
 ggplot(natmat, aes(x = `Time blocks`, y = survival, 
                    group = factor(sigmaR), colour = factor(sigmaR))) +
-  geom_line(size = 1.3) + 
+  geom_line(size = 1) + 
   geom_point(size = 1.3) + 
   scale_colour_manual(values = sigmaR_cols) +
   facet_wrap(~sigmaM) +
@@ -392,7 +392,7 @@ matsel %>% filter(param == "Maturity") %>%
   geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
   labs(x = "\nAge", y = "Maturity\n", colour = "sigmaM")
 
-ggsave(paste0(figdir, "/maturity_sigmaM.png"), dpi = 300, height = 6, width = 8, units = "in")
+ggsave(paste0(figdir, "/maturity_sigmaM.png"), dpi = 300, height = 4, width = 8, units = "in")
 
 # Confirms that there is very slight variation in maturity across sigmaR for
 # small values of sigmaM), where maturation occurs slightly later with increased
@@ -418,7 +418,7 @@ matsel %>% filter(param == "Selectivity") %>%
   geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
   labs(x = "\nAge", y = "Selecitivity\n", colour = "sigmaM")
 
-ggsave(paste0(figdir, "/selectivity_sigmaM.png"), dpi = 300, height = 6, width = 8, units = "in")
+ggsave(paste0(figdir, "/selectivity_sigmaM.png"), dpi = 300, height = 4, width = 8, units = "in")
 
 matsel %>% filter(param == "Selectivity") %>% 
   ggplot(aes(x = Age, y = proportion)) + 
@@ -432,12 +432,15 @@ matsel %>% filter(param == "Selectivity") %>%
 ggsave(paste0(figdir, "/selectivity_sigmaR.png"), dpi = 300, height = 4, width = 8, units = "in")
 
 # Derived time series ----
-derived %>% mutate(sigmaR = round(sqrt(1/precR), 1)) -> derived
+derived %>%
+  mutate(sigmaR = round(sqrt(1/precR), 1)) -> derived
 
-# Separate forecast quantities into separate df
+# Separate forecast quantities into separate df - cannot use the model-supplied
+# fore_sb b/c the assumptions are not correct
 diags %>% 
-  select(fn, sigmaR, sigmaM, fore_sb, fore_matb) %>% 
-  mutate(Year = max(derived$Year) + 1) -> forec
+  select(fn, sigmaR, sigmaM, fore_matb, ghl) %>% 
+  mutate(Year = max(derived$Year) + 1,
+         fore_sb = fore_matb - ghl) -> forec
 
 # SSB facetted by sigmaM - shows variability in ssb is attributed to sigmaM not
 # sigmaR
@@ -460,27 +463,33 @@ R <- derived %>%
 
 # sigmaM strongly influences estimates; low sigmaM results in lower estimates at
 # beginning of ts, then much higher during the 2000s.
-M + geom_line(aes(y = spB), size = 1) +
+M + geom_line(aes(y = spB), size = 0.8) +
   labs(x = "\nYear", y = "Spawning biomass (t)\n", colour = "sigmaM") +
   geom_point(data = forec, aes(x = Year, y = fore_sb, colour = sigmaM, group = sigmaM),
              shape = "*", size = 4)
 
-ggsave(paste0(figdir, "/spbiomass_sigmaM.png"), dpi = 300, height = 6, width = 8, units = "in")
+ggsave(paste0(figdir, "/spbiomass_sigmaM.png"), dpi = 300, height = 4, width = 8, units = "in")
 
 # sigmaR has no influence on estimates
-R + geom_line(aes(y = spB), size = 1) +
-  labs(x = "\nYear", y = "Spawning biomass (t)\n", colour = "sigmaR")
+R + geom_line(aes(y = spB), size = 0.8) +
+  labs(x = "\nYear", y = "Spawning biomass (t)\n", colour = "sigmaR") +
+  geom_point(data = forec, aes(x = Year, y = fore_sb, colour = factor(sigmaR), group = factor(sigmaR)),
+             shape = "*", size = 4)
 
 ggsave(paste0(figdir, "/spbiomass_sigmaR.png"), dpi = 300, height = 4, width = 8, units = "in")
 
 # Mature biomass: same results as spawning biomass
-M + geom_line(aes(y = matB), size = 1) +
-  labs(x = "\nYear", y = "Mature biomass (t)\n", colour = "sigmaM")
+M + geom_line(aes(y = matB), size = 0.8) +
+  labs(x = "\nYear", y = "Mature biomass (t)\n", colour = "sigmaM") +
+  geom_point(data = forec, aes(x = Year, y = fore_matb, colour = sigmaM, group = sigmaM),
+             shape = "*", size = 4)
 
-ggsave(paste0(figdir, "/matbiomass_sigmaM.png"), dpi = 300, height = 6, width = 8, units = "in")
+ggsave(paste0(figdir, "/matbiomass_sigmaM.png"), dpi = 300, height = 4, width = 8, units = "in")
 
-R + geom_line(aes(y = matB), size = 1) +
-  labs(x = "\nYear", y = "Mature biomass (t)\n", colour = "sigmaR")
+R + geom_line(aes(y = matB), size = 0.8) +
+  labs(x = "\nYear", y = "Mature biomass (t)\n", colour = "sigmaR") +
+  geom_point(data = forec, aes(x = Year, y = fore_matb, colour = factor(sigmaR), group = factor(sigmaR)),
+             shape = "*", size = 4) 
 
 ggsave(paste0(figdir, "/matbiomass_sigmaR.png"), dpi = 300, height = 4, width = 8, units = "in")
 
@@ -489,23 +498,30 @@ ggsave(paste0(figdir, "/matbiomass_sigmaR.png"), dpi = 300, height = 4, width = 
 # ASA-estimated age-3 abundance: 
 
 # sigmaM appears to have a slight affect on estimates but trends are the same.
-M + geom_line(aes(y = age3), size = 1) +
+M + geom_line(aes(y = age3), size = 0.8) +
   labs(x = "\nYear", y = "ASA age-3 abundance (millions)\n", colour = "sigmaM")
 
+ggsave(paste0(figdir, "/ASA_age3_sigmaM.png"), dpi = 300, height = 4, width = 8, units = "in")
+
 # sigmaR has no affect on estimates
-R + geom_line(aes(y = age3), size = 1) +
+R + geom_line(aes(y = age3), size = 0.8) +
   labs(x = "\nYear", y = "ASA age-3 abundance (millions)\n", colour = "sigmaR")
+
+ggsave(paste0(figdir, "/ASA_age3_sigmaR.png"), dpi = 300, height = 4, width = 8, units = "in")
 
 # Ricker-estimated age-3 abundance:
 
 # Very different trends in first part of ts, similar after 2000-ish.
-M + geom_line(aes(y = SR), size = 1) +
+M + geom_line(aes(y = SR), size = 0.8) +
   labs(x = "\nYear", y = "Ricker age-3 abundance (millions)\n", colour = "sigmaM")
+
+ggsave(paste0(figdir, "/Ricker_age3_sigmaM.png"), dpi = 300, height = 4, width = 8, units = "in")
 
 # sigmaR highly influential. As expected, higher sigmaR results in more
 # variability over the ts. Trends over time are the same for a given sigmaM
-R + geom_line(aes(y = SR), size = 1) +
+R + geom_line(aes(y = SR), size = 0.8) +
   labs(x = "\nYear", y = "Ricker age-3 abundance (millions)\n", colour = "sigmaR")
 
-head(diags)
+ggsave(paste0(figdir, "/Ricker_age3_sigmaR.png"), dpi = 300, height = 4, width = 8, units = "in")
 
+# Recommondations

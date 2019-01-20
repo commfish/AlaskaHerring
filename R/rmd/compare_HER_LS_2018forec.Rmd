@@ -1,7 +1,7 @@
 ---
 title: "A comparison of the LS and HER models for the 2018 Sitka herring forecast"
 author: "Jane Sullivan"
-date: "August 2018"
+date: "2019-01-22 (originally submitted 2018-08-31)""
 output:
   word_document: default
   html_document:
@@ -30,33 +30,38 @@ figpath <- "../../HER/figs/"
 
 The purpose of this document is to compare 2018 forecasts between two age-structured assessment (ASA) models, the current management least-squares (LS) model developed by Pete Hulson (Hulson et al. DRAFT 2014), and an alternative model (HER) developed by Steve Martell (Martell 2016). We applied the comparison of these models to the 1980-2017 time series of Sitka Pacific herring data for the 2018 forecast.
 
-In order to compare the models, we applied the parameterization from the best-fitting 2018 forecast LS model to HER. This parameterization includes: three time blocks for natural mortality (1980-1998, 1999-2014, 2015-2017), two time blocks for maturity (1980-2014,	2015-2017), and one time block for selectivity (1980-2017). It is important to keep this in mind when comparing the fits of the two models - what might be the best-fitting parameterization in LS, may not be the best-fitting parameterization for HER.
+In order to compare the models, we applied the parameterization from the best-fitting 2018 forecast LS model to HER. This parameterization includes: 
 
-HER has built-in options to condition on effort instead of catch (it is conditioned on catch in this document) and can have alternative parameterizations of time-varying parameters (e.g. cubic spline for natural mortality).
+    - 3 time blocks for natural mortality (1980-1998, 1999-2014, 2015-2017),
+    - 2 time blocks for maturity (1980-2014,	2015-2017), and
+    - 1 time block for selectivity (1980-2017). 
+    
+It is important to keep this in mind when comparing the fits of the two models - what might be the best-fitting parameterization in LS, may not be the best-fitting parameterization for HER.
 
-Objectives and deliverables for this project included:
-
-1.  Update the HER report file
-2.  Generate graphics and tables
-3.  Conduct retrospective analysis
-4.  Add feature to examine likelihood profiles 
-5.  Estimate variance using MCMC on quantities of interest
-6.  Run simulation test
-7.  Goal of a side-by-side comparison of 2018 forecast (2017 data)
+The aim of this document is a side-by-side comparison of the 2018 forecast (1980-2017 data) the :
     -  Document any differences in underlying model structure or assumptions
     -  Compare quantities of interest and explore differences
 
-In addition to the comparison figures contained in this document, there are LS- and HER-specific figures in HER/figs/LS and HER/figs/HER.
+Also noteworthy in this introduction is that HER has a built-in option to condition the model on effort instead of catch, and thus estimate instantaneous fully-selected (and age-specific) annual fishing mortality rates. The current LS model instead conditions the model on catch. The version of HER in this document similarly conditoins on catch. Currently HER can also have alternative cubic spline parameterization of time-varying natural mortality. These alternative model structures represent a broad range of hypotheses that should be considered in a future model selection or model averageing approach.
+
+This document includes comparison graphics between HER and LS. Formatting is consistent among all figures: black solid lines represent results from HER, grey dashed lines are from LS. In addition to comparison figures, there are LS- and HER-specific figures in the project directory: AlaskaHerring/HER/figs/LS and AlaskaHerring/HER/figs/HER. 
+
+Final deliverables will include:
+
+1.   A visual retrospective analysis with summary statistics like Mohn's rho,
+2.   A sensitivity analysis on key parameters $\sigma_R$ (variabililty in recruitment deviations) and $\sigma_M$ (variability in time-varying natural mortality or survival),
+3.   Bayesian estimates of variance, and
+4.   A partial simulation self-test with potential areas of development.
 
 # Differences between LS and HER
 
 This list is a work in progress, and I hope to develop it through the review process and as we continue to explore HER.
 
-1.   The structure and estimation of natural mortality is very different between models:  LS did not have any prior on M, only bounded from 0.001 to 1. LS estimates independent M for each time block. HER estimtes log mean M and then estimates time varying (block or cubic spline) deviations for each block. The result is that natural mortality in HER is not allowed to very much over time (it is functionally constant), which appears to be causing residual patterns in biomass over time.
+1.   The structure and estimation of natural mortality ($M$) is very different between models:  LS did not have any prior on $M$ and includes lower and upper bounds from 0.001 to 1. LS estimates independent $M$s for each time block. HER estimtes log mean $M$ and then estimates time varying deviations for each blocks. The variability in $M$ is government by a fixed paramter called $\sigma_M$. The result is that if $\sigma_M$ is small (e.g. 0.001), natural mortality in HER is functionally constant, which appears to cause residual patterns in the survey-estimated egg deposition over time.
 
 2.   Rounding issues in the input data. The LS dat file had extremely high precision, which we changed in HER.
 
-3.   HER does not use objective function weights. In particular, the LS is weighted by hand, with zero weight given to the stock recruitment (S-R) relationship. HER apparently gives the S-R relationship more weight.
+3.   HER does not use objective function weights. In particular, the LS is weighted by hand, with zero weight given to the stock recruitment (S-R) relationship. HER gives the S-R relationship more weight or influence in the total likelihood.
 
 4.   The assumptions related to maturity catch is different in HER and LS: HER applies the maturity curve to catch numbers-at-age, such that spawning_Nij = maturity_ij $/times$ (total_Nij – catch_Nij), and LS assumes catch to be 100% mature spawning_Nij = (maturity_ij $/times$ total_Nij) – catch_Nij. This is a subtle difference (one parenthesis) between HER and LS that results in a lack of convergence (Hessian does not appear to be positive definite) when I recode HER to match the LS assumption. I’ve been in touch with Sherri on this issue, providing output of mature and catch numbers-at-age. None of the values are negative. When I run HER with the assumption that all catch is mature, ADMB produces a report file. I generated a file displaying all the figures from this report file, and there are no glaring differences except that the estimate of survival went from ~0.5 to 0.6. One potential path forward is to code the LS model like the HER model to see if it runs and substantially changes the results. 
 
