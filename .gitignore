@@ -15,7 +15,7 @@
 *.log
 *.b01
 *.bar
-*.cor
+#*.cor
 *.cout
 *.cpp
 *.ecm
@@ -27,10 +27,10 @@
 *.mcm
 *.obj
 *.p01
-*.par
-*.psv
+#*.par
+#*.psv
 *.r01
-*.rep
+#*.rep
 *.std
 *.out
 *.ps
