@@ -56,8 +56,10 @@ std <- paste0(name,".std") # for checking model convergence in loop
 
 # Values of sigmaR (precR) and sigmaM over which to run a sensitivity analysis:
 sigmaR_vec <- seq(0.3, 1.6, by = 0.2)
+sigmaR_vec <- c(0.2, 0.3, 0.4, 0.6, 0.8, 1.0, 1.4, 2.0)
+sigmaR_vec <- c(0.4, 0.5, 0.6)
 precR_vec <- round(1/(sigmaR_vec^2), 3)
-sigmaM_vec <- c(0.001, 0.005, 0.010, 0.050, 0.100, 0.500)
+sigmaM_vec <- c(0.001, 0.010, 0.025, 0.050, 0.075, 0.100, 0.500, 1.00)
 
 rundir <- file.path(proj_dir, "sensitivity_sigmas")
 dir.create("sensitivity_sigmas", showWarnings = FALSE)
@@ -361,8 +363,8 @@ ggplot(natmat, aes(x = `Time blocks`, y = survival,
 
 ggsave(paste0(figdir, "/survival_sigmaM.png"), dpi = 300, height = 4, width = 8, units = "in")
 
-# sigmaR has an affect on M at values of sigmaM < 0.01 (low sigmaR results in
-# higher survival), but the affect is swamped at high values of sigmaM
+# sigmaR has an effect on M at values of sigmaM < 0.01 (low sigmaR results in
+# higher survival), but the effect is swamped at high values of sigmaM
 ggplot(natmat, aes(x = `Time blocks`, y = survival, 
                    group = factor(sigmaR), colour = factor(sigmaR))) +
   geom_line(size = 1) + 
