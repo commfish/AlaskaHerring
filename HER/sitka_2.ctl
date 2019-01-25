@@ -17,7 +17,7 @@
     5.60   -6.00   12.00      1      0      0     0   # log_rbar
     6.00   -6.00   12.00      2      0      0     0   # log_ro
     2.40    0.00   12.00      2      2   2.73  0.50   # log_reck
-    6.25    0.00  200.00     -2      4   1.05  1.05   # precision = 1/(sigma_r^2)
+    4.00    0.00  200.00     -2      4   1.05  1.05   # precision = 1/(sigma_r^2), SM=6.25
 ##  50.25    0.00  200.00    -2      4   1.05  1.05   # precision = 1/(sigma_r^2)
 
 ## —————————————————————————————————————————————————————————————————————————— ##
@@ -98,6 +98,6 @@
 25000       # 3 - harvest threshold
 0.2         # 4 - target harvest rate
 20000       # 5 - threshold denominator
-0.001       # 6 - standard deviation in natural mortality devs (also tried .05, .01)
+0.075       # 6 - standard deviation in natural mortality devs SM=0.001
 ## EOF
 999

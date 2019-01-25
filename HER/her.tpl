@@ -1226,20 +1226,26 @@ FUNCTION void calcSpawningStockRecruitment()
     substracting immature fish from the numbers before calculating SSB.
   */
   for(int i = mod_syr; i <= mod_nyr; i++){
-    // mature numbers at age before the fishery
-    // mat_Nij(i) = elem_prod(mat(i),Nij(i));
-    // mature numbers at age post fishery
-    // sp_Nij(i) = mat_Nij(i) - Cij(i);
-    // spawning biomass after the fishery
-    // sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
-    
+
     //mature numbers-at-age before the fishery
     mat_Nij(i) = elem_prod(mat(i),Nij(i));
+
+    // Mature biomass-at-age and tot biomass before the fishery
     mat_Bij(i) = elem_prod(mat_Nij(i), data_sp_waa(i)(sage,nage));
     mat_B(i) = sum(mat_Bij(i));
 
+    // Alternative assumptions about catch and maturity:
+
+    // 1. Assume catch is 100% mature (like LS)
+    // mature numbers at age post fishery
+    // sp_Nij(i) = mat_Nij(i) - Cij(i);
+
+    
+    // 2. Assume catch is only partially mature by applying maturity curve
     //mature numbers-at-age after the fishery (spawning population)
-    sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
+     sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
+
+
     // spawning biomass after the fishery
     sp_B(i) = sp_Nij(i) * data_sp_waa(i)(sage,nage);
   }
