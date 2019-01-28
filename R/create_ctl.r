@@ -1,8 +1,23 @@
-# Create ctl file for sensitivity analysis of sigma_r (log precision) and
+# Create ctl file for sensitivity analysis of precR (1/sigmaR^2), sigma_rdevs, and
 # sigma_M (sd on natural mortality deviations)
 
+# Definitions
+
+# precR - precision of stock-recruitment relationship (SM value:
+# precR=6.25, sigmaR=0.4, JS changed to: precR=4.0m sigmaR=0.5 b/c more trials converge across range of
+# sigmaM)
+
+# sigma_rdevs (and f_sigma_rdevs) - variability of age-3 recruitment deviations
+# (rbar_devs) and initial numbers-at-age (rinit_devs) during all phases of
+# estimation vs. the final phase (SM value: sigma_rdevs=1.0, f_sigma_rdevs=5.0)
+
+# sigmaM - variability of natural mortality deviations
+
 # NOTE: this names the ctl file "sitka_2.ctl"
-create_ctl <- function(precR = precR, sigmaM = sigmaM) {
+create_ctl <- function(precR = precR, 
+                       sigmaM = sigmaM, 
+                       sigma_rdevs = sigma_rdevs, 
+                       f_sigma_rdevs = f_sigma_rdevs) {
 
 ctl <- c( "
  
@@ -96,14 +111,16 @@ precR, "0.00  200.00     -2      4       1.05    1.05   # precision = 1/(sigma_r
 ##                        OTHER MISCELLANEOUS CONTROLS                        ##
 ## —————————————————————————————————————————————————————————————————————————— ##
 ## number of controls to read in.
-6
-## Value    # # - Description
-0.90718     # 1 - Catch Scaler (convert from short tons to metric tons)
-0           # 2 - Condition on Catch = 0, Condition of Ft = 1
-25000       # 3 - harvest threshold
-0.2         # 4 - target harvest rate
-20000       # 5 - threshold denominator",
-sigmaM, "# 6 - standard deviation in natural mortality devs (also tried .05, .01)
+8
+## Value        # # - Description
+0.90718         # 1 - Catch Scaler (convert from short tons to metric tons)
+0               # 2 - Condition on Catch = 0, Condition of Ft = 1
+25000           # 3 - harvest threshold
+0.2             # 4 - target harvest rate
+20000           # 5 - threshold denominator",
+sigmaM,        "# 6 - standard deviation in natural mortality devs",
+sigma_rdevs,   "# 7 - sd in recruitment deviations in all phases of estimate up until the last",
+f_sigma_rdevs, "# 8 - sd in recruitment deviation in the final phase of estimation
 ## EOF
 999
 ")

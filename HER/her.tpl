@@ -1442,13 +1442,13 @@ FUNCTION void calcObjectiveFunction()
   // in the last phase, can vary deviations further from zero if there is still process noise that needs to be explained not just by varying parameter estimates
   dvariable log_fbar = mean(log_ft_pars);
   if( last_phase() ){
-    penll(1) = dnorm(log_rinit_devs,0.0,5.0);
-    penll(2) = dnorm(log_rbar_devs,0.0,5.0);
+    penll(1) = dnorm(log_rinit_devs,0.0,dMiscCont(8));
+    penll(2) = dnorm(log_rbar_devs,0.0,dMiscCont(8));
     penll(3) = dnorm(log_fbar,0.2,2.0);
 
   } else {
-    penll(1) = dnorm(log_rinit_devs,0.0,1.0);
-    penll(2) = dnorm(log_rbar_devs,0.0,1.0);
+    penll(1) = dnorm(log_rinit_devs,0.0,dMiscCont(7));
+    penll(2) = dnorm(log_rbar_devs,0.0,dMiscCont(7));
     penll(3) = dnorm(log_fbar,0.2,0.07); 
   }
 
