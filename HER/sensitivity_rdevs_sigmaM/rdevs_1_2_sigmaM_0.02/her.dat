@@ -1,0 +1,16 @@
+#
+# DEBUG FLAG (0 = FALSE, 1 = TRUE)
+#
+	0
+
+#
+# Data file for Herring Assessment Model
+#
+	sitka_2.dat
+
+
+#	
+# Control file
+#
+	sitka_2.ctl 
+

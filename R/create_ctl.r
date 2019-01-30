@@ -14,10 +14,10 @@
 # sigmaM - variability of natural mortality deviations
 
 # NOTE: this names the ctl file "sitka_2.ctl"
-create_ctl <- function(precR = precR, 
-                       sigmaM = sigmaM, 
-                       sigma_rdevs = sigma_rdevs, 
-                       f_sigma_rdevs = f_sigma_rdevs) {
+create_ctl <- function(precR = 4.0, 
+                       sigmaM = 0.075, 
+                       sigma_rdevs = 1.0, 
+                       f_sigma_rdevs = 5.0) {
 
 ctl <- c( "
  
