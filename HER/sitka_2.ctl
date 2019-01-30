@@ -86,12 +86,11 @@
       1     1       5.0   0.3   0     0      2        1980  2017
 ## —————————————————————————————————————————————————————————————————————————— ##
 
-
 ## —————————————————————————————————————————————————————————————————————————— ##
 ##                        OTHER MISCELLANEOUS CONTROLS                        ##
 ## —————————————————————————————————————————————————————————————————————————— ##
 ## number of controls to read in.
-6
+8
 ## Value    # # - Description
 0.90718     # 1 - Catch Scaler (convert from short tons to metric tons)
 0           # 2 - Condition on Catch = 0, Condition of Ft = 1
@@ -99,5 +98,7 @@
 0.2         # 4 - target harvest rate
 20000       # 5 - threshold denominator
 0.075       # 6 - standard deviation in natural mortality devs SM=0.001
+1.00        # 7 - sd in recruitment deviations in all phases of estimate up until the last
+5.00        # 8 - sd in recruitment deviation in the final phase of estimation
 ## EOF
 999
