@@ -126,6 +126,6 @@ f_sigma_rdevs, "# 8 - sd in recruitment deviation in the final phase of estimati
 ")
 
 # Write it to file
-write.table(ctl, file = "sitka_2.ctl", sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE)
+write.table(ctl, file = "sitka.ctl", sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE)
 
 }
