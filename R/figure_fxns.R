@@ -342,9 +342,9 @@ plot_agecomps <- function(D = D, path = path) {
   
 }
 
-# Spawning biomass ----
+# Biomass time series ----
 
-plot_biomass <- function() {
+plot_biomass <- function(D = D, path = path) {
   
   # in SPAWN folder, numbers from excel spread sheet for spawn deposition
   srv_spB <- c(35000,30000,29500,23500,38500,31000,25000,46000,58500,27000,23000,23500,
@@ -357,11 +357,73 @@ plot_biomass <- function() {
   syr_index <- D[["mod_syr"]] - D[["dat_syr"]] + 1
 
   df <- data.frame(Year = D[["year"]],
-                   spB = D[["sp_B"]] / 0.90718, # convert to short tons
-                   catch = D[["data_catch"]][syr_index:tot_yrs, 2] # already in short tons
-                   ) %>% 
-    mutate(matB = spB + catch,
-           srv_spB = srv_spB)
-
+                   matB = D[["mat_B"]] / 0.90718, # convert to short tons
+                   catch = D[["data_catch"]][syr_index:tot_yrs, 2]  / 0.90718) %>% 
+    mutate(spB = matB - catch) %>% 
+    gather("Biomass", "tons", -Year) %>% 
+    mutate(Type = "Estimate") %>% 
+    # Bind to forecast values
+    bind_rows(data.frame(Year = D[["mod_nyr"]] + 1,
+                         matB = D[["fore_matb"]] / 0.90718,
+                         catch = D[["ghl"]]) %>% 
+                mutate(spB = matB - catch) %>% 
+                gather("Biomass", "tons", -Year) %>% 
+                mutate(Type = "Forecast")) %>% 
+    mutate(label = ifelse(Type == "Forecast", 
+                   prettyNum(tons, big.mark = ",", digits = 1), NA))
+  
+  # Historical estimates from survey
+  survey <- data.frame(Year = D[["year"]],
+                         srv_spB = srv_spB,
+                         catch = D[["data_catch"]][syr_index:tot_yrs, 2] / 0.90718) %>%
+    mutate(srv_matB = srv_spB + catch)
+  
+  tickryr <- data.frame(Year = 1980:max(df$Year)+3)
+  axisx <- tickr(tickryr, Year, 5)
+  
+  # Spawning biomass ----
+  ggplot() +
+    geom_point(data = df %>% filter(Biomass == "spB" & Type == "Forecast"), 
+               aes(x = Year, y = tons, colour = "Model predictions and forecast",
+                   fill = "Model predictions and forecast"), size = 2, shape = 23) +
+    geom_line(data = df %>% filter(Biomass == "spB"), 
+              aes(x = Year, y = tons, colour = "Model predictions and forecast"), size = 1) +
+    scale_colour_manual(values = "darkgrey") + 
+    scale_fill_manual(values = "darkgrey") + 
+    geom_point(data = survey, aes(x = Year, y = srv_spB, shape = "Historical estimates from survey")) +
+    scale_shape_manual(values = 1) +
+    geom_text(data = df %>% filter(Biomass == "spB"), 
+                    aes(x = Year, y = tons, label = label), size = 3, nudge_x = 2) +
+    theme(legend.position = c(0.25, 0.8),
+          legend.spacing.y = unit(0, "cm")) +
+    scale_x_continuous(limits = c(min(tickryr$Year), max(tickryr$Year)),
+                                  breaks = axisx$breaks, labels = axisx$labels) +
+    scale_y_continuous(labels = scales::comma) +
+    labs(x = "", y = "Spawning biomass (tons)\n", shape = NULL, colour = NULL, fill = NULL) -> spbiomass_plot
+  
+  ggsave(paste0(path, "/spbiomass_plot.png"), plot = spbiomass_plot, dpi = 300, height = 4, width = 7, units = "in")
+  
+  # Mature biomass ----
+  
+  ggplot() +
+    geom_point(data = df %>% filter(Biomass == "matB" & Type == "Forecast"), 
+               aes(x = Year, y = tons, colour = "Model predictions and forecast",
+                   fill = "Model predictions and forecast"), size = 2, shape = 23) +
+    geom_line(data = df %>% filter(Biomass == "matB"), 
+              aes(x = Year, y = tons, colour = "Model predictions and forecast"), size = 1) +
+    scale_colour_manual(values = "darkgrey") + 
+    scale_fill_manual(values = "darkgrey") + 
+    geom_point(data = survey, aes(x = Year, y = srv_matB, shape = "Historical estimates from survey")) +
+    scale_shape_manual(values = 1) +
+    geom_text(data = df %>% filter(Biomass == "matB"), 
+              aes(x = Year, y = tons, label = label), size = 3, nudge_x = 2) +
+    theme(legend.position = c(0.25, 0.8),
+          legend.spacing.y = unit(0, "cm")) +
+    scale_x_continuous(limits = c(min(tickryr$Year), max(tickryr$Year)),
+                       breaks = axisx$breaks, labels = axisx$labels) +
+    scale_y_continuous(labels = scales::comma) +
+    labs(x = "", y = "Mature biomass (tons)\n", shape = NULL, colour = NULL, fill = NULL) -> matbiomass_plot
+  
+  ggsave(paste0(path, "/matbiomass_plot.png"), plot = matbiomass_plot, dpi = 300, height = 4, width = 7, units = "in")
   
 }

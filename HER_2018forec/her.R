@@ -281,7 +281,7 @@ tot_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
 df <- data.frame(Year = D[["year"]],
                  matB = D[["mat_B"]] / 0.90718,
                  spB = D[["sp_B"]] / 0.90718, # convert to short tons
-                 catch = D[["data_catch"]][10:47, 2]#[nyr + 1, tot_yrs, 1), 2] # just the column of catch, already in short tons
+                 catch = D[["data_catch"]][10:tot_yrs, 2]  / 0.90718 #[nyr + 1, tot_yrs, 1), 2] # just the column of catch
 ) %>% 
   mutate(matB2 = spB + catch,
          Model = "HER") %>% 
@@ -908,7 +908,7 @@ sel_sum %>%
 
 # her_matsel %>% filter(param == "Selectivity") -> par
 # 
-# ggplot(par, aes(x = Age, y = proportion)) + 
+# ggplot(par, aes(x = Age, y = proportion)) +
 #   geom_line(aes(linetype = `Time blocks`, group = `Time blocks`)) +
 #   geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
 #   expand_limits(y = 0) +

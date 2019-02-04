@@ -21,6 +21,7 @@ library(gtools)     # for the permutations function
 library(R2admb)     # running ADMB through R
 library(data.table)
 source("R/helper.R")
+source("R/figure_fxns.R")
 
 # User inputs ----
 
@@ -59,7 +60,7 @@ names(perms) <- c("survival", "maturity", "selectivity")
 # Function that applies rule that selectivity can only change within the same
 # years or less than maturity). This eliminates all the extra models, which
 # makes the total run time much faster. If you don't want to apply this rule,
-# then don't run the function!
+# don't run the function
 selectivity_tst <- function(perms = perms,
                             # If debug = TRUE the tst list will print out. see
                             # debug=TRUE documentation below for details
@@ -316,13 +317,31 @@ filter(check_converge, Convergence == 1) -> selection_summary
 selection_summary %>% 
   mutate(AIC = NA,
          max_grad = NA,
-         GHL = NA) -> selection_summary
-  
-survival <- list()
-maturity <- list()
-selectivity <- list()
+         GHL = NA,
+         nopar = NA) -> selection_summary
 
 # 7. Figures and report file ----
+
+# total number of years in the data vs model and model start year index, used
+# for indexing output
+n_dat_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
+n_mod_yrs <- D[["mod_nyr"]] - D[["mod_syr"]] + 1
+syr_index <- D[["mod_syr"]] - D[["dat_syr"]] + 1
+
+# Function that formats matrices in the format year x age
+format_matrix <- function(D = D, 
+                          # Name of year x age matrix you want formatted
+                          matrix = 'Nij', 
+                          # 'years' includes forecast year, 'year' doesn't
+                          yr = 'years') {
+  Year <- data.frame(Year = D[[yr]])
+  mat <- as.data.frame(D[[matrix]])
+  names(mat) <- c(3:7, "8+")
+  mat <- cbind(Year, mat)
+  mat <- mat %>% filter(Year <= D[['mod_nyr']] & Year >= D[['mod_syr']])
+  return(mat)
+}
+
 for(i in 1:length(selection_summary$Folder_name)){
   
   # Navigate to the correct directory
@@ -341,21 +360,174 @@ for(i in 1:length(selection_summary$Folder_name)){
   selection_summary[i,"AIC"] <- 2 * P[["nlogl"]] + 2 * P[["nopar"]]
   selection_summary[i,"max_grad"] <- P[["maxgrad"]]
   selection_summary[i, "GHL"] <- D[["ghl"]] # Already in short tons
+  selection_summary[i, "nopar"] <- P[["nopar"]]
   
   # Generate figures
   plot_recruitment(D, results, showRicker = FALSE) # showRicker=TRUE Ricker estimates in top graph desired
   plot_eggdep(D, results, 
-              # Bootstrap confidence intervals
+              # Show ootstrap confidence intervals
               bootstrap = TRUE,
-              # Plot 95% credibility interval from posterior samples
+              # Show 95% credibility interval from posterior samples (not
+              # possible unless you run the MCMC first)
               credibility = FALSE, 
               # Cut off extreme value in 2008
               remove_outlier = TRUE)
   plot_survival(D, results)
   plot_matsel(D, results)
-  plot_agecomps(D, results)
+  # generates 4 figs (data bubble plot, residuals, & barplots with data and fit)
+  plot_agecomps(D, results) 
+  plot_biomass(D, results)
+  
+  # Write report
+  
+  # Forecast values
+  forec <- data.frame(age = c(3:7, "8+"),
+                      nj = D[['fore_nj']],
+                      matnj = D[['fore_matnj']],
+                      prop_matnj = D[['fore_matnj']] / sum(D[['fore_matnj']]),
+                      waa = D[['data_sp_waa']][n_dat_yrs, 2:7],
+                      surv = exp(-D[['Mij']][n_mod_yrs, ]),
+                      mat = D[['mat']][n_mod_yrs, ],
+                      sel = D[['Sij']][n_mod_yrs, ])
+  
+  names(forec) <- c('Age', 'Mature and immature numbers-at-age forecast (millions)',
+                    'Mature numbers-at-age (millions)', 'Proportion mature numbers-at-age',
+                    'Weight-at-age used in forecast (g)', 'Survival', 'Maturity', 'Selectivity')
+  
+  # Derived time series
+  ts <- data.frame(Year = D[['year']],
+                   matB = D[['mat_B']] / 0.90718, # convert to short tons
+                   catch = D[['data_catch']][syr_index:n_dat_yrs, 2] / 0.90718, 
+                   rec = D[['Nij']][1:n_mod_yrs, 1]) %>% 
+    mutate(spB = matB - catch)  # Assumption that 100% catch is mature
+  
+  ts <- ts %>% 
+    select(Year, `Mature biomass (tons)` = matB,
+           `Spawning biomass (tons)` = spB, `Catch (tons)` = catch,
+           `Mature and immature age-3 abundance (recruitment in millions)` = rec)
+  
+  # Format year x age matrices
+  Nij <- format_matrix(D, 'Nij') # Total numbers-at-age 
+  mat_Nij <- format_matrix(D, 'mat_Nij') # Mature numbers-at-age
+  Cij <- format_matrix(D, 'Cij') # Catch in numbers-at-age
+  # Spawning numbers-at-age with assumption that 100% of the catch is mature
+  sp_Nij <- mat_Nij - Cij 
+  sp_Nij <- sp_Nij %>% mutate(Year = D[['year']])
+  # Estimated proportion of each age class that is caught (e.g. number of age-3
+  # fish caught divided by the number of age-3 mature at age)
+  Pij <- Cij / mat_Nij
+  Pij <- Pij %>% mutate(Year = D[['year']])
+  mat_Bij <- format_matrix(D, 'mat_Bij') # Mature biomass-at-age
+  # Catch biomass-at-age
+  catch_Bij <- D[['data_cm_waa']][syr_index:n_dat_yrs, ] * Cij
+  catch_Bij <- catch_Bij %>% mutate(Year = D[['year']])
+  # Spawning biomass-at-age with assumption at 100% of the catch is mature
+  sp_Bij <- mat_Bij - catch_Bij
+  # Surivival
+  surv <- as.data.frame(exp(-D[['Mij']]))
+  names(surv) <-  c(3:7, "8+")
+  surv <- cbind(data.frame(Year = D[['year']]), surv)
+  mat <- format_matrix(D, 'mat', yr = 'year') # Maturity
+  sel <- format_matrix(D, 'Sij') # Selectivity
+  # Observed spawning age comps
+  sp_comp <- as.data.frame(D[['data_sp_comp']]) 
+  names(sp_comp) <- c('Year', 3:7, "8+")
+  sp_comp <- sp_comp %>% filter(Year <= D[['mod_nyr']] & Year >= D[['mod_syr']])
+  # Observed catch age comps
+  catch_comp <- as.data.frame(D[['data_cm_comp']]) 
+  names(catch_comp) <- c('Year', 3:7, "8+")
+  catch_comp <- catch_comp %>% filter(Year <= D[['mod_nyr']] & Year >= D[['mod_syr']])
+  
+  rep <- c(paste0("MODEL RESULTS", "\n",
+                  "\n",
+                  "Report produced by model_selection.R", "\n",
+                  "Contact: Sherri.Dressel@alaska.gov or Jane.Sullivan1@alaska.gov", "\n",
+                  paste0(selection_summary$Folder_name[i]),  "\n",
+                  "\n",
+                  "Model structure", "\n",
+                  "Survival time blocks:,", selection_summary$Survival[i], "\n",
+                  "Maturity time blocks:,", selection_summary$Maturity[i], "\n",
+                  "Selectivity time blocks:,", selection_summary$Selectivity[i], "\n",
+                  "\n",
+                  "Model diagnostics", "\n",
+                  "Number of parameters:,", round(P[['nopar']], 0),  "\n",
+                  "Negative log likelihood:,", round(P[['nlogl']], 1),  "\n",
+                  "Maximum gradient compoent:,", P[['maxgrad']], "\n",
+                  "\n",
+                  "Forecast", "\n",
+                  "Mature biomass forecast (tons):,", round(D[['fore_matb']] / 0.90718, 1),  "\n",
+                  "Threshold placeholder, TODO",  "\n",
+                  "GHL (tons):,", round(D[['ghl']], 1),  "\n",
+                  "Harvest rate:, 0.2", "\n",
+                  "\n",
+                  "Forecast values by age")
+  )
+  
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n")
+  write.table(forec, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Catch and biomass time series"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(ts, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Mature and immature numbers-at-age (millions)"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(Nij, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Mature numbers-at-age (millions)"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(mat_Nij, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Spawning numbers-at-age (millions)"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(sp_Nij, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Catch in numbers-at-age (millions)"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(Cij, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Proportion of each age class that is caught from mature population (e.g. number of age-3 fish caught divided by the number of age-3 mature at age)"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(Pij, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Mature biomass-at-age (tons)"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(mat_Bij, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Spawning biomass-at-age (tons)"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(sp_Bij, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Catch in biomass-at-age (tons)"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(catch_Bij, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Survival"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(surv, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Maturity"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(mat, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Selectivity"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(sel, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Observed spawning age composition (cast net)"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(sp_comp, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
+  
+  rep <- c(paste0("\n", "Observed commercial age composition (spring seine)"))
+  write.table(rep, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
+  write.table(catch_comp, file = paste0(results, "/Report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
   
   }
 
+# 8. Final AIC summary ----
+selection_summary %>% 
+  mutate(deltaAIC = abs(min(selection_summary$AIC) - AIC)) %>% 
+  select(Folder_name, Structure, deltaAIC, AIC, GHL, nopar, max_grad, Survival, Maturity, Selectivity) %>% 
+  arrange(deltaAIC) -> selection_summary
 
-# Model selection summary ----
+write_csv(selection_summary, paste0(modsel_dir, "/AIC_selection_summary.csv"))
