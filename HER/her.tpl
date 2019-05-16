@@ -4,20 +4,20 @@
 //                               VERSION 0.1                                  //
 //                                Jan  2015                                   //
 //                                                                            //
-//                                 AUTHORS                                    //
-//                              Sherri Dressel                                //                                 
-//                        sherri.dressel@alaska.gov                           //
-//                               Sara Miller                                  //
-//                          sara.miller@alaska.gov                            //
-//                               Kray Van Kirk                                //
-//                          kray.vankirk@alaska.gov                           //
+//                            Code developed by                               //
+//                              Steven Martell                                //
+//                          martell.steve@gmail.com                           //
 //                                                                            //
 //                   Built on code developed by Peter Hulson                  //
 //                            pete.hulson@noaa.gov                            //
 //                                                                            //
-//                           Layout and references                            //
-//                              Steven Martell                                //
-//                          martell.steve@gmail.com                           //
+//                                 AUTHORS                                    //
+//                              Jane Sullivan                                 //                                 
+//                        jane.sullivan1@alaska.gov                           //
+//                              Sherri Dressel                                //                                 
+//                        sherri.dressel@alaska.gov                           //
+//                               Sara Miller                                  //
+//                          sara.miller@alaska.gov                            //
 //                                                                            //
 // CONVENTIONS: Formatting conventions are based on                           //
 //              The Elements of C++ Style (Misfeldt et al. 2004)              //
@@ -1843,8 +1843,8 @@ REPORT_SECTION
 // *FLAG* can't figure out how to generalize maturity param output from mat_params, a bounded_vector_vector
 //  ivector a50 = column(mat_params,1);
 //  ivector a95 = column(mat_params,2);
-  REPORT(mat_params[1]);
-  REPORT(mat_params[2]);
+//  REPORT(mat_params[1]);
+//  REPORT(mat_params[2]);
 
 // Natural mortality
   REPORT(Mij);
