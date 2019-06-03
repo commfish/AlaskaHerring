@@ -1,1 +1,0 @@
-../models_2015/sitka/sitka_2
