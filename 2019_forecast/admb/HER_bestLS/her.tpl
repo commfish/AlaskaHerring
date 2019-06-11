@@ -767,7 +767,7 @@ FUNCTION void writePosteriorSamples()
     ofstream ofs3("pred_egg_dep.ps");    
 
     // estimated recruitment
-    ofstream ofs4("recruits.ps");  
+    ofstream ofs4("ricker_rec.ps");  
 
     // survival
     ofstream ofs5("survival.ps");
@@ -782,6 +782,18 @@ FUNCTION void writePosteriorSamples()
     // predicted catch (only works if model is conditioned on effort)
     ofstream ofs8("pred_catch.ps");  
 
+    // predicted spawner age comps
+    ofstream ofs9("pred_sp_comp.ps");
+
+    // predicted catch age comps
+    ofstream ofs10("pred_cm_comp.ps");
+
+    // fishing mortality
+    ofstream ofs11("fmort.ps");
+
+    // age-3 recruitment from N matrix
+    ofstream ofs12("age3_rec.ps");
+
   }
   ofstream ofs("mat_B.ps",ios::app);
   ofs<<mat_B<<endl;
@@ -795,12 +807,12 @@ FUNCTION void writePosteriorSamples()
   ofstream ofs3("pred_egg_dep.ps",ios::app);
   ofs3<<pred_egg_dep<<endl;
 
-  ofstream ofs4("recruits.ps",ios::app);
+  ofstream ofs4("ricker_rec.ps",ios::app);
   ofs4<<recruits<<endl;  
 
   ofstream ofs5("survival.ps",ios::app);
   //ofs5<< exp(log_natural_mortality) << "\t" << exp(-(exp(log_natural_mortality))) << endl;
-  ofs5<< exp(-Mij) << endl;
+  ofs5<< mfexp(-Mij) << endl;
 
   ofstream ofs6("maturity.ps",ios::app);
   ofs6<<mat<<endl;  
@@ -811,6 +823,18 @@ FUNCTION void writePosteriorSamples()
   ofstream ofs8("pred_catch.ps",ios::app);
   ofs8<<pred_catch<<endl;  
   
+  ofstream ofs9("pred_sp_comp.ps",ios::app);
+  ofs9<<pred_sp_comp<<endl;  
+
+  ofstream ofs10("pred_cm_comp.ps",ios::app);
+  ofs10<<pred_cm_comp<<endl;  
+
+  ofstream ofs11("fmort.ps",ios::app);
+  ofs11<<mfexp(log_ft_pars)<<endl;  
+
+  ofstream ofs12("age3_rec.ps",ios::app);
+  ofs12<<mfexp(log_rbar + log_rbar_devs)<<endl;  
+
 FUNCTION void runSimulationModel(const int& rseed)
   
 //    // PSUEDOCODE:
@@ -914,7 +938,7 @@ FUNCTION void runSimulationModel(const int& rseed)
       //double log_it = value(log(pred_egg_dep(i)));
       data_egg_dep(i,2) = value(pred_egg_dep(i)) 
                           * exp(epsilon_egg_dep(i) * sd - 0.5 * square(sd));  
-      //data_egg_dep(i,2) = exp(log_it + epsilon_egg_dep(i) * sd) - 05 * square(sd));
+      //data_egg_dep(i,2) = exp(log_it + epsilon_egg_dep(i) * sd) - 0.5 * square(sd));
     }
   }
 

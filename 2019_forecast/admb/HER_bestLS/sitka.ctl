@@ -24,7 +24,6 @@
 
 
 
-
 ## —————————————————————————————————————————————————————————————————————————— ##
 ##                CONTROLS FOR TIME-VARYING MATURITY                          ##
 ## —————————————————————————————————————————————————————————————————————————— ##
@@ -35,7 +34,6 @@
    4.5    7.0      2           2014
    4.5    7.0      2           2018
 ## —————————————————————————————————————————————————————————————————————————— ##
-
 
 
 
@@ -57,7 +55,6 @@
 
 
 
-
 ## —————————————————————————————————————————————————————————————————————————— ##
 ##                    CONTROLS FOR SELECTIVITY PARAMETERS                     ##
 ## —————————————————————————————————————————————————————————————————————————— ##
@@ -71,13 +68,6 @@
 ##  Gear  Sel     sel   sel   age   year  phz    | start end
 ##  Index Type    mu    sd    nodes nodes mirror | block block
 ## —————————————————————————————————————————————————————————————————————————— ##
-##    1     1       3.0   0.5   0     0     -1        1971  1980
-##    1     1       5.0   0.3   0     0      2        1981  2000
-##    1     1       5.0   0.3   0     0      2        2001  2015
-  
-##    1     1       5.0   0.3   0     0      2        1980  2000
-##    1     1       5.0   0.3   0     0      2        2001  2016
-
       1     1       5.0   0.3   0     0      2        1980  2018
 ## —————————————————————————————————————————————————————————————————————————— ##
 
@@ -92,7 +82,7 @@
 25000       # 3 - harvest threshold
 0.2         # 4 - target harvest rate
 20000       # 5 - threshold denominator
-0.07        # 6 - standard deviation in natural mortality devs SM=0.001 2018_forec=0.08
+0.09        # 6 - standard deviation in natural mortality devs SM=0.001 2018_forec=0.08
 1.00        # 7 - sd in recruitment deviations in all phases of estimate up until the last
 5.00        # 8 - sd in recruitment deviation in the final phase of estimation
 ## EOF
