@@ -1064,7 +1064,9 @@ df %>%
   left_join(LS_byage %>% 
               select(Year, LS = survival), by = "Year") %>% 
   group_by(LS, HER) %>% 
-  mutate(Blocks = paste0(min(Year), "-", max(Year))) %>% 
+  mutate(Blocks = paste0(min(Year), "-", max(Year))) -> df_sum
+
+df_sum %>% 
   distinct(Blocks, HER, LS) %>% 
   select(Blocks, HER, LS) -> survival_blks
 
@@ -1123,17 +1125,30 @@ df %>% select(Year, M = `3`) %>%
 ggplot(df, aes(x = Year, y = survival)) +
   geom_vline(xintercept = c(1998.5, 2014.5), colour = "lightgrey", linetype = 3) +
   geom_line(size = 1) +
-  geom_point() +
+  # geom_point() +
   lims(y = c(0, 1)) +
-  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) +
   labs(x = "", y = "Survival\n") -> survival_plot
 
 ggsave(paste0(HERfig_dir, "/survival.png"), plot = survival_plot, dpi = 300, height = 4, width = 6, units = "in")
 
 # TODO: With 95% credible interval
-# surv_sum %>% filter(Age == 3) -> surv_sum
-# surv_sum %>% distinct(min, max, Blocks) -> surv_blks
-# data.frame(Year = min(surv_blks,))
+surv_sum %>% filter(Age == 3) -> surv_sum
+
+df_sum %>% 
+  ungroup() %>% 
+  select(-LS) %>% 
+  left_join(surv_sum) %>%
+  rename(survival = HER) %>%
+  distinct(Year, survival, Blocks, q025, q975, q250, q750) -> df_sum
+
+survival_plot +
+  geom_ribbon(data = df_sum, aes(x = Year, ymin = q025, ymax = q975),
+              alpha = 0.6, fill = "grey70") +
+  geom_ribbon(data = df_sum, aes(x = Year, ymin = q250, ymax = q750),
+              alpha = 0.6, fill = "grey40") -> survival_plot_CI
+
+ggsave(paste0(HERfig_dir, "/survival_CI.png"), plot = survival_plot_CI, dpi = 300, height = 4, width = 6, units = "in")
 
 # Maturity/Selectivity ----
 
