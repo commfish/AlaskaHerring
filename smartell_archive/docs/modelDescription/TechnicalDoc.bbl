@@ -1,0 +1,29 @@
+\begin{thebibliography}{}
+
+\bibitem[Francis, 2011]{francis2011data}
+Francis, R. (2011).
+\newblock Data weighting in statistical fisheries stock assessment models.
+\newblock {\em Canadian Journal of Fisheries and Aquatic Sciences},
+  68(6):1124--1138.
+
+\bibitem[Mace and Doonan, 1988]{mace1988generalised}
+Mace, P.~M. and Doonan, I. (1988).
+\newblock {\em A generalised bioeconomic simulation model for fish population
+  dynamics}.
+\newblock MAFFish, NZ Ministry of Agriculture and Fisheries.
+
+\bibitem[Schnute and Richards, 1995]{schnute1995influence}
+Schnute, J. and Richards, L. (1995).
+\newblock {The influence of error on population estimates from catch-age
+  models}.
+\newblock {\em Canadian Journal of Fisheries and Aquatic Sciences},
+  52(10):2063--2077.
+
+\bibitem[Walters and Ludwig, 1994]{walters1994calculation}
+Walters, C. and Ludwig, D. (1994).
+\newblock {Calculation of Bayes posterior probability distributions for key
+  population parameters}.
+\newblock {\em Canadian Journal of Fisheries and Aquatic Sciences},
+  51(3):713--722.
+
+\end{thebibliography}

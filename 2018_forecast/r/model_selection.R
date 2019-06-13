@@ -1,7 +1,7 @@
 
 # Model selection for HER
 # Jane Sullivan (jane.sullivan1@alaska.gov)
-# Updated January 2019
+# Updated June 2019
 
 # Pseudocode
 # 1. User inputs the year breaks
@@ -324,6 +324,8 @@ selection_summary %>%
          nopar = NA) -> selection_summary
 
 # 7. Figures and report file ----
+setwd(tpl_dir)
+D <- read_admb(name)
 
 # total number of years in the data vs model and model start year index, used
 # for indexing output
@@ -356,7 +358,7 @@ for(i in 1:length(selection_summary$Folder_name)){
   P <- read_fit(name)  # Diagnostics
   
   # Create directory for figures and results
-  results <- file.path(model_dir, "results")
+  results <- file.path(model_dir, paste0("results_", fn))
   dir.create(results, showWarnings = FALSE)
   
   # Store salient results for selection summary

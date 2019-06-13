@@ -18,7 +18,8 @@ syr <- 1980
 lyr <- YEAR - 1
 
 # IMPORTANT: this will create a subdirectory and allow you to run a
-# retrospective on multiple model versions for comparison
+# retrospective on multiple model versions for comparison. User must update
+# write_ctl() function below to match MODEL_VERSION ctl!!!
 MODEL_VERSION <- "HER_bestLS"   # HER with the "best" LS parameterization
 
 # For MODEL_VERSION, what are the time blocks? This information is needed

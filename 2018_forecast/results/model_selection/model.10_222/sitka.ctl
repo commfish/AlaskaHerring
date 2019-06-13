@@ -61,8 +61,8 @@
 ##  Gear  Sel     sel   sel   age   year  phz    | start end
 ##  Index Type    mu    sd    nodes nodes mirror | block block
 ## —————————————————————————————————————————————————————————————————————————— ##
-1     1     3.0     0.5     0     0     2          1980     1998
-1     1     3.0     0.5     0     0     2          1999     2017
+1     1     5.0     0.3     0     0     2          1980     1998
+1     1     5.0     0.3     0     0     2          1999     2017
 ## ——————————————————————————————————————————————————————————————————————————— ##
 
 ## ——————————————————————————————————————————————————————————————————————————— ##
@@ -76,7 +76,7 @@
 25000       # 3 - harvest threshold
 0.2         # 4 - target harvest rate
 20000       # 5 - threshold denominator
-0.075       # 6 - standard deviation in natural mortality devs SM=0.001
+0.080       # 6 - standard deviation in natural mortality devs SM=0.001
 1.00        # 7 - sd in recruitment deviations in all phases of estimate up until the last
 5.00        # 8 - sd in recruitment deviation in the final phase of estimation
 ## EOF
