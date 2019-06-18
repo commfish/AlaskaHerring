@@ -181,7 +181,7 @@ DATA_SECTION
         iyr ++;
       }while(iyr <= nFecBlockYears(h));
     }
-   COUT(Eij);
+   //COUT(Eij);
  END_CALCS
 
 // |---------------------------------------------------------------------------|
@@ -794,6 +794,15 @@ FUNCTION void writePosteriorSamples()
     // age-3 recruitment from N matrix
     ofstream ofs12("age3_rec.ps");
 
+    // posterior predictive interval for egg deposition
+    ofstream ofs13("pp_egg_dep.ps");
+
+    // posterior predictive interval for spawner age comps
+    ofstream ofs14("pp_sp_comp.ps");
+
+    // posterior predictive interval for catch age comps
+    ofstream ofs15("pp_cm_comp.ps");
+
   }
   ofstream ofs("mat_B.ps",ios::app);
   ofs<<mat_B<<endl;
@@ -834,6 +843,60 @@ FUNCTION void writePosteriorSamples()
 
   ofstream ofs12("age3_rec.ps",ios::app);
   ofs12<<mfexp(log_rbar + log_rbar_devs)<<endl;  
+
+  // Estimate posterior predictive intervals for abundance index and composition data
+  int pp_seed = 123; 
+
+  // Posterior predictive intervals for egg deposition with lognormal distribution:
+  dvector pp_egg_dep(mod_syr,mod_nyr);   // empty vector to hold prediction from each posterior sample
+  pp_egg_dep.initialize();
+  double mu_egg_dep;
+  double sigma_egg_dep;
+  random_number_generator rng(pp_seed);
+
+  // Sample from lognormal distribution 
+  for(int i = mod_syr; i <= mod_nyr; i++) {
+    mu_egg_dep = value(log(pred_egg_dep(i)));                             // assume prediction = mean, assume lognormal distribution
+    sigma_egg_dep = TINY + column(data_egg_dep,3)(i);              // log_se
+    pp_egg_dep(i) = mfexp(rnorm(mu_egg_dep,sigma_egg_dep,rng));    // put prediction back on natural scale
+  }
+
+  // Posterior predictive intervals for age comps with multivariate logistic distribution:
+  dmatrix pp_sp_comp(mod_syr,mod_nyr,sage,nage);    // empty matrix to hold prediction from each posterior sample
+  dmatrix pp_cm_comp(mod_syr,mod_nyr,sage,nage);    
+  pp_sp_comp.initialize();
+  pp_cm_comp.initialize();
+  
+  double pp_sp_tau2;  // variance estimates for each posterior sample (single variance across all years)
+  double pp_cm_tau2;    
+
+  double minp = 0.00; // threshold proportion <= grouped with next bin
+
+  // spawning survey age composition
+  dmatrix d_sp_comp = trans(trans(data_sp_comp).sub(sage,nage)).sub(mod_syr,mod_nyr);
+  pp_sp_tau2 = value(dmvlogistic(d_sp_comp,pred_sp_comp,resd_sp_comp,pp_sp_tau2,minp,false));   // value() returns double
+
+  // commercial fishery age composition
+  dmatrix d_cm_comp = trans(trans(data_cm_comp).sub(sage,nage)).sub(mod_syr,mod_nyr);
+  pp_cm_tau2 = value(dmvlogistic(d_cm_comp,pred_cm_comp,resd_cm_comp,pp_cm_tau2,minp,false));   // false = extract variance instead of nll
+
+  // sample from multivariate logistic distribution
+  for(int i = mod_syr; i <= mod_nyr; i++) {
+    dvector pp_sp = value(pred_sp_comp(i));
+    dvector pp_cm = value(pred_cm_comp(i));
+    
+    pp_sp_comp(i)(sage,nage) = rmvlogistic(pp_sp,pp_sp_tau2,pp_seed-i);
+    pp_cm_comp(i)(sage,nage) = rmvlogistic(pp_cm,pp_cm_tau2,pp_seed-i);
+  }
+
+  ofstream ofs13("pp_egg_dep.ps",ios::app);
+  ofs13<<pp_egg_dep<<endl;  
+
+  ofstream ofs14("pp_sp_comp.ps",ios::app);
+  ofs14<<pp_sp_comp<<endl;  
+
+  ofstream ofs15("pp_cm_comp.ps",ios::app);
+  ofs15<<pp_cm_comp<<endl;  
 
 FUNCTION void runSimulationModel(const int& rseed)
   
@@ -1429,21 +1492,13 @@ FUNCTION void calcObjectiveFunction()
   int t2 = mod_nyr;
   // spawning survey composition
   dmatrix d_sp_comp = trans(trans(data_sp_comp).sub(sage,nage)).sub(t1,t2);
-  nll(1) = dmvlogistic(d_sp_comp,pred_sp_comp,resd_sp_comp,sp_tau2,minp,nll=true);
-
-  int tst_seed = 123;
-  COUT(tst_seed);
-
-  random_number_generator rng(tst_seed);
-  dvector tst_epsilon(sage,nage);
-  tst_epsilon.fill_randn(rng);
-  COUT(tst_epsilon);
+  nll(1) = dmvlogistic(d_sp_comp,pred_sp_comp,resd_sp_comp,sp_tau2,minp,true); // true = return nll instead of variance
 
   // Mulitvariate logistic likelihood for composition data.
   double cm_tau2;
   // commerical catch composition
   dmatrix d_cm_comp  = trans(trans(data_cm_comp).sub(sage,nage)).sub(t1,t2);
-  nll(2) = dmvlogistic(d_cm_comp,pred_cm_comp,resd_cm_comp,cm_tau2,minp,nll=true);
+  nll(2) = dmvlogistic(d_cm_comp,pred_cm_comp,resd_cm_comp,cm_tau2,minp,true);
 
   // Negative loglikelihood for egg deposition data
   dvector std_egg_dep = TINY + column(data_egg_dep,3)(t1,t2);

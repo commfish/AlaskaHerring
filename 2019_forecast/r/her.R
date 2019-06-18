@@ -129,11 +129,11 @@ D$ghl
 
 # Number of interations (MCMC samples) and thinning rate (if 10, saves every
 # 10th sample)
-niter <- 1e6
+niter <- 1e3#6
 thin <- 10
 
 run_admb("her", extra.args = paste0("-mcmc ", niter, " -mcsave ", thin))
-run_admb("her", extra.args="-mceval")
+run_admb("her", extra.args="-mceval", verbose = TRUE)
 
 # For posterior sample output that is structured by year (i.e. number of columns
 # = number of model years and number of rows = number of iterations). Unit_conv
