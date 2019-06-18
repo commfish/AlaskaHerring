@@ -1429,13 +1429,13 @@ FUNCTION void calcObjectiveFunction()
   int t2 = mod_nyr;
   // spawning survey composition
   dmatrix d_sp_comp = trans(trans(data_sp_comp).sub(sage,nage)).sub(t1,t2);
-  nll(1) = dmvlogistic(d_sp_comp,pred_sp_comp,resd_sp_comp,sp_tau2,minp);
+  nll(1) = dmvlogistic(d_sp_comp,pred_sp_comp,resd_sp_comp,sp_tau2,minp,nll=true);
   
   // Mulitvariate logistic likelihood for composition data.
   double cm_tau2;
   // commerical catch composition
   dmatrix d_cm_comp  = trans(trans(data_cm_comp).sub(sage,nage)).sub(t1,t2);
-  nll(2) = dmvlogistic(d_cm_comp,pred_cm_comp,resd_cm_comp,cm_tau2,minp);
+  nll(2) = dmvlogistic(d_cm_comp,pred_cm_comp,resd_cm_comp,cm_tau2,minp,nll=true);
 
   // Negative loglikelihood for egg deposition data
   dvector std_egg_dep = TINY + column(data_egg_dep,3)(t1,t2);
@@ -1593,7 +1593,7 @@ GLOBALS_SECTION
   // matrix for returning residuals
   // variable for conditional MLE ofr variance of initial observation errors
   // threshold value minp
-  dvariable dmvlogistic(const dmatrix o, const dvar_matrix& p,dvar_matrix& nu, double& tau2,const double minp)
+  dvariable dmvlogistic(const dmatrix o, const dvar_matrix& p,dvar_matrix& nu, double& tau2,const double minp, bool nll=true)
   { //returns the negative loglikelihood using the MLE for the variance
   /*
     This is a modified version of the dmvlogistic negative log likelihood
@@ -1638,7 +1638,8 @@ GLOBALS_SECTION
     
     //count # of observations greater than minp (2% is a reasonable number)
     for(j=a;j<=A;j++)
-      if(oo(j) > minp)n++;
+      if(oo(j) > minp)
+      n++;
     
     ivector iiage(1,n);
     dvector o1(1,n); o1.initialize();
@@ -1678,7 +1679,8 @@ GLOBALS_SECTION
   dvariable nloglike =(age_counts)*log(tau_hat2);
   tau2=value(tau_hat2); //mle of the variance 
   RETURN_ARRAYS_DECREMENT();
-  return(nloglike);
+  if(nll) return(nloglike);
+  return(tau2);
  }
 
   double dicValue;
