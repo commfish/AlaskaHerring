@@ -1361,7 +1361,7 @@ FUNCTION void calcEggSurveyResiduals()
   resd_egg_dep.initialize();
   for(int i = mod_syr; i <= mod_nyr; i++){
     pred_egg_dep(i) = (0.5 * sp_Nij(i)) * Eij(i); // proportion female * proportion numbers at age * number of eggs
-    cout<<Eij(i)<<endl;
+    //cout<<Eij(i)<<endl;
     // for years with egg data, calculate residuals in log space
     if(data_egg_dep(i,2) > 0){
       resd_egg_dep(i) = log(data_egg_dep(i,2)) - log(pred_egg_dep(i));
@@ -1430,7 +1430,16 @@ FUNCTION void calcObjectiveFunction()
   // spawning survey composition
   dmatrix d_sp_comp = trans(trans(data_sp_comp).sub(sage,nage)).sub(t1,t2);
   nll(1) = dmvlogistic(d_sp_comp,pred_sp_comp,resd_sp_comp,sp_tau2,minp);
-  
+
+  int tst_seed = 123;
+  COUT(tst_seed);
+
+  random_number_generator rng(tst_seed);
+  dvector tst_epsilon(sage,nage);
+  tst_epsilon.fill_randn(rng);
+  COUT(tst_epsilon);
+
+
   // Mulitvariate logistic likelihood for composition data.
   double cm_tau2;
   // commerical catch composition
@@ -1439,7 +1448,7 @@ FUNCTION void calcObjectiveFunction()
 
   // Negative loglikelihood for egg deposition data
   dvector std_egg_dep = TINY + column(data_egg_dep,3)(t1,t2);
-  COUT(resd_egg_dep)
+  //COUT(resd_egg_dep)
   nll(3) = dnorm(resd_egg_dep,std_egg_dep);
 
   // Negative loglikelihood for milt mile day

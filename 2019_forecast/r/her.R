@@ -100,7 +100,7 @@ LS_forec %>%
 
 # Can't figure out how to put file path directly from project root into the
 # compile_admb() function
-setwd(file.path(getwd(), paste0(YEAR, "_forecast/admb/HER_bestLS")))
+setwd(file.path(main_dir, paste0(YEAR, "_forecast/admb/HER_bestLS")))
 
 # Running model in R
 setup_admb()
