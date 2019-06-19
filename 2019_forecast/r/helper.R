@@ -194,7 +194,7 @@ read_rep <-
   }
 
 read_psv <-
-  function(fn, nsamples=10000)
+  function(fn, nsamples=11110)
   {
     #This function reads the binary output from ADMB
     #-mcsave command line option.

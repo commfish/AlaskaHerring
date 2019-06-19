@@ -12,6 +12,8 @@
 # Set up ----
 
 library(ggdistribute) # plot posteriors
+library(coda) # mcmc diagnostics
+library(BayesianTools) # more mcmc diagnostics
 
 # Forecast year
 YEAR <- 2019
@@ -118,36 +120,19 @@ run_admb("her", verbose = TRUE)
 # Run
 # > her
 
-# Results ----
-
-D <- read_admb("her")
-
-D$fore_matb
-D$ghl
-
 # Run MCMC ----
 
 # Number of interations (MCMC samples) and thinning rate (if 10, saves every
 # 10th sample)
-niter <- 1e4#6
-thin <- 10
+niter <- 11110000 # this value give you nout=1000
+thin <- 1000
 burn_in <- 0.1 # 10% (this is the first 10% of the thinned/saved iterations)
-nout <- round((niter / thin + 1) - burn_in * (niter / thin + 1),0)
+nout <- round((niter / thin + 1) - burn_in * (niter / thin + 1), 0)
 
 run_admb("her", extra.args = paste0("-mcmc ", niter, " -mcsave ", thin))
 run_admb("her", extra.args="-mceval", verbose = TRUE)
 
-# Parameter draws
-psv <- file("her.psv", "rb")
-nparams <- readBin(psv, "integer", n = 1)
-mcmc <- matrix(readBin(psv, "numeric", n = nparams * nout), ncol = nparams,
-               byrow = TRUE)
-
-close(psv)
-
-library(coda)
-mcmc <- as.mcmc(mcmc)
-pairs(mcmc)
+D <- read_admb("her")
 
 # For posterior sample output that is structured by year (i.e. number of columns
 # = number of model years and number of rows = number of iterations). Unit_conv
@@ -184,6 +169,7 @@ ps_byyear <- function(fn = "sp_B",
 
 # Posterior predictive intervals
 egg_pp <- ps_byyear(fn = "pp_egg_dep")
+catch_pp <- ps_byyear(fn = "pp_catch") # won't be anything if conditioned on catch
 
 # Posterior intervals (aka credible intervals, show variability around
 # the expected value)
@@ -195,19 +181,8 @@ ricker_sum <- ps_byyear(fn = "ricker_rec", syr = D[["mod_syr"]] + D[["sage"]],
                          lyr = D[["mod_nyr"]] + 1)
 age3_sum <- ps_byyear(fn = "age3_rec", syr = D[["mod_syr"]],
                          lyr = D[["mod_nyr"]] + 1)
-# If conditioned on catch
-# fmort_sum <- ps_byyear(fn = "fmort", syr = D[["mod_syr"]],
-#                          lyr = D[["mod_nyr"]])
-
-# Visualize mature biomass posteriors
-# axis <- tickr(matb_sum, Year, 5)
-# ggplot(matb_sum, aes(x = quantity, y = Year, group = Year)) +
-#   ggdistribute::geom_posterior(mirror = TRUE, position = position_spread(padding = 0)) +
-#   coord_flip() +
-#   labs(x = "Mature biomass posterior distribution") + 
-#   scale_y_continuous(breaks = axis$breaks, labels = axis$labels) -> post_matb
-# 
-# ggsave(paste0(HERfig_dir, "/posterior_matbiomass.png"), plot = post_matb, dpi = 300, height = 4, width = 6, units = "in")
+fmort_sum <- ps_byyear(fn = "fmort", syr = D[["mod_syr"]], # won't be anything if conditioned on catch
+                         lyr = D[["mod_nyr"]])
 
 # For posterior sample output that is structured by age and time blocks (i.e.
 # number of columns = number of ages, number of rows = number of years * number
@@ -264,7 +239,8 @@ sel_sum <- sel_sum[min != YEAR]
 ps_comps <- function(fn = "pred_sp_comp", 
                      syr = D[["mod_syr"]], 
                      lyr = D[["mod_nyr"]], 
-                     n = niter / thin + 1) {
+                     n = niter / thin + 1,
+                     burn = burn_in * (niter / thin + 1)) {
 
   require(data.table)
   df <- fread(paste0(fn, ".ps"))
@@ -272,6 +248,8 @@ ps_comps <- function(fn = "pred_sp_comp",
   df[, Year := rep(syr:lyr, n)]
   df[, iter := rowid(Year)] # row number
   df <- melt(df, id.vars = c("Year", "iter"), variable.name = "Age")
+  df <- df[iter > burn, ] # Eliminate burn in
+  
   # `:=` mutate multiple columns, by same as group_by
   df[, `:=` (mean = mean(value),
              median = median(value),
@@ -280,13 +258,73 @@ ps_comps <- function(fn = "pred_sp_comp",
      by = .(Year, Age)] 
 }
 
+# Posterior predictive intervals
+pp_sp_comp <- ps_comps(fn = "pp_sp_comp", syr = D[["mod_syr"]], 
+                        lyr = D[["mod_nyr"]], n = niter / thin + 1) 
+
+pp_cm_comp <- ps_comps(fn = "pp_cm_comp", syr = D[["mod_syr"]], 
+                        lyr = D[["mod_nyr"]], n = niter / thin + 1)  
+
+# Posterior intervals (credible intervals)
 sp_comp_sum <- ps_comps(fn = "pred_sp_comp", syr = D[["mod_syr"]], 
                         lyr = D[["mod_nyr"]], n = niter / thin + 1) 
 
 cm_comp_sum <- ps_comps(fn = "pred_cm_comp", syr = D[["mod_syr"]], 
                     lyr = D[["mod_nyr"]], n = niter / thin + 1)  
 
-# Caterpillar plots ----
+# MCMC diagnostic plots ----
+
+# Parameter draws
+pars <- D[["post.samp"]]
+burn <- round(burn_in * (niter / thin + 1), 0) # index for end of burn in
+pars <- pars[burn:(niter/thin),] # Remove burn-in
+
+ages <- c(D[["sage"]]:D[["nage"]])
+yrs <- c(D[["mod_syr"]]:D[["mod_nyr"]])
+
+# Labels for maturity blocks
+out <- list()
+for(i in 1:length(unique(mat_sum$Blocks))) {
+  out[[i]] <- c(paste0("mat_a50_", i), paste0("mat_a95_", i))
+}
+mat_labels <- unlist(out)
+
+# Labels for selectivity blocks
+out <- list()
+for(i in 1:length(unique(sel_sum$Blocks))) {
+  out[[i]] <- c(paste0("log_s50_", i), paste0("log_selk_", i))
+}
+sel_labels <- unlist(out)
+
+colnames(pars) <- c("log_Mbar", "log_rinit", "log_rbar", "log_ro", "log_reck", 
+                    paste0("log_rinit_dev_", ages), paste0("log_rbar_devs_", yrs),
+                    mat_labels, paste0("log_Mdevs_", 1:length(unique(surv_sum$Blocks))),
+                    sel_labels)
+
+pars <- as.data.frame(pars) %>% 
+  select(- contains("dev")) 
+
+pars <- coda::as.mcmc(pars)
+acf(pars[,1:3], pch = ".")
+plot(pars)
+
+# Marginal densities (diagonal), pairwise densities (lower panes) and
+# correlation coefficien (upper panels) - when there is strong correlation, the
+# marginal density (uncertainty) in the parameter estimate is affected.
+BayesianTools::correlationPlot(data.frame(pars)) 
+
+# geweke.diag returns Z scores for the equality of (by default) the first 10%
+# and the last 50% of the chain.  pnorm(abs(v),lower.tail=FALSE)*2 computes a
+# two-tailed Z-test, of which the results should be > 0.05 if chain is converged)
+pnorm(geweke.diag(pars)$z,lower.tail=FALSE)*2
+geweke.plot(pars) # should stay within the 2 sd bounds
+# More on Geweke:
+# https://www2.math.su.se/matstat/reports/master/2011/rep2/report.pdf or
+# http://pymc-devs.github.io/pymc/modelchecking.html?highlight=geweke
+
+# Compute the effective sample size, corrected for autocorrelation. This
+# value should be > 200 for reasonal estimation of credible intervals
+effectiveSize(pars)
 
 mcmc_plot <- function(df = srv_sum, 
                       type = "ps_byyear",
@@ -318,11 +356,6 @@ surv_sum %>%
   filter(Age == 3) %>% 
   mutate(Age = "All ages") -> surv_sum
 mcmc_plot(df = surv_sum, type = "ps_byage", name = "Survival")
-
-# *FLAG* By chance a couple iterations got assigned to a time block that doesn't
-# exist. These don't affect inference, so just get rid of these for plotting
-# purposes
-mat_sum %>% filter(Blocks != "1980-2018") -> mat_sum
 mcmc_plot(df = mat_sum, type = "ps_byage", name = "Maturity")
 mcmc_plot(df = sel_sum, type = "ps_byage", name = "Selectivity")
 
@@ -1027,7 +1060,8 @@ ggsave(paste0(LSfig_dir, "/eggdep_plot.png"), plot = eggdep_plot, dpi = 300, hei
 df <- as.data.frame(D[["data_egg_dep"]][ , 1:2])
 colnames(df) <- c("Year", "obs")
 
-egg_sum %>% distinct(Year, mean, q025, q975, q250, q750, q475, q525) -> egg_sum2
+egg_pp %>% distinct(Year, mean, q025, q975, q250, q750, q475, q525) %>% 
+  mutate(Year = as.numeric(as.character(Year))) -> egg_pp
 
 df %>% 
   filter(Year >= D[["mod_syr"]]) %>%
@@ -1039,11 +1073,11 @@ df %>%
   ggplot(aes(x = Year)) +
   # Credibility intervals. 
   geom_point(aes(y = obs, shape = "Historical estimates from survey")) +
-  geom_ribbon(data = egg_sum2, aes(x = Year, ymin = q025, ymax = q975),
+  geom_ribbon(data = egg_pp, aes(x = Year, ymin = q025, ymax = q975),
               alpha = 0.6, fill = "grey70") +
-  geom_ribbon(data = egg_sum2, aes(x = Year, ymin = q250, ymax = q750),
+  geom_ribbon(data = egg_pp, aes(x = Year, ymin = q250, ymax = q750),
               alpha = 0.6, fill = "grey40") +
-  geom_ribbon(data = egg_sum2, aes(x = Year, ymin = q475, ymax = q525),
+  geom_ribbon(data = egg_pp, aes(x = Year, ymin = q475, ymax = q525),
               alpha = 0.6, fill = "black") +
   # Egg dep confidence intervals (To add whiskers, remove width=0)
   geom_errorbar(aes(ymin = egg_lower, ymax = egg_upper), colour = "black", width = 0, size = 0.001) +  scale_colour_manual(values = "grey") +
