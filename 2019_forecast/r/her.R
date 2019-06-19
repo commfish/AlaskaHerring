@@ -129,11 +129,25 @@ D$ghl
 
 # Number of interations (MCMC samples) and thinning rate (if 10, saves every
 # 10th sample)
-niter <- 1e3#6
+niter <- 1e4#6
 thin <- 10
+burn_in <- 0.1 # 10% (this is the first 10% of the thinned/saved iterations)
+nout <- round((niter / thin + 1) - burn_in * (niter / thin + 1),0)
 
 run_admb("her", extra.args = paste0("-mcmc ", niter, " -mcsave ", thin))
 run_admb("her", extra.args="-mceval", verbose = TRUE)
+
+# Parameter draws
+psv <- file("her.psv", "rb")
+nparams <- readBin(psv, "integer", n = 1)
+mcmc <- matrix(readBin(psv, "numeric", n = nparams * nout), ncol = nparams,
+               byrow = TRUE)
+
+close(psv)
+
+library(coda)
+mcmc <- as.mcmc(mcmc)
+pairs(mcmc)
 
 # For posterior sample output that is structured by year (i.e. number of columns
 # = number of model years and number of rows = number of iterations). Unit_conv
@@ -142,37 +156,41 @@ run_admb("her", extra.args="-mceval", verbose = TRUE)
 ps_byyear <- function(fn = "sp_B", 
                       syr = D[["mod_syr"]], 
                       lyr = D[["mod_nyr"]],
-                      unit_conv = 1) {
+                      unit_conv = 1,
+                      burn = burn_in * (niter / thin + 1)) {
   require(data.table)
   df <- fread(paste0(fn, ".ps"))
   colnames(df) <- paste(syr:lyr)
   df[, iter := .I] # row number = iteration number
   df <- melt(df, id.vars = c("iter"), variable.name = "Year")
   
+  df <- df[iter > burn, ] # Eliminate burn in
+
   df[, value := value / unit_conv] # if needed, convert to short tons
   
   df[, `:=` (mean = mean(value), # `:=` is the same as dplyr::mutate on multiple cols
              median = median(value),
-             # 95% cred
+             # 95% 
              q025 = quantile(value, 0.025),
              q975 = quantile(value, 0.975),
-             # 50% cred
+             # 50% 
              q250 = quantile(value, 0.250),
              q750 = quantile(value, 0.750),
-             # 5% cred
+             # 5% 
              q475 = quantile(value, 0.475),
              q525 = quantile(value, 0.525)),
      by = Year] 
 }
 
-spb_sum <- ps_byyear(fn = "sp_B", syr = D[["mod_syr"]], 
-                     lyr = D[["mod_nyr"]], unit_conv = 0.90718)
-matb_sum <- ps_byyear(fn = "mat_B", syr = D[["mod_syr"]], 
-                      lyr = D[["mod_nyr"]], unit_conv = 0.90718)
-egg_sum <- ps_byyear(fn = "pred_egg_dep", syr = D[["mod_syr"]], 
-                     lyr = D[["mod_nyr"]])
-catch_sum <- ps_byyear(fn = "pred_catch", syr = D[["mod_syr"]], 
-                       lyr = D[["mod_nyr"]])
+# Posterior predictive intervals
+egg_pp <- ps_byyear(fn = "pp_egg_dep")
+
+# Posterior intervals (aka credible intervals, show variability around
+# the expected value)
+egg_sum <- ps_byyear(fn = "pred_egg_dep")
+spb_sum <- ps_byyear(fn = "sp_B", unit_conv = 0.90718)
+matb_sum <- ps_byyear(fn = "mat_B", unit_conv = 0.90718)
+catch_sum <- ps_byyear(fn = "pred_catch") 
 ricker_sum <- ps_byyear(fn = "ricker_rec", syr = D[["mod_syr"]] + D[["sage"]],
                          lyr = D[["mod_nyr"]] + 1)
 age3_sum <- ps_byyear(fn = "age3_rec", syr = D[["mod_syr"]],
@@ -197,7 +215,8 @@ age3_sum <- ps_byyear(fn = "age3_rec", syr = D[["mod_syr"]],
 ps_byage <- function(fn = "maturity", 
                      syr = D[["mod_syr"]], 
                      lyr = D[["mod_nyr"]], 
-                     n = niter / thin + 1) {
+                     n = niter / thin + 1,
+                     burn = burn_in * (niter / thin + 1)) {
 
   require(data.table)
   df <- fread(paste0(fn, ".ps"))
@@ -206,6 +225,8 @@ ps_byage <- function(fn = "maturity",
   df[, iter := rowid(Year)] 
   df <- melt(df, id.vars = c("Year", "iter"), variable.name = "Age")
 
+  df <- df[iter > burn, ] # Eliminate burn in
+  
   # akin to dplyr::summarize
   df <- df[, list(min = min(Year), 
             max = max(Year)),
@@ -216,10 +237,10 @@ ps_byage <- function(fn = "maturity",
   # `:=` is the same as dplyr::mutate on multiple cols
   df[, `:=` (mean = mean(value),
              median = median(value),
-             # 95% cred
+             # 95% 
              q025 = quantile(value, 0.025),
              q975 = quantile(value, 0.975),
-             # 50% cred
+             # 50% 
              q250 = quantile(value, 0.250),
              q750 = quantile(value, 0.750)),
      by = .(Age, Blocks)] 

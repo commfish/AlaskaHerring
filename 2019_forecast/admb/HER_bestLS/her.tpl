@@ -797,11 +797,14 @@ FUNCTION void writePosteriorSamples()
     // posterior predictive interval for egg deposition
     ofstream ofs13("pp_egg_dep.ps");
 
+    // posterior predictive interval for catch
+    ofstream ofs14("pp_catch.ps");
+
     // posterior predictive interval for spawner age comps
-    ofstream ofs14("pp_sp_comp.ps");
+    ofstream ofs15("pp_sp_comp.ps");
 
     // posterior predictive interval for catch age comps
-    ofstream ofs15("pp_cm_comp.ps");
+    ofstream ofs16("pp_cm_comp.ps");
 
   }
   ofstream ofs("mat_B.ps",ios::app);
@@ -844,19 +847,32 @@ FUNCTION void writePosteriorSamples()
   ofstream ofs12("age3_rec.ps",ios::app);
   ofs12<<mfexp(log_rbar + log_rbar_devs)<<endl;  
 
-  // Estimate posterior predictive intervals for abundance index and composition data
+  // Estimate posterior predictive intervals for abundance indices and composition data
   int pp_seed = 123; 
+  random_number_generator rng(pp_seed);
+
+  // Posterior predictive interval for predicted catch
+  dvector pp_catch(mod_syr,mod_nyr);   // empty vector to hold prediction from each posterior sample
+  pp_catch.initialize();
+  double mu_catch;
+  double sigma_catch;
+
+  // Sample from lognormal distribution 
+  for(int i = mod_syr; i <= mod_nyr; i++) {
+    mu_catch = value(log(pred_catch(i)));                     // assume prediction = mean, assume lognormal distribution
+    sigma_catch = TINY + column(data_catch,3)(i);             // log_se
+    pp_catch(i) = mfexp(rnorm(mu_catch,sigma_catch,rng));     // put prediction back on natural scale
+  }
 
   // Posterior predictive intervals for egg deposition with lognormal distribution:
   dvector pp_egg_dep(mod_syr,mod_nyr);   // empty vector to hold prediction from each posterior sample
   pp_egg_dep.initialize();
   double mu_egg_dep;
   double sigma_egg_dep;
-  random_number_generator rng(pp_seed);
 
   // Sample from lognormal distribution 
   for(int i = mod_syr; i <= mod_nyr; i++) {
-    mu_egg_dep = value(log(pred_egg_dep(i)));                             // assume prediction = mean, assume lognormal distribution
+    mu_egg_dep = value(log(pred_egg_dep(i)));                      // assume prediction = mean, assume lognormal distribution
     sigma_egg_dep = TINY + column(data_egg_dep,3)(i);              // log_se
     pp_egg_dep(i) = mfexp(rnorm(mu_egg_dep,sigma_egg_dep,rng));    // put prediction back on natural scale
   }
@@ -892,11 +908,14 @@ FUNCTION void writePosteriorSamples()
   ofstream ofs13("pp_egg_dep.ps",ios::app);
   ofs13<<pp_egg_dep<<endl;  
 
-  ofstream ofs14("pp_sp_comp.ps",ios::app);
-  ofs14<<pp_sp_comp<<endl;  
+  ofstream ofs14("pp_catch.ps",ios::app);
+  ofs14<<pp_catch<<endl;  
 
-  ofstream ofs15("pp_cm_comp.ps",ios::app);
-  ofs15<<pp_cm_comp<<endl;  
+  ofstream ofs15("pp_sp_comp.ps",ios::app);
+  ofs15<<pp_sp_comp<<endl;  
+
+  ofstream ofs16("pp_cm_comp.ps",ios::app);
+  ofs16<<pp_cm_comp<<endl;  
 
 FUNCTION void runSimulationModel(const int& rseed)
   
