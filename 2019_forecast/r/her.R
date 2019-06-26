@@ -11,6 +11,8 @@
 
 # Set up ----
 
+set.seed(907)
+
 library(ggdistribute) # plot posteriors
 library(coda) # mcmc diagnostics
 library(BayesianTools) # more mcmc diagnostics
@@ -124,7 +126,7 @@ run_admb("her", verbose = TRUE)
 
 # Number of interations (MCMC samples) and thinning rate (if 10, saves every
 # 10th sample)
-niter <- 11110000 # this value give you nout=1000
+niter <- 11110000 # this value give you nout=10000
 thin <- 1000
 burn_in <- 0.1 # 10% (this is the first 10% of the thinned/saved iterations)
 nout <- round((niter / thin + 1) - burn_in * (niter / thin + 1), 0)
@@ -134,42 +136,7 @@ run_admb("her", extra.args="-mceval", verbose = TRUE)
 
 D <- read_admb("her")
 
-# For posterior sample output that is structured by year (i.e. number of columns
-# = number of model years and number of rows = number of iterations). Unit_conv
-# is there to deal with the conversion of metric tons to short tons (st = mt /
-# 0.90718)
-ps_byyear <- function(fn = "sp_B", 
-                      syr = D[["mod_syr"]], 
-                      lyr = D[["mod_nyr"]],
-                      unit_conv = 1,
-                      burn = burn_in * (niter / thin + 1)) {
-  require(data.table)
-  df <- fread(paste0(fn, ".ps"))
-  colnames(df) <- paste(syr:lyr)
-  df[, iter := .I] # row number = iteration number
-  df <- melt(df, id.vars = c("iter"), variable.name = "Year")
-  
-  df <- df[iter > burn, ] # Eliminate burn in
-
-  df[, value := value / unit_conv] # if needed, convert to short tons
-  
-  df[, `:=` (mean = mean(value), # `:=` is the same as dplyr::mutate on multiple cols
-             median = median(value),
-             # 95% 
-             q025 = quantile(value, 0.025),
-             q975 = quantile(value, 0.975),
-             # 50% 
-             q250 = quantile(value, 0.250),
-             q750 = quantile(value, 0.750),
-             # 5% 
-             q475 = quantile(value, 0.475),
-             q525 = quantile(value, 0.525)),
-     by = Year] 
-}
-
-# Posterior predictive intervals
-egg_pp <- ps_byyear(fn = "pp_egg_dep")
-catch_pp <- ps_byyear(fn = "pp_catch") # won't be anything if conditioned on catch
+# NOTE: See helper.R for source code for all user-defined functions.
 
 # Posterior intervals (aka credible intervals, show variability around
 # the expected value)
@@ -184,43 +151,6 @@ age3_sum <- ps_byyear(fn = "age3_rec", syr = D[["mod_syr"]],
 fmort_sum <- ps_byyear(fn = "fmort", syr = D[["mod_syr"]], # won't be anything if conditioned on catch
                          lyr = D[["mod_nyr"]])
 
-# For posterior sample output that is structured by age and time blocks (i.e.
-# number of columns = number of ages, number of rows = number of years * number
-# of iterations)
-ps_byage <- function(fn = "maturity", 
-                     syr = D[["mod_syr"]], 
-                     lyr = D[["mod_nyr"]], 
-                     n = niter / thin + 1,
-                     burn = burn_in * (niter / thin + 1)) {
-
-  require(data.table)
-  df <- fread(paste0(fn, ".ps"))
-  colnames(df) <- paste(D[['sage']]:D[['nage']])
-  df[, Year := rep(syr:lyr, n)]
-  df[, iter := rowid(Year)] 
-  df <- melt(df, id.vars = c("Year", "iter"), variable.name = "Age")
-
-  df <- df[iter > burn, ] # Eliminate burn in
-  
-  # akin to dplyr::summarize
-  df <- df[, list(min = min(Year), 
-            max = max(Year)),
-     by = .(iter, Age, value)]
-  
-  df[, Blocks := paste0(min, "-", max), by = .(iter, Age, value)]
-     
-  # `:=` is the same as dplyr::mutate on multiple cols
-  df[, `:=` (mean = mean(value),
-             median = median(value),
-             # 95% 
-             q025 = quantile(value, 0.025),
-             q975 = quantile(value, 0.975),
-             # 50% 
-             q250 = quantile(value, 0.250),
-             q750 = quantile(value, 0.750)),
-     by = .(Age, Blocks)] 
-}
-
 # Survival posterior distribution
 surv_sum <- ps_byage(fn = "survival", syr = D[["mod_syr"]],
                     lyr = D[["mod_nyr"]], n = niter / thin + 1)
@@ -234,43 +164,27 @@ sel_sum <- ps_byage(fn = "selectivity", syr = D[["mod_syr"]],
                     lyr = D[["mod_nyr"]] + 1, n = niter / thin + 1)  
 sel_sum <- sel_sum[min != YEAR]
 
-# For age composition posterior sample output (number of columns
-# = number of ages, number of rows = number of years * number of iterations)
-ps_comps <- function(fn = "pred_sp_comp", 
-                     syr = D[["mod_syr"]], 
-                     lyr = D[["mod_nyr"]], 
-                     n = niter / thin + 1,
-                     burn = burn_in * (niter / thin + 1)) {
-
-  require(data.table)
-  df <- fread(paste0(fn, ".ps"))
-  colnames(df) <- paste(D[['sage']]:D[['nage']])
-  df[, Year := rep(syr:lyr, n)]
-  df[, iter := rowid(Year)] # row number
-  df <- melt(df, id.vars = c("Year", "iter"), variable.name = "Age")
-  df <- df[iter > burn, ] # Eliminate burn in
-  
-  # `:=` mutate multiple columns, by same as group_by
-  df[, `:=` (mean = mean(value),
-             median = median(value),
-             q025 = quantile(value, 0.025),
-             q975 = quantile(value, 0.975)),
-     by = .(Year, Age)] 
-}
-
-# Posterior predictive intervals
-pp_sp_comp <- ps_comps(fn = "pp_sp_comp", syr = D[["mod_syr"]], 
-                        lyr = D[["mod_nyr"]], n = niter / thin + 1) 
-
-pp_cm_comp <- ps_comps(fn = "pp_cm_comp", syr = D[["mod_syr"]], 
-                        lyr = D[["mod_nyr"]], n = niter / thin + 1)  
-
-# Posterior intervals (credible intervals)
+# Posterior intervals (credible intervals) for age compositions
 sp_comp_sum <- ps_comps(fn = "pred_sp_comp", syr = D[["mod_syr"]], 
                         lyr = D[["mod_nyr"]], n = niter / thin + 1) 
 
 cm_comp_sum <- ps_comps(fn = "pred_cm_comp", syr = D[["mod_syr"]], 
                     lyr = D[["mod_nyr"]], n = niter / thin + 1)  
+
+# Posterior predictive intervals 
+
+# Variance estimates for each posterior sample from the multivariate logistic
+# distribution used for age comps
+sp_tau2 <- ps_tau(fn = "pp_sp_tau2")
+cm_tau2 <- ps_tau(fn = "pp_cm_tau2")
+
+# Get posterior predictive intervals for multivariate logistic distribution (age
+# compositions). Uses the posterior sample estimates and variance.
+cm_comp_ppi <- ppi_rmvlogistic(ps_sum = cm_comp_sum,
+                               tau2 = cm_tau2)
+
+sp_comp_ppi <- ppi_rmvlogistic(ps_sum = sp_comp_sum,
+                               tau2 = sp_tau2)
 
 # MCMC diagnostic plots ----
 
@@ -1055,16 +969,40 @@ cowplot::plot_grid(obsfit, resids, align = "hv", nrow = 2) -> eggdep_plot
 
 ggsave(paste0(LSfig_dir, "/eggdep_plot.png"), plot = eggdep_plot, dpi = 300, height = 5, width = 6, units = "in")
 
-# For HER:
+# For HER with posterior predictive intervals:
+
+# Egg deposition
+df <- as.data.frame(D[["data_egg_dep"]])
+colnames(df) <- c("Year", "obs_egg", "log_se")
+df %>% 
+  filter(Year >= D[["mod_syr"]]) %>% 
+  mutate(Year = factor(Year)) %>% 
+  select(Year, log_se) %>% 
+  left_join(egg_sum) -> egg_sum
+
+egg_sum %>%  
+  mutate(log_value = log(value),
+         # Posterior predictive value
+         pp_value = exp(rnorm(n(), mean = log_value, sd = log_se))) -> egg_sum
+
+egg_sum %>% 
+  group_by(Year) %>% 
+  mutate(pp_mean = mean(pp_value),
+         p025 = quantile(pp_value, 0.025),
+         p975 = quantile(pp_value, 0.975)) -> egg_sum
 
 df <- as.data.frame(D[["data_egg_dep"]][ , 1:2])
 colnames(df) <- c("Year", "obs")
 
-egg_pp %>% distinct(Year, mean, q025, q975, q250, q750, q475, q525) %>% 
-  mutate(Year = as.numeric(as.character(Year))) -> egg_pp
+egg_sum %>% distinct(Year, mean, q025, q975, p025, p975) %>% 
+  ungroup() %>% 
+  mutate(Year = as.numeric(as.character(Year))) -> egg_sum2
+
+df %>%filter(Year >= D[["mod_syr"]]) -> df
+
+axisx <- tickr(df, Year, 5)
 
 df %>% 
-  filter(Year >= D[["mod_syr"]]) %>%
   # 2008 survey egg estimates were extreme high and variable, pmin() helps
   # reduce the scale of the upper confidence interval for better visualization:
   mutate(egg_upper = pmin(obs + LS_byyear$egg_upper, max(obs) * 1.2),
@@ -1073,19 +1011,18 @@ df %>%
   ggplot(aes(x = Year)) +
   # Credibility intervals. 
   geom_point(aes(y = obs, shape = "Historical estimates from survey")) +
-  geom_ribbon(data = egg_pp, aes(x = Year, ymin = q025, ymax = q975),
+  geom_ribbon(data = egg_sum2, aes(x = Year, ymin = p025, ymax = p975),
               alpha = 0.6, fill = "grey70") +
-  geom_ribbon(data = egg_pp, aes(x = Year, ymin = q250, ymax = q750),
+  geom_ribbon(data = egg_sum2, aes(x = Year, ymin = q025, ymax = q975),
               alpha = 0.6, fill = "grey40") +
-  geom_ribbon(data = egg_pp, aes(x = Year, ymin = q475, ymax = q525),
-              alpha = 0.6, fill = "black") +
+  geom_line(data = egg_sum2, aes(x = Year, y = mean)) + 
   # Egg dep confidence intervals (To add whiskers, remove width=0)
   geom_errorbar(aes(ymin = egg_lower, ymax = egg_upper), colour = "black", width = 0, size = 0.001) +  scale_colour_manual(values = "grey") +
   theme(legend.position = c(0.25, 0.8),
         legend.spacing.y = unit(0, "cm")) +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
   scale_y_continuous(limits = c(0, max(df$obs) * 1.2)) +
-  labs(x = NULL, y = "Eggs spawned (trillions)\n", shape = NULL, linetype = NULL) -> obsfit
+  labs(x = NULL, y = "Eggs spawned (trillions)\n", shape = NULL, linetype = NULL)  -> obsfit
 
 # residuals
 data.frame(Year = D[["year"]],
@@ -1566,9 +1503,8 @@ her_agecomps %>% # fishery
 
 ggsave(paste0(HERfig_dir, "/catchage_comps_barplot.png"), plot = catchage_barplot, dpi = 300, height = 8, width = 6, units = "in")
 
-# Barplot with 95% credible intervals
-cm_comp_sum <- cm_comp_sum %>% 
-  distinct(Year, Age, mean, median, q025, q975) %>% 
+# Barplot with 95% posterior predictive intervals
+cm_comp_ppi <- cm_comp_ppi %>% 
   mutate(age = as.numeric(as.character(Age)),
          Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
                       labels = c("3", "4", "5", "6", "7", "8+")),
@@ -1576,7 +1512,7 @@ cm_comp_sum <- cm_comp_sum %>%
 
 her_agecomps %>% # fishery
   filter(Source == "Commercial fishery") %>% 
-  left_join(cm_comp_sum) %>% #View()
+  left_join(cm_comp_ppi) %>% #View()
   ggplot() + 
   geom_bar(aes(x = Age, y = obs), 
            stat = "identity", colour = "grey", fill = "lightgrey",
@@ -1589,17 +1525,17 @@ her_agecomps %>% # fishery
   labs(x = '\nAge', y = 'Proportion-at-age\n') + 
   ggtitle("Commercial fishery age compositions") -> catchage_barplot2
 
-ggsave(paste0(HERfig_dir, "/catchage_comps_barplotCI.png"), plot = catchage_barplot2, dpi = 300, height = 8, width = 6, units = "in")
+ggsave(paste0(HERfig_dir, "/catchage_comps_barplotPPI.png"), plot = catchage_barplot2, dpi = 300, height = 8, width = 6, units = "in")
 
 # colour palette for tracking cohorts
 mycols <- c("#f4cc70","#de7a22", "#20948b", "#6ab187", "#9a9eab", "#BCBABE")
 nages <- D[["nage"]] - D[["sage"]]
-xtra <- nages * ((n_distinct(cm_comp_sum$Cohort)-1)/nages - floor((n_distinct(cm_comp_sum$Cohort)-1)/nages))
-cohort_cols <- c(rep(mycols[1:5], (n_distinct(cm_comp_sum$Cohort)-1)/nages), mycols[1:xtra], mycols[6])
+xtra <- nages * ((n_distinct(cm_comp_ppi$Cohort)-1)/nages - floor((n_distinct(cm_comp_ppi$Cohort)-1)/nages))
+cohort_cols <- c(rep(mycols[1:5], (n_distinct(cm_comp_ppi$Cohort)-1)/nages), mycols[1:xtra], mycols[6])
 
 her_agecomps %>% # fishery
   filter(Source == "Commercial fishery") %>% 
-  left_join(cm_comp_sum) %>%
+  left_join(cm_comp_ppi) %>%
   ggplot() + 
   geom_bar(aes(x = Age, y = obs, colour = Cohort, fill = Cohort), 
            stat = "identity", show.legend = FALSE,
@@ -1614,7 +1550,7 @@ her_agecomps %>% # fishery
   labs(x = '\nAge', y = 'Proportion-at-age\n') + 
   ggtitle("Commercial fishery age compositions") -> catchage_barplot3
 
-ggsave(paste0(HERfig_dir, "/catchage_comps_colourbarplotCI.png"), plot = catchage_barplot3, dpi = 300, height = 8, width = 7, units = "in")
+ggsave(paste0(HERfig_dir, "/catchage_comps_colourbarplotPPI.png"), plot = catchage_barplot3, dpi = 300, height = 8, width = 7, units = "in")
 
 # survey
 her_agecomps %>% 
@@ -1631,9 +1567,8 @@ her_agecomps %>%
 
 ggsave(paste0(HERfig_dir, "/spawnage_comps_barplot.png"), plot = spawnage_barplot, dpi = 300, height = 8, width = 6, units = "in")
 
-# Barplot with 95% credible intervals
-sp_comp_sum <- sp_comp_sum %>% 
-  distinct(Year, Age, mean, median, q025, q975) %>% 
+# Barplot with 95% posterior predictive intervals
+sp_comp_ppi <- sp_comp_ppi %>% 
   mutate(age = as.numeric(as.character(Age)),
          Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
                       labels = c("3", "4", "5", "6", "7", "8+")),
@@ -1641,7 +1576,7 @@ sp_comp_sum <- sp_comp_sum %>%
 
 her_agecomps %>% # survey
   filter(Source == "Cast net survey") %>% 
-  left_join(sp_comp_sum) %>% #View()
+  left_join(sp_comp_ppi) %>% #View()
   ggplot() + 
   geom_bar(aes(x = Age, y = obs), 
            stat = "identity", colour = "grey", fill = "lightgrey",
@@ -1654,11 +1589,11 @@ her_agecomps %>% # survey
   labs(x = '\nAge', y = 'Proportion-at-age\n') + 
   ggtitle("Cast net survey age compositions") -> spawnage_barplot2
 
-ggsave(paste0(HERfig_dir, "/spawnage_comps_barplotCI.png"), plot = spawnage_barplot2, dpi = 300, height = 8, width = 6, units = "in")
+ggsave(paste0(HERfig_dir, "/spawnage_comps_barplotPPI.png"), plot = spawnage_barplot2, dpi = 300, height = 8, width = 6, units = "in")
 
 her_agecomps %>% # survey
   filter(Source == "Cast net survey") %>% 
-  left_join(sp_comp_sum) %>%
+  left_join(sp_comp_ppi) %>%
   ggplot() + 
   geom_bar(aes(x = Age, y = obs, colour = Cohort, fill = Cohort), 
            stat = "identity", show.legend = FALSE,
@@ -1673,7 +1608,7 @@ her_agecomps %>% # survey
   labs(x = '\nAge', y = 'Proportion-at-age\n') +
   ggtitle("Cast net survey age compositions") -> spawnage_barplot3
 
-ggsave(paste0(HERfig_dir, "/spawnage_comps_colourbarplotCI.png"), plot = spawnage_barplot3, dpi = 300, height = 8, width = 6, units = "in")
+ggsave(paste0(HERfig_dir, "/spawnage_comps_colourbarplotPPI.png"), plot = spawnage_barplot3, dpi = 300, height = 8, width = 6, units = "in")
 
 # Compare spawning comps ----
 

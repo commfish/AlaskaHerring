@@ -324,3 +324,136 @@ appendix_tbl <- captioner(prefix = "Table") #Numbers tables in the appendix
 
 appendix_fig <- captioner(prefix = "Figure") #Numbers figures in the appendix
 
+# For posterior sample output that is structured by year (i.e. number of columns
+# = number of model years and number of rows = number of iterations). Unit_conv
+# is there to deal with the conversion of metric tons to short tons (st = mt /
+# 0.90718)
+ps_byyear <- function(fn = "sp_B", 
+                      syr = D[["mod_syr"]], 
+                      lyr = D[["mod_nyr"]],
+                      unit_conv = 1,
+                      burn = burn_in * (niter / thin + 1)) {
+  require(data.table)
+  df <- fread(paste0(fn, ".ps"))
+  colnames(df) <- paste(syr:lyr)
+  df[, iter := .I] # row number = iteration number
+  df <- melt(df, id.vars = c("iter"), variable.name = "Year")
+  
+  df <- df[iter > burn, ] # Eliminate burn in
+  
+  df[, value := value / unit_conv] # if needed, convert to short tons
+  
+  df[, `:=` (mean = mean(value), # `:=` is the same as dplyr::mutate on multiple cols
+             median = median(value),
+             # 95% 
+             q025 = quantile(value, 0.025),
+             q975 = quantile(value, 0.975),
+             # 50% 
+             q250 = quantile(value, 0.250),
+             q750 = quantile(value, 0.750),
+             # 5% 
+             q475 = quantile(value, 0.475),
+             q525 = quantile(value, 0.525)),
+     by = Year] 
+}
+
+# For posterior sample output that is structured by age and time blocks (i.e.
+# number of columns = number of ages, number of rows = number of years * number
+# of iterations)
+ps_byage <- function(fn = "maturity", 
+                     syr = D[["mod_syr"]], 
+                     lyr = D[["mod_nyr"]], 
+                     n = niter / thin + 1,
+                     burn = burn_in * (niter / thin + 1)) {
+  
+  require(data.table)
+  df <- fread(paste0(fn, ".ps"))
+  colnames(df) <- paste(D[['sage']]:D[['nage']])
+  df[, Year := rep(syr:lyr, n)]
+  df[, iter := rowid(Year)] 
+  df <- melt(df, id.vars = c("Year", "iter"), variable.name = "Age")
+  
+  df <- df[iter > burn, ] # Eliminate burn in
+  
+  # akin to dplyr::summarize
+  df <- df[, list(min = min(Year), 
+                  max = max(Year)),
+           by = .(iter, Age, value)]
+  
+  df[, Blocks := paste0(min, "-", max), by = .(iter, Age, value)]
+  
+  # `:=` is the same as dplyr::mutate on multiple cols
+  df[, `:=` (mean = mean(value),
+             median = median(value),
+             # 95% 
+             q025 = quantile(value, 0.025),
+             q975 = quantile(value, 0.975),
+             # 50% 
+             q250 = quantile(value, 0.250),
+             q750 = quantile(value, 0.750)),
+     by = .(Age, Blocks)] 
+}
+
+# For age composition posterior sample output (number of columns
+# = number of ages, number of rows = number of years * number of iterations)
+ps_comps <- function(fn = "pred_sp_comp", 
+                     syr = D[["mod_syr"]], 
+                     lyr = D[["mod_nyr"]], 
+                     n = niter / thin + 1,
+                     burn = burn_in * (niter / thin + 1)) {
+  
+  require(data.table)
+  df <- fread(paste0(fn, ".ps"))
+  colnames(df) <- paste(D[['sage']]:D[['nage']])
+  df[, Year := rep(syr:lyr, n)]
+  df[, iter := rowid(Year)] # row number
+  df <- melt(df, id.vars = c("Year", "iter"), variable.name = "Age")
+  df <- df[iter > burn, ] # Eliminate burn in
+  
+  # `:=` mutate multiple columns, by same as group_by
+  df[, `:=` (mean = mean(value),
+             median = median(value),
+             q025 = quantile(value, 0.025),
+             q975 = quantile(value, 0.975)),
+     by = .(Year, Age)] 
+}
+
+# Summarize posterior samples of the multivariate logistic variance estimates 
+ps_tau <- function(fn = "pp_sp_tau2", 
+                   n = niter / thin + 1,
+                   burn = burn_in * (niter / thin + 1)) {
+  
+  require(data.table)
+  df <- fread(paste0(fn, ".ps")) # Read in variance estimates
+  colnames(df) <- "tau2"
+  df[, iter := .I] # row number
+  df <- df[iter > burn, ] # Eliminate burn in
+}
+
+# Posterior predictive interval for multivariate logistic distribution (age
+# compositions). Uses the posterior sample estimates and variance.
+ppi_rmvlogistic <- function(
+  ps_sum = sp_comp_sum,  # summarized posterior samples (output from ps_comps)
+  tau2 = sp_tau2    # summarized variance estimates (output from ps_tau)
+) {
+  
+  df <- unique(ps_sum[, list(Year, iter, Age, value)]) # same as dplyr::distinct()
+  df <- df[tau2, on = 'iter'] # same as dplyr::left_join()
+  
+  # Modeled after rmvlogistic() function in ADMB:
+  # http://api.admb-project.org/rmvlogistic_8cpp_source.html
+  df[, x := log(value) + tau2 * rnorm(.I)]
+  df[, mu_x := mean(x), by = .(iter, Year)]
+  df[, x := x - mu_x]
+  df[, sum_x := sum(exp(x)), by = .(iter, Year)]
+  df[, new_value := exp(x) / sum_x]
+  
+  # Get posterior predictive intervals (syntax akin to dplyr::summarize)
+  df[, list(# 95% 
+    q025 = quantile(new_value, 0.025),
+    q975 = quantile(new_value, 0.975),
+    # 50% 
+    q250 = quantile(new_value, 0.250),
+    q750 = quantile(new_value, 0.750)),
+    by = .(Age, Year)] 
+}
