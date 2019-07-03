@@ -1120,7 +1120,8 @@ FUNCTION void calcSelectivity()
   // // this process is to get the same thing but keeping differentiable 
     int jyr = h != nSlxBlks ? nslx_nyr(h):nslx_nyr(h)-retro_yrs;
     for(int i = nslx_syr(h); i <= jyr; i++){
-      log_slx(i) = log(slx) - log(mean(slx));
+      //log_slx(i) = log(slx) - log(mean(slx));
+      log_slx(i) = log(slx);// - log(mean(slx));
     }
   }
   Sij.sub(mod_syr,mod_nyr) = mfexp(log_slx);

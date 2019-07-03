@@ -20,6 +20,9 @@ library(BayesianTools) # more mcmc diagnostics
 # Forecast year
 YEAR <- 2019
 
+# User input: do you want to run the full MCMC?
+run_mcmc <- TRUE
+
 # Create directory for HER/LS comparison figs, HER figs, and LS figs
 main_dir <- getwd()
 # Directory for all comparison figures
@@ -131,8 +134,10 @@ thin <- 1000
 burn_in <- 0.1 # 10% (this is the first 10% of the thinned/saved iterations)
 nout <- round((niter / thin + 1) - burn_in * (niter / thin + 1), 0)
 
-run_admb("her", extra.args = paste0("-mcmc ", niter, " -mcsave ", thin))
-run_admb("her", extra.args="-mceval", verbose = TRUE)
+if (run_mcmc == TRUE){
+  run_admb("her", extra.args = paste0("-mcmc ", niter, " -mcsave ", thin))
+  run_admb("her", extra.args="-mceval", verbose = TRUE)
+}
 
 D <- read_admb("her")
 
@@ -143,7 +148,7 @@ D <- read_admb("her")
 egg_sum <- ps_byyear(fn = "pred_egg_dep")
 spb_sum <- ps_byyear(fn = "sp_B", unit_conv = 0.90718)
 matb_sum <- ps_byyear(fn = "mat_B", unit_conv = 0.90718)
-catch_sum <- ps_byyear(fn = "pred_catch") 
+catch_sum <- ps_byyear(fn = "pred_catch") # warning msg ok!
 ricker_sum <- ps_byyear(fn = "ricker_rec", syr = D[["mod_syr"]] + D[["sage"]],
                          lyr = D[["mod_nyr"]] + 1)
 age3_sum <- ps_byyear(fn = "age3_rec", syr = D[["mod_syr"]],
@@ -198,9 +203,11 @@ yrs <- c(D[["mod_syr"]]:D[["mod_nyr"]])
 
 # Labels for maturity blocks
 out <- list()
+mat_sum <- mat_sum %>% filter(Blocks != "1980-2018")
 for(i in 1:length(unique(mat_sum$Blocks))) {
   out[[i]] <- c(paste0("mat_a50_", i), paste0("mat_a95_", i))
 }
+
 mat_labels <- unlist(out)
 
 # Labels for selectivity blocks
@@ -211,63 +218,60 @@ for(i in 1:length(unique(sel_sum$Blocks))) {
 sel_labels <- unlist(out)
 
 colnames(pars) <- c("log_Mbar", "log_rinit", "log_rbar", "log_ro", "log_reck", 
-                    paste0("log_rinit_dev_", ages), paste0("log_rbar_devs_", yrs),
+                    paste0("log_rinit_devs_", ages), paste0("log_rbar_devs_", yrs),
                     mat_labels, paste0("log_Mdevs_", 1:length(unique(surv_sum$Blocks))),
                     sel_labels)
 
 pars <- as.data.frame(pars) %>% 
-  select(- contains("dev")) 
+  select(- contains("rinit_devs"), - contains("rbar_devs")) 
 
 pars <- coda::as.mcmc(pars)
-acf(pars[,1:3], pch = ".")
-plot(pars)
+
+# Autocorrelation figures (ACF): There shouldn't be any correlation in lag >= 1.
+# ACFs look great except for log_rinit, although the correlation declines
+# steeply, so I don't think this is too much of a concern.
+acfplot(pars)
+png(paste0(HERmcmc_dir, "/acf.png"))
+acfplot(pars)
+dev.off()
+
+# Trace plots (aka caterpillar plots) with posterior marginal densities:
+# Trace plots shouldn't have any trends, should be well-mixed.
+png(paste0(HERmcmc_dir, "/param_trace.png"),
+    width = 11, height = 11, units = "in", res = 300)
+par(mfrow = c(7, 4))
+plot(pars, auto.layout = FALSE, ask = FALSE)
+dev.off()
 
 # Marginal densities (diagonal), pairwise densities (lower panes) and
 # correlation coefficien (upper panels) - when there is strong correlation, the
 # marginal density (uncertainty) in the parameter estimate is affected.
+png(paste0(HERmcmc_dir, "/param_correlation.png"),
+    width = 11, height = 11, units = "in", res = 300)
 BayesianTools::correlationPlot(data.frame(pars)) 
+dev.off()
 
 # geweke.diag returns Z scores for the equality of (by default) the first 10%
 # and the last 50% of the chain.  pnorm(abs(v),lower.tail=FALSE)*2 computes a
 # two-tailed Z-test, of which the results should be > 0.05 if chain is converged)
 pnorm(geweke.diag(pars)$z,lower.tail=FALSE)*2
-geweke.plot(pars) # should stay within the 2 sd bounds
+png(paste0(HERmcmc_dir, "/geweke_diagnostic.png"),
+    width = 8, height = 8, units = "in", res = 300)
+par(mfrow = c(5, 3))
+geweke.plot(pars, auto.layout = FALSE) # should stay within the 2 sd bounds
+dev.off()
 # More on Geweke:
 # https://www2.math.su.se/matstat/reports/master/2011/rep2/report.pdf or
 # http://pymc-devs.github.io/pymc/modelchecking.html?highlight=geweke
 
 # Compute the effective sample size, corrected for autocorrelation. This
 # value should be > 200 for reasonal estimation of credible intervals
-effectiveSize(pars)
-
-mcmc_plot <- function(df = srv_sum, 
-                      type = "ps_byyear",
-                      name = "Survival",
-                      save = TRUE, 
-                      path = HERmcmc_dir,
-                      height = 8,
-                      width = 8) {
-  
-  # Base plot
-  p <- ggplot(df, aes(x = iter, y = value, group = 1)) +
-    geom_line() +
-    ggtitle(paste0(name, " posterior samples"))
-  
-  if(type == "ps_byyear") { p <- p + facet_wrap(~ Year) }
-  if(type == "ps_byage") { p <- p + facet_grid(Age ~ Blocks) }
-  if(type == "ps_comps") { p <- p + facet_grid(Year ~ Age) }
-  
-  if(save == TRUE) {
-    ggsave(paste0(HERmcmc_dir, "/", name, "_caterpillar.png"), plot = p, dpi = 300, height = height, width = width, units = "in")
-    
-  }
-    
-}
+coda::effectiveSize(pars)
 
 # Survival is programmed such that it can be age-dependent but is currently
 # constant across all ages.
 surv_sum %>% 
-  filter(Age == 3) %>% 
+  filter(Age == "3") %>% 
   mutate(Age = "All ages") -> surv_sum
 mcmc_plot(df = surv_sum, type = "ps_byage", name = "Survival")
 mcmc_plot(df = mat_sum, type = "ps_byage", name = "Maturity")
@@ -307,7 +311,7 @@ fore_matb_sum %>%
   geom_hline(aes(yintercept = mean), linetype = 2, colour = "grey") +
   geom_line() -> caterpillar_forematb
 
-ggsave(paste0(HERfig_dir, "/caterpillar_forematb.png"), plot = caterpillar_forematb, dpi = 300, height = 4, width = 6, units = "in")
+ggsave(paste0(HERmcmc_dir, "/caterpillar_forematb.png"), plot = caterpillar_forematb, dpi = 300, height = 4, width = 6, units = "in")
 
 fore_matb_sum %>% 
   ggplot(aes(x = quantity)) +
@@ -315,7 +319,7 @@ fore_matb_sum %>%
   labs(x = "\nForecast mature biomass posterior distribution") + 
   scale_x_continuous(labels = scales::comma) -> post_forematb
 
-ggsave(paste0(HERfig_dir, "/posterior_forematb.png"), plot = post_forematb, dpi = 300, height = 4, width = 6, units = "in")
+ggsave(paste0(HERmcmc_dir, "/posterior_forematb.png"), plot = post_forematb, dpi = 300, height = 4, width = 6, units = "in")
 
 # Diagnostics ----
 P <- read_fit("her")
@@ -326,11 +330,14 @@ P[["maxgrad"]]
 
 # Mature biomass ----
 
+tot_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
+
 # For HER with MCMC variance estimation:
 
 # Combine estimates and forecast
 matb_sum %>% 
-  mutate(type = "Estimate") %>% 
+  mutate(Year = as.numeric(as.character(Year)),
+         type = "Estimate") %>% 
   bind_rows(fore_matb_sum %>% 
               mutate(type = "Forecast")) %>% 
   distinct(Year, mean, q025, q975, type) %>% 
@@ -361,8 +368,8 @@ ggplot(df, aes(x = Year)) +
   scale_colour_grey() +
   scale_x_continuous(limits = c(min(tickryr$Year), max(tickryr$Year)),
                      breaks = axisf$breaks, labels = axisf$labels) +
-  scale_y_continuous(#limits = c(0, max(matb_sum$mean)*1.2), 
-    labels = scales::comma) +
+  scale_y_continuous(limits = c(0, max(LS_byyear$surv_est_matbio)), 
+                     labels = scales::comma) +
   labs(x = NULL, y = "Mature biomass (tons)\n", shape = NULL, text = NULL) +
   theme(legend.position = c(0.25, 0.8)) -> post_matb
 
@@ -373,7 +380,8 @@ ggsave(paste0(fig_dir, "/compare_matbiomass.png"), plot = post_matb, dpi = 300, 
 
 # Combine estimates and forecast
 matb_sum %>% 
-  mutate(type = "Estimate") %>% 
+  mutate(Year = as.numeric(as.character(Year)),
+         type = "Estimate") %>% 
   bind_rows(fore_matb_sum %>% 
               mutate(type = "Forecast")) %>% 
   distinct(Year, mean, q025, q975, q250, q750, q475, q525, type) %>% 
@@ -398,7 +406,7 @@ ggplot(df, aes(x = Year)) +
   scale_colour_grey() +
   scale_x_continuous(limits = c(min(tickryr$Year), max(tickryr$Year)),
                      breaks = axisf$breaks, labels = axisf$labels) +
-  scale_y_continuous(labels = scales::comma) +
+  scale_y_continuous(limits = c(0, max(LS_byyear$surv_est_matbio)), labels = scales::comma) +
   labs(x = NULL, y = "Mature biomass (tons)\n", shape = NULL, text = NULL) +
   theme(legend.position = c(0.25, 0.8)) -> post_matb
 
@@ -407,46 +415,40 @@ ggsave(paste0(HERfig_dir, "/matbiomass_CI.png"), plot = post_matb, dpi = 300, he
 # Spawning biomass ----
 
 # post-fishery
-
-tot_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
-
-df <- data.frame(Year = D[["year"]],
-                 matB = D[["mat_B"]] / 0.90718,
-                 spB = D[["sp_B"]] / 0.90718, # convert to short tons
-                 catch = D[["data_catch"]][10:tot_yrs, 2]  / 0.90718 #[nyr + 1, tot_yrs, 1), 2] # just the column of catch
-) %>% 
-  mutate(matB2 = spB + catch,
-         Model = "HER") %>% 
-  select(-catch) %>% 
-  gather("Biomass", "tons", -c(Model, Year)) %>% 
-  bind_rows(data.frame(Year = LS_byyear$year,
-                       matB = LS_byyear$tot_mat_B_tons,
-                       spB = LS_byyear$tot_sp_B_tons,
-                       Model = "LS") %>% 
-              gather("Biomass", "tons", -c(Model, Year)))
+spb_sum %>% 
+  mutate(Year = as.numeric(as.character(Year)),
+         type = "Estimate") %>% 
+  distinct(Year, mean, q025, q975, type) %>% 
+  mutate(Model = "HER") %>% 
+  bind_rows(
+    LS_byyear %>% 
+      select(Year = year, mean = tot_sp_B_tons) %>% 
+      mutate(type = "Estimate",
+             Model = "LS")) -> df
 
 srv_index <- data.frame(Year = LS_byyear$year,
                         srv_spB = LS_byyear$surv_est_spB,
                         Model = "Historical survey index")
 
-df %>% filter(Biomass %in% c("spB")) -> df
-
 axisx <- tickr(df, Year, 5)
 ggplot() +
-  # geom_point(data = df, aes(x = Year, y = tons, colour = Model, linetype = Model, shape = Model), size = 1) +
-  geom_line(data = df, aes(x = Year, y = tons, colour = Model, linetype = Model), size = 1) +
+  geom_ribbon(data = filter(df, !is.na(q025)), aes(x = Year, ymin = q025, ymax = q975),
+              alpha = 0.4, fill = "grey80") +
+  geom_line(data = df, aes(x = Year, y = mean, colour = Model, linetype = Model), size = 1) +
   geom_point(data = srv_index, aes(x = Year, y = srv_spB, shape = "Historical estimates from survey")) +
   scale_shape_manual(values = 1) +
   scale_colour_grey() +
   theme(legend.position = c(0.25, 0.7)) +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
-  scale_y_continuous(labels = scales::comma) +
+  scale_y_continuous(limits = c(0, max(LS_byyear$surv_est_spB)), labels = scales::comma) +
   labs(x = "", y = "Spawning biomass (tons)\n", shape = "Data") -> spbiomass_plot
 
 ggsave(paste0(fig_dir, "/compare_spbiomass_plot.png"), plot = spbiomass_plot, dpi = 300, height = 4, width = 6, units = "in")
 
 # For HER with credibility intervals:
-spb_sum %>% distinct(Year, mean, q025, q975, q250, q750, q475, q525) -> df
+spb_sum %>% 
+  mutate(Year = as.numeric(as.character(Year))) %>% 
+  distinct(Year, mean, q025, q975, q250, q750, q475, q525) -> df
 
 axisx <- tickr(df, Year, 5)
 ggplot(data = df, aes(x = Year)) +  
@@ -460,7 +462,7 @@ ggplot(data = df, aes(x = Year)) +
   scale_colour_grey() +
   scale_shape_manual(values = 1) +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
-  scale_y_continuous(limitlabels = scales::comma) +#limits = c(0, max(spb_sum$mean)*1.2), 
+  scale_y_continuous(limits = c(0, max(LS_byyear$surv_est_spB)), labels = scales::comma) +
   labs(x = NULL, y = "Spawning biomass (tons)\n", shape = NULL) +
   theme(legend.position = c(0.25, 0.8)) -> post_ssb
 
@@ -503,8 +505,8 @@ ggplot() +
         legend.spacing.y = unit(0, "cm")) +
   scale_x_continuous(limits = c(min(tickryr$Year), max(tickryr$Year)),
                      breaks = axisf$breaks, labels = axisf$labels) +
-  scale_y_continuous(#limits = c(0, max(LS_yearminus$matbio_tons) * 1.1),
-    labels = scales::comma) +
+  scale_y_continuous(limits = c(0, max(LS_byyear$surv_est_matbio)),
+                     labels = scales::comma) +
   labs(x = "", y = "Mature biomass (tons)\n", shape = NULL) -> past_matbio
 
 ggsave(paste0(LSfig_dir, "/compare_past_matbio.png"), plot = past_matbio, dpi = 300, height = 4, width = 6, units = "in")
@@ -670,6 +672,11 @@ ggsave(paste0(HERfig_dir, "/biom_abd_barplots.png"), plot = bars_her, dpi = 300,
 
 # Compare LS and HER 
 
+title <- ggdraw() + draw_label("LS")
+bars <- cowplot::plot_grid(title, bars, ncol = 1, rel_heights = c(0.1, 1))
+title_her <- ggdraw() + draw_label("HER")
+bars_her <- cowplot::plot_grid(title_her, bars_her, ncol = 1, rel_heights = c(0.1, 1))
+
 cowplot::plot_grid(bars, bars_her) -> compare_bars
 ggsave(paste0(fig_dir, "/compare_biom_abd_barplots.png"), plot = compare_bars, dpi = 300, height = 8, width = 12, units = "in")
 
@@ -834,12 +841,19 @@ df <- data.frame(Year = D[["years"]],
                        SR = D[["recruits"]],
                        resids = D[["resd_rec"]]), by = "Year")
 
-axisr <- tickr(df, Year, 5)
-ggplot(df, aes(x = Year)) +
+# Add in posterior intervals
+age3_sum %>% 
+  mutate(Year = as.numeric(as.character(Year))) %>% 
+  distinct(Year, q025, q975) %>% 
+  left_join(df) -> df2
+
+axisr <- tickr(df2, Year, 5)
+ggplot(df2, aes(x = Year)) +
   geom_bar(aes(y = age3, colour = "ASA model"),
            stat = "identity", 
            fill = "lightgrey",
            width = 0.8, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = q025, ymax = q975), colour = "black", size = 0.001, width = 0) + 
   # If you don't want to show Ricker line, comment out:
   geom_line(aes(y = SR, linetype = "Ricker model"), colour = "black", size = 1) +
   theme(legend.position = c(0.1, 0.75),
@@ -872,7 +886,15 @@ df %>%
   # mutate(SR2 = so * ssb * exp(- beta * ssb)) %>% 
   filter(Year >= D[["mod_syr"]] + D[["sage"]]) -> df
 
+# Add in posterior intervals
+ricker_sum %>% 
+  mutate(Year = as.numeric(as.character(Year))) %>% 
+  distinct(Year, q025, q975) %>% 
+  left_join(df) -> df
+
 ggplot(df, aes(x = ssb)) +
+  geom_ribbon(aes(x = ssb, ymin = q025, ymax = q975),
+              alpha = 0.4, fill = "grey80") +
   geom_line(aes(y = SR, linetype = "Ricker model"), 
             colour = "grey", size = 1) +
   geom_point(aes(y = age3, colour = "ASA model")) +
@@ -884,7 +906,7 @@ ggplot(df, aes(x = ssb)) +
   labs(x = "\nSpawning stock biomass (tons)", y = "Age-3 recruits (millions)\n",
        linetype = NULL, colour = NULL) -> sr_curve
 
-cowplot::plot_grid(recruits, resids, sr_curve, align = "hv", nrow = 3) -> recruit_plot
+cowplot::plot_grid(recruits, resids, sr_curve, align = "hv", nrow = 3, rel_heights=c(1, 0.8, 1)) -> recruit_plot
 
 ggsave(paste0(HERfig_dir, "/recruit_plot.png"), plot = recruit_plot, dpi = 300, height = 8, width = 6, units = "in")
 
@@ -903,7 +925,7 @@ df %>% filter(Year >= D[["mod_syr"]]) %>%
 
 axisx <- tickr(df, Year, 5)
 ggplot(df, aes(x = Year)) +
-  geom_errorbar(aes(ymin = lower, ymax = upper), colour = "darkgrey", size = 0.001) + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), colour = "darkgrey", size = 0.001, width = 0.5) + 
   geom_line(aes(y = trillions, colour = Model,
                 linetype = Model), size = 1) +  
   geom_point(aes(y = obs, shape = "Historical estimates from survey")) +
@@ -947,7 +969,7 @@ LS_byyear %>%
   scale_colour_manual(values = "grey") +
   geom_point(aes(y = tot_obs_egg, shape = "Historical estimates from survey")) +
   # To get rid of all confidence intervals, comment out following line. To add whiskers, remove width=0
-  geom_errorbar(aes(ymin = egg_lower, ymax = egg_upper), colour = "black", width = 0, size = 0.001) +
+  geom_errorbar(aes(ymin = egg_lower, ymax = egg_upper), colour = "black", width = 0.5, size = 0.001) +
   # theme(legend.position = c(0.25, 0.7)) +
   theme(legend.position = c(0.25, 0.75),
         legend.spacing.y = unit(0, "cm")) +
@@ -989,12 +1011,14 @@ egg_sum %>%
   group_by(Year) %>% 
   mutate(pp_mean = mean(pp_value),
          p025 = quantile(pp_value, 0.025),
-         p975 = quantile(pp_value, 0.975)) -> egg_sum
+         p975 = quantile(pp_value, 0.975),
+         p250 = quantile(pp_value, 0.250),
+         p750 = quantile(pp_value, 0.750)) -> egg_sum
 
 df <- as.data.frame(D[["data_egg_dep"]][ , 1:2])
 colnames(df) <- c("Year", "obs")
 
-egg_sum %>% distinct(Year, mean, q025, q975, p025, p975) %>% 
+egg_sum %>% distinct(Year, mean, p025, p975, p250, p750) %>% 
   ungroup() %>% 
   mutate(Year = as.numeric(as.character(Year))) -> egg_sum2
 
@@ -1009,11 +1033,11 @@ df %>%
          egg_lower = obs - LS_byyear$egg_lower,
          pred = D[["pred_egg_dep"]]) %>% 
   ggplot(aes(x = Year)) +
-  # Credibility intervals. 
+  # Posterior predictive intervals 
   geom_point(aes(y = obs, shape = "Historical estimates from survey")) +
   geom_ribbon(data = egg_sum2, aes(x = Year, ymin = p025, ymax = p975),
               alpha = 0.6, fill = "grey70") +
-  geom_ribbon(data = egg_sum2, aes(x = Year, ymin = q025, ymax = q975),
+  geom_ribbon(data = egg_sum2, aes(x = Year, ymin = p250, ymax = p750),
               alpha = 0.6, fill = "grey40") +
   geom_line(data = egg_sum2, aes(x = Year, y = mean)) + 
   # Egg dep confidence intervals (To add whiskers, remove width=0)
@@ -1071,11 +1095,11 @@ df %>%
          Model = "HER") %>% 
   bind_rows(LS_byage %>% 
               select(Year, survival) %>% 
-              mutate(Model = "LS")) -> df
+              mutate(Model = "LS")) -> df_compare
 
 # Figure summary
 tickr(LS_byage, Year, 5) -> axis
-ggplot(df, aes(x = Year, y = survival,  colour = Model, linetype = Model)) +
+ggplot(df_compare, aes(x = Year, y = survival,  colour = Model, linetype = Model)) +
   geom_vline(xintercept = c(1998.5, 2014.5), colour = "lightgrey", linetype = 3, alpha = 0.4) +
   geom_line(size = 1) +
   # geom_point() +
@@ -1092,6 +1116,31 @@ ggplot(df, aes(x = Year, y = survival,  colour = Model, linetype = Model)) +
   theme(legend.position = c(0.1, 0.8)) -> survival_plot
 
 ggsave(paste0(fig_dir, "/compare_survival.png"), plot = survival_plot, dpi = 300, height = 4, width = 6, units = "in")
+
+# Plot model comparisons with 95% posterior interval on HER
+df_sum %>% 
+  ungroup() %>% 
+  distinct() %>% 
+  melt(id.vars = c("Year", "Blocks"), variable.name = "Model", value.name = "survival") %>%
+  left_join(surv_sum %>% distinct(Blocks, q025, q975)) %>% 
+  ggplot() +
+  annotation_custom(tableGrob(survival_blks, rows = NULL, 
+                              theme = ttheme_minimal(base_size = 8, base_colour = "black", base_family = "Times",
+                                                     parse = FALSE, #core = list(fg_params = list(hjust = 1)),
+                                                     # colhead = list(fg_params = list(hjust = 1)), 
+                                                     padding = unit(c(4, 4), "mm"))), 
+                    xmin = 1980, xmax = 2015, ymin = 0.1, ymax = 0.35) +
+  geom_ribbon(aes(x = Year, ymin = q025, ymax = q975),
+              alpha = 0.6, fill = "grey70") +
+  geom_line(aes(x = Year, y = survival, colour = Model, linetype = Model), size = 1) +
+  geom_vline(xintercept = c(1998.5, 2014.5), colour = "lightgrey", linetype = 3, alpha = 0.4) +
+  lims(y = c(0, 1)) +
+  scale_colour_grey() +
+  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) +
+  labs(x = "", y = "Survival\n") +
+  theme(legend.position = c(0.1, 0.8)) -> survival_plot2
+
+ggsave(paste0(fig_dir, "/compare_survival_CI.png"), plot = survival_plot2, dpi = 300, height = 4, width = 6, units = "in")
 
 # For LS:
 
@@ -1117,28 +1166,32 @@ df %>% select(Year, M = `3`) %>%
 ggplot(df, aes(x = Year, y = survival)) +
   geom_vline(xintercept = c(1998.5, 2014.5), colour = "lightgrey", linetype = 3) +
   geom_line(size = 1) +
-  # geom_point() +
+  geom_point() +
   lims(y = c(0, 1)) +
   scale_x_continuous(breaks = axis$breaks, labels = axis$labels) +
   labs(x = "", y = "Survival\n") -> survival_plot
 
 ggsave(paste0(HERfig_dir, "/survival.png"), plot = survival_plot, dpi = 300, height = 4, width = 6, units = "in")
 
-# TODO: With 95% credible interval
-surv_sum %>% filter(Age == 3) -> surv_sum
-
+# HER with 95% and 50% posterior intervals
 df_sum %>% 
   ungroup() %>% 
-  select(-LS) %>% 
+  select(-LS) %>%
   left_join(surv_sum) %>%
   rename(survival = HER) %>%
-  distinct(Year, survival, Blocks, q025, q975, q250, q750) -> df_sum
+  distinct(Year, survival, Blocks, q025, q975, q250, q750) -> df_sum2
 
-survival_plot +
-  geom_ribbon(data = df_sum, aes(x = Year, ymin = q025, ymax = q975),
+ggplot(df, aes(x = Year, y = survival)) +
+  geom_ribbon(data = df_sum2, aes(x = Year, ymin = q025, ymax = q975),
               alpha = 0.6, fill = "grey70") +
-  geom_ribbon(data = df_sum, aes(x = Year, ymin = q250, ymax = q750),
-              alpha = 0.6, fill = "grey40") -> survival_plot_CI
+  geom_ribbon(data = df_sum2, aes(x = Year, ymin = q250, ymax = q750),
+              alpha = 0.6, fill = "grey40") +
+  geom_vline(xintercept = c(1998.5, 2014.5), colour = "lightgrey", linetype = 3) +
+  geom_line(size = 1) +
+  # geom_point() +
+  lims(y = c(0, 1)) +
+  scale_x_continuous(breaks = axis$breaks, labels = axis$labels) +
+  labs(x = "", y = "Survival\n") -> survival_plot_CI
 
 ggsave(paste0(HERfig_dir, "/survival_CI.png"), plot = survival_plot_CI, dpi = 300, height = 4, width = 6, units = "in")
 
@@ -1228,7 +1281,7 @@ ggsave(paste0(fig_dir, "/compare_mat_sel.png"), plot = matsel_plot, dpi = 300, h
 # For HER with 95% credibility intervals
 mat_sum %>% 
   distinct(Blocks, Age, mean, q025, q975) %>% 
-  mutate(age = as.numeric(Age)) %>% 
+  mutate(age = as.numeric(as.character(Age))) %>% 
   ggplot(aes(x = age, y = mean)) + 
   geom_line(aes(linetype = Blocks, group = Blocks)) +
   geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
@@ -1262,7 +1315,7 @@ sel_sum %>%
   # mean of 1 across all ages. This was done in log space by substracting
   # the mean from the vector of age-specific selectivities. See Tech Doc
   # p 11. Here we normalize it from 0 to 1.
-  mutate_if(is.numeric, funs((. - 0) / max(.) - 0)) %>% 
+  mutate_if(is.numeric, funs((. - 0) / max(.) - 0)) %>%
   ggplot(aes(x = Age, y = mean)) + 
   geom_line(aes(linetype = Blocks, group = Blocks)) +
   geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
@@ -1275,18 +1328,6 @@ sel_sum %>%
   ggtitle("Selectivity") +
   theme(legend.position = c(0.7, 0.2),
         plot.title = element_text(hjust = 0.5)) -> sel
-
-# her_matsel %>% filter(param == "Selectivity") -> par
-# 
-# ggplot(par, aes(x = Age, y = proportion)) +
-#   geom_line(aes(linetype = `Time blocks`, group = `Time blocks`)) +
-#   geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
-#   expand_limits(y = 0) +
-#   labs(x = "\nAge", y = NULL, linetype = "Time blocks") +
-#   scale_y_continuous(breaks = seq(0, max(par$proportion), .25)) +
-#   ggtitle(paste0(par$param[1])) +
-#   theme(legend.position = c(0.7, 0.2),
-#         plot.title = element_text(hjust = 0.5)) -> sel
 
 cowplot::plot_grid(mat, sel, align = "hv", nrow = 1) -> matsel_plot
 
@@ -1528,10 +1569,11 @@ her_agecomps %>% # fishery
 ggsave(paste0(HERfig_dir, "/catchage_comps_barplotPPI.png"), plot = catchage_barplot2, dpi = 300, height = 8, width = 6, units = "in")
 
 # colour palette for tracking cohorts
-mycols <- c("#f4cc70","#de7a22", "#20948b", "#6ab187", "#9a9eab", "#BCBABE")
+mycols <- c("#f4cc70","#de7a22", "#20948b", "#6ab187", "#9a9eab", "white")#BCBABE")
 nages <- D[["nage"]] - D[["sage"]]
 xtra <- nages * ((n_distinct(cm_comp_ppi$Cohort)-1)/nages - floor((n_distinct(cm_comp_ppi$Cohort)-1)/nages))
-cohort_cols <- c(rep(mycols[1:5], (n_distinct(cm_comp_ppi$Cohort)-1)/nages), mycols[1:xtra], mycols[6])
+cohort_fill <- c(rep(mycols[1:5], (n_distinct(cm_comp_ppi$Cohort)-1)/nages), mycols[1:xtra], mycols[6])
+cohort_cols <- replace(cohort_fill, cohort_fill == "white", "black") # Plus group always white bar with black border
 
 her_agecomps %>% # fishery
   filter(Source == "Commercial fishery") %>% 
@@ -1540,7 +1582,7 @@ her_agecomps %>% # fishery
   geom_bar(aes(x = Age, y = obs, colour = Cohort, fill = Cohort), 
            stat = "identity", show.legend = FALSE,
            width = 0.8, position = position_dodge(width = 0.5)) +
-  scale_fill_manual(values = cohort_cols) +
+  scale_fill_manual(values = cohort_fill) +
   scale_colour_manual(values = cohort_cols) +
   geom_point(aes(x = Age, y = pred), size = 1) +
   geom_errorbar(aes(x = Age, ymin = q025, ymax = q975),
@@ -1598,7 +1640,7 @@ her_agecomps %>% # survey
   geom_bar(aes(x = Age, y = obs, colour = Cohort, fill = Cohort), 
            stat = "identity", show.legend = FALSE,
            width = 0.8, position = position_dodge(width = 0.5)) +
-  scale_fill_manual(values = cohort_cols) +
+  scale_fill_manual(values = cohort_fill) +
   scale_colour_manual(values = cohort_cols) +
   geom_point(aes(x = Age, y = pred), size = 1) +
   geom_errorbar(aes(x = Age, ymin = q025, ymax = q975),
@@ -1800,66 +1842,66 @@ so; beta
 D[["so"]];D[["beta"]]
 
 # her_test.r code ----
-
-# HER - ADFG's herring model. Original ADMB code written by SJD Martell. Helper
-# files and documention contributed by M. Rudd.
-
-source("R/tools.R") 
-library(R2admb)
-
-
-# clean up directory - remove unnecessary files to run
-# add ".pin" when wanting to save .pin file, or any other file to save
-setwd("HER/")
-need_files <- c(".tpl", ".ctl", ".dat", ".R")
-files_present <- list.files()
-keep_index <- unlist(sapply(1:length(need_files), function(x) which(grepl(need_files[x], files_present))))
-rm_files <- files_present[-keep_index]
-remove <- sapply(1:length(rm_files), function(x) unlink(rm_files[x], TRUE))
-# setwd("..") # backs out one folder
-
-## compile model
-compile_admb("her", verbose=TRUE)
-## run MAP
-run_admb("her")
-
-years <- 1971:2015
-
-#Maturity
-readMat("mat", file="her.rep", nrow = length(years))
-readVec("mat_params[1]", file="her.rep")
-readVec("mat_params[2]", file="her.rep")
-
-# Natural mortality
-natmat <- readMat("Mij", file = "her.rep", nrow = length(years))[,1]
-plot(natmat ~ years, ylim=c(0, max(natmat)*1.1), type="l", lwd=2)
-
-## read report from initial MAP run - maximum a posteriori estimation (i.e.
-## maximum likelihood using priors!)
-ssb <- readVec("ssb", file="her.rep")
-## put in thousands
-ssb <- ssb/1000
-
-plot(ssb ~ years, ylim=c(0, max(ssb)*1.1), type="l", lwd=2)
-
-
-## run simulation with seed 123
-run_admb("her", extra.args="-sim 123")
-
-## run MCMC
-run_admb("her", extra.args="-mcmc 10000 -mcsave 10")
-run_admb("her", extra.args="-mceval")
-
-## posterior distributions
-ssb_ps <- read.table("ssb.ps")
-natural_ps <- read.table("natural.ps", header=TRUE)
-
-par(mfrow=c(2,1))
-plot(natural_ps[,1])
-abline(h=median(natural_ps[,1]), col="red")
-plot(natural_ps[,2])
-abline(h=median(natural_ps[,2]), col="red")
-
-## from tech doc:
-## 1) first fit to sitka data
-## 2) save .par file as her.pin
+# 
+# # HER - ADFG's herring model. Original ADMB code written by SJD Martell. Helper
+# # files and documention contributed by M. Rudd.
+# 
+# source("R/tools.R") 
+# library(R2admb)
+# 
+# 
+# # clean up directory - remove unnecessary files to run
+# # add ".pin" when wanting to save .pin file, or any other file to save
+# setwd("HER/")
+# need_files <- c(".tpl", ".ctl", ".dat", ".R")
+# files_present <- list.files()
+# keep_index <- unlist(sapply(1:length(need_files), function(x) which(grepl(need_files[x], files_present))))
+# rm_files <- files_present[-keep_index]
+# remove <- sapply(1:length(rm_files), function(x) unlink(rm_files[x], TRUE))
+# # setwd("..") # backs out one folder
+# 
+# ## compile model
+# compile_admb("her", verbose=TRUE)
+# ## run MAP
+# run_admb("her")
+# 
+# years <- 1971:2015
+# 
+# #Maturity
+# readMat("mat", file="her.rep", nrow = length(years))
+# readVec("mat_params[1]", file="her.rep")
+# readVec("mat_params[2]", file="her.rep")
+# 
+# # Natural mortality
+# natmat <- readMat("Mij", file = "her.rep", nrow = length(years))[,1]
+# plot(natmat ~ years, ylim=c(0, max(natmat)*1.1), type="l", lwd=2)
+# 
+# ## read report from initial MAP run - maximum a posteriori estimation (i.e.
+# ## maximum likelihood using priors!)
+# ssb <- readVec("ssb", file="her.rep")
+# ## put in thousands
+# ssb <- ssb/1000
+# 
+# plot(ssb ~ years, ylim=c(0, max(ssb)*1.1), type="l", lwd=2)
+# 
+# 
+# ## run simulation with seed 123
+# run_admb("her", extra.args="-sim 123")
+# 
+# ## run MCMC
+# run_admb("her", extra.args="-mcmc 10000 -mcsave 10")
+# run_admb("her", extra.args="-mceval")
+# 
+# ## posterior distributions
+# ssb_ps <- read.table("ssb.ps")
+# natural_ps <- read.table("natural.ps", header=TRUE)
+# 
+# par(mfrow=c(2,1))
+# plot(natural_ps[,1])
+# abline(h=median(natural_ps[,1]), col="red")
+# plot(natural_ps[,2])
+# abline(h=median(natural_ps[,2]), col="red")
+# 
+# ## from tech doc:
+# ## 1) first fit to sitka data
+# ## 2) save .par file as her.pin

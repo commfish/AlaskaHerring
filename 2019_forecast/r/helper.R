@@ -457,3 +457,28 @@ ppi_rmvlogistic <- function(
     q750 = quantile(new_value, 0.750)),
     by = .(Age, Year)] 
 }
+
+# Function to plot trace plots for derived variables
+mcmc_plot <- function(df = srv_sum, 
+                      type = "ps_byyear",
+                      name = "Survival",
+                      save = TRUE, 
+                      path = HERmcmc_dir,
+                      height = 8,
+                      width = 8) {
+  
+  # Base plot
+  p <- ggplot(df, aes(x = iter, y = value, group = 1)) +
+    geom_line() +
+    ggtitle(paste0(name, " posterior samples"))
+  
+  if(type == "ps_byyear") { p <- p + facet_wrap(~ Year) }
+  if(type == "ps_byage") { p <- p + facet_grid(Age ~ Blocks) }
+  if(type == "ps_comps") { p <- p + facet_grid(Year ~ Age) }
+  
+  if(save == TRUE) {
+    ggsave(paste0(HERmcmc_dir, "/", name, "_caterpillar.png"), plot = p, dpi = 300, height = height, width = width, units = "in")
+    
+  }
+  
+}
