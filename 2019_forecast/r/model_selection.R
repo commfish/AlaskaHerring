@@ -22,7 +22,7 @@ library(R2admb)     # running ADMB through R
 library(data.table)
 
 # Forecast year
-YEAR <- 2018
+YEAR <- 2019
 
 source(paste0(YEAR, "_forecast/r/helper.r"))
 source(paste0(YEAR, "_forecast/r/figure_fxns.r"))
@@ -108,7 +108,7 @@ write_maturity_blocks <- function(i) {
   for(i in 1:n_blocks[[combo]]) {
     tmp <- blocks[[combo]]$lyr[i]
     # user-defined starting values for a50, a95 and estimation phase
-    out[[i]] <- paste0("4.5       7.0       2       ", tmp, collapse = "     ")
+    out[[i]] <- paste0("3.0       4.5       2       ", tmp, collapse = "     ")
   }
   txt <- paste(unlist(out), sep = "\n")
   return(txt)
@@ -130,7 +130,7 @@ write_selectivity_blocks <- function(i) {
     lyr_tmp <- blocks[[combo]]$lyr[i]
     # user-defined starting values for gear index, sel type, sel mu and sd, age
     # nodes, year nodes, and the phase for estimation
-    out[[i]] <- paste("1     1     5.0     0.3     0     0     2     ", 
+    out[[i]] <- paste("1     1     4.0     0.3     0     0     2     ", 
                        syr_tmp, lyr_tmp, sep = "     ", collapse = "    ")
   }
   txt <- paste(unlist(out), sep = "\n")
@@ -153,8 +153,7 @@ ctl <- c(
 ##  init  lower   upper    est  prior                                         ##
 ## value  bound   bound    phz   type     p1    p2   # PARAMETER              ##
 ## —————————————————————————————————————————————————————————————————————————— ##
--1.05   -6.79    1.00      2      0  -1.05  0.05   # log_natural_mortality  (original, p1 too high?)
-## -0.7985  -5.00    5.00     1      1  -0.7985  0.4  # log_natural_mortality (same as iscam)
+-1.05   -6.79    1.00      2      0  -1.05  0.05  # log_natural_mortality 
 4.60   -6.00   12.00      1      0      0     0   # log_rinit
 5.60   -6.00   12.00      1      0      0     0   # log_rbar
 6.00   -6.00   12.00      2      0      0     0   # log_ro
@@ -216,7 +215,7 @@ write_selectivity_blocks(i),
 25000       # 3 - harvest threshold
 0.2         # 4 - target harvest rate
 20000       # 5 - threshold denominator
-0.080       # 6 - standard deviation in natural mortality devs SM=0.001
+0.090       # 6 - standard deviation in natural mortality devs SM=0.001
 1.00        # 7 - sd in recruitment deviations in all phases of estimate up until the last
 5.00        # 8 - sd in recruitment deviation in the final phase of estimation
 ## EOF
