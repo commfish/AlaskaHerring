@@ -794,19 +794,13 @@ FUNCTION void writePosteriorSamples()
     // age-3 recruitment from N matrix
     ofstream ofs12("age3_rec.ps");
 
-    // posterior predictive interval for egg deposition
-    ofstream ofs13("pp_egg_dep.ps");
+    // Variance for spawner age comps
+    ofstream ofs13("pp_sp_tau2.ps");
 
-    // posterior predictive interval for catch
-    ofstream ofs14("pp_catch.ps");
-
-    // posterior predictive interval for spawner age comps
-    ofstream ofs15("pp_sp_comp.ps");
-
-    // posterior predictive interval for catch age comps
-    ofstream ofs16("pp_cm_comp.ps");
-
+    // Variance for catch age comps
+    ofstream ofs14("pp_cm_tau2.ps");
   }
+
   ofstream ofs("mat_B.ps",ios::app);
   ofs<<mat_B<<endl;
 
@@ -847,75 +841,25 @@ FUNCTION void writePosteriorSamples()
   ofstream ofs12("age3_rec.ps",ios::app);
   ofs12<<mfexp(log_rbar + log_rbar_devs)<<endl;  
 
-  // Estimate posterior predictive intervals for abundance indices and composition data
-  int pp_seed = 123; 
-  random_number_generator rng(pp_seed);
-
-  // Posterior predictive interval for predicted catch
-  dvector pp_catch(mod_syr,mod_nyr);   // empty vector to hold prediction from each posterior sample
-  pp_catch.initialize();
-  double mu_catch;
-  double sigma_catch;
-
-  // Sample from lognormal distribution 
-  for(int i = mod_syr; i <= mod_nyr; i++) {
-    mu_catch = value(log(pred_catch(i)));                     // assume prediction = mean, assume lognormal distribution
-    sigma_catch = TINY + column(data_catch,3)(i);             // log_se
-    pp_catch(i) = mfexp(rnorm(mu_catch,sigma_catch,rng));     // put prediction back on natural scale
-  }
-
-  // Posterior predictive intervals for egg deposition with lognormal distribution:
-  dvector pp_egg_dep(mod_syr,mod_nyr);   // empty vector to hold prediction from each posterior sample
-  pp_egg_dep.initialize();
-  double mu_egg_dep;
-  double sigma_egg_dep;
-
-  // Sample from lognormal distribution 
-  for(int i = mod_syr; i <= mod_nyr; i++) {
-    mu_egg_dep = value(log(pred_egg_dep(i)));                      // assume prediction = mean, assume lognormal distribution
-    sigma_egg_dep = TINY + column(data_egg_dep,3)(i);              // log_se
-    pp_egg_dep(i) = mfexp(rnorm(mu_egg_dep,sigma_egg_dep,rng));    // put prediction back on natural scale
-  }
-
-  // Posterior predictive intervals for age comps with multivariate logistic distribution:
-  dmatrix pp_sp_comp(mod_syr,mod_nyr,sage,nage);    // empty matrix to hold prediction from each posterior sample
-  dmatrix pp_cm_comp(mod_syr,mod_nyr,sage,nage);    
-  pp_sp_comp.initialize();
-  pp_cm_comp.initialize();
+  // Variance estimates for age comps with multivariate logistic distribution:
   
   double pp_sp_tau2;  // variance estimates for each posterior sample (single variance across all years)
   double pp_cm_tau2;    
-
   double minp = 0.00; // threshold proportion <= grouped with next bin
 
   // spawning survey age composition
   dmatrix d_sp_comp = trans(trans(data_sp_comp).sub(sage,nage)).sub(mod_syr,mod_nyr);
-  pp_sp_tau2 = value(dmvlogistic(d_sp_comp,pred_sp_comp,resd_sp_comp,pp_sp_tau2,minp,false));   // value() returns double
+  pp_sp_tau2 = value(dmvlogistic(d_sp_comp,pred_sp_comp,resd_sp_comp,pp_sp_tau2,minp,false));   // false = extract variance instead of nll, value() returns double
 
   // commercial fishery age composition
   dmatrix d_cm_comp = trans(trans(data_cm_comp).sub(sage,nage)).sub(mod_syr,mod_nyr);
-  pp_cm_tau2 = value(dmvlogistic(d_cm_comp,pred_cm_comp,resd_cm_comp,pp_cm_tau2,minp,false));   // false = extract variance instead of nll
+  pp_cm_tau2 = value(dmvlogistic(d_cm_comp,pred_cm_comp,resd_cm_comp,pp_cm_tau2,minp,false));
 
-  // sample from multivariate logistic distribution
-  for(int i = mod_syr; i <= mod_nyr; i++) {
-    dvector pp_sp = value(pred_sp_comp(i));
-    dvector pp_cm = value(pred_cm_comp(i));
-    
-    pp_sp_comp(i)(sage,nage) = rmvlogistic(pp_sp,pp_sp_tau2,pp_seed-i);
-    pp_cm_comp(i)(sage,nage) = rmvlogistic(pp_cm,pp_cm_tau2,pp_seed-i);
-  }
+  ofstream ofs13("pp_sp_tau2.ps",ios::app);
+  ofs13<<pp_sp_tau2<<endl;  
 
-  ofstream ofs13("pp_egg_dep.ps",ios::app);
-  ofs13<<pp_egg_dep<<endl;  
-
-  ofstream ofs14("pp_catch.ps",ios::app);
-  ofs14<<pp_catch<<endl;  
-
-  ofstream ofs15("pp_sp_comp.ps",ios::app);
-  ofs15<<pp_sp_comp<<endl;  
-
-  ofstream ofs16("pp_cm_comp.ps",ios::app);
-  ofs16<<pp_cm_comp<<endl;  
+  ofstream ofs14("pp_cm_tau2.ps",ios::app);
+  ofs14<<pp_cm_tau2<<endl;  
 
 FUNCTION void runSimulationModel(const int& rseed)
   
@@ -926,9 +870,9 @@ FUNCTION void runSimulationModel(const int& rseed)
 //    // 4) calculate selectivity parameters.
 //    // 5) generate random normal deviates for process/observation errors.
 //    // 6) initialize state variables.
- //   // 7) update state variables conditioned on the observed catch data.
-  //  // 8) calculate age-composition residuals and over-write input data in memory.
-  //  // 9) calculate egg survey residuals and simulate fake survey.
+//    // 7) update state variables conditioned on the observed catch data.
+//    // 8) calculate age-composition residuals and over-write input data in memory.
+//    // 9) calculate egg survey residuals and simulate fake survey.
   
   if(global_parfile) {
     cout<<"\nUsing pin file for simulation parameter values.\n"<<endl;
@@ -1176,7 +1120,8 @@ FUNCTION void calcSelectivity()
   // // this process is to get the same thing but keeping differentiable 
     int jyr = h != nSlxBlks ? nslx_nyr(h):nslx_nyr(h)-retro_yrs;
     for(int i = nslx_syr(h); i <= jyr; i++){
-      log_slx(i) = log(slx) - log(mean(slx));
+      //log_slx(i) = log(slx) - log(mean(slx));
+      log_slx(i) = log(slx);// - log(mean(slx));
     }
   }
   Sij.sub(mod_syr,mod_nyr) = mfexp(log_slx);
@@ -1344,12 +1289,12 @@ FUNCTION void calcSpawningStockRecruitment()
 
     // 1. Assume catch is 100% mature (like LS)
     // mature numbers at age post fishery
-       sp_Nij(i) = mat_Nij(i) - Cij(i);
+    // sp_Nij(i) = mat_Nij(i) - Cij(i);
 
     
     // 2. Assume catch is only partially mature by applying maturity curve
     //mature numbers-at-age after the fishery (spawning population)
-    // sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
+     sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
 
 
     // spawning biomass after the fishery

@@ -9,13 +9,17 @@
 # This code creates figures for the least-squares (LS) model and HER and a set
 # of comparison figures.
 
-# Set up ----
+# Set up and user inputs ----
 
-set.seed(907)
+set.seed(907) # random seed to make prediction interval calculations repeatable
 
 library(ggdistribute) # plot posteriors
 library(coda) # mcmc diagnostics
 library(BayesianTools) # more mcmc diagnostics
+
+# IMPORTANT: User inputs model version name. This will create a subdirectory and
+# allow you to run multiple model versions for comparison.
+MODEL_VERSION <- "HER_bestLS"   # HER with the "best" LS parameterization
 
 # Forecast year
 YEAR <- 2019
@@ -23,10 +27,14 @@ YEAR <- 2019
 # User input: do you want to run the full MCMC?
 run_mcmc <- TRUE
 
+# Do you want to run LS figures? Option available so you don't end up with a
+# bunch of repeat figures
+run_LSfig <- FALSE
+
 # Create directory for HER/LS comparison figs, HER figs, and LS figs
 main_dir <- getwd()
 # Directory for all comparison figures
-fig_dir <- file.path(main_dir, paste0(YEAR, "_forecast/results/compare_HER_LS"))
+fig_dir <- file.path(main_dir, paste0(YEAR, "_forecast/results/", MODEL_VERSION))
 dir.create(fig_dir, showWarnings = FALSE)
 # Path for HER-specific figures
 HERfig_dir <- file.path(fig_dir, "HER")
@@ -36,8 +44,9 @@ HERmcmc_dir <- file.path(HERfig_dir, "MCMC_diagnostics")
 dir.create(HERmcmc_dir, showWarnings = FALSE)
 # Path for LS-specific figures
 LSfig_dir <- file.path(fig_dir, "LS")
-dir.create(LSfig_dir, showWarnings = FALSE)
-
+if(run_LSfig == TRUE){
+  dir.create(LSfig_dir, showWarnings = FALSE)
+}
 # source(paste0(YEAR, "_forecast/r/tools.r"))
 source(paste0(YEAR, "_forecast/r/helper.r"))
 
@@ -107,7 +116,7 @@ LS_forec %>%
 
 # Can't figure out how to put file path directly from project root into the
 # compile_admb() function
-setwd(file.path(main_dir, paste0(YEAR, "_forecast/admb/HER_bestLS")))
+setwd(file.path(main_dir, paste0(YEAR, "_forecast/admb/", MODEL_VERSION)))
 
 # Running model in R
 setup_admb()
@@ -509,7 +518,9 @@ ggplot() +
                      labels = scales::comma) +
   labs(x = "", y = "Mature biomass (tons)\n", shape = NULL) -> past_matbio
 
-ggsave(paste0(LSfig_dir, "/compare_past_matbio.png"), plot = past_matbio, dpi = 300, height = 4, width = 6, units = "in")
+if(run_LSfig == TRUE){
+  ggsave(paste0(LSfig_dir, "/compare_past_matbio.png"), plot = past_matbio, dpi = 300, height = 4, width = 6, units = "in")
+}
 
 # Biom/Abd bargraphs ----
 
@@ -572,7 +583,9 @@ ggplot(df %>%
 
 cowplot::plot_grid(matb_bar, matn_bar, totn_bar, align = "hv", nrow = 3) -> bars
 
-ggsave(paste0(LSfig_dir, "/biom_abd_barplots.png"), plot = bars, dpi = 300, height = 8, width = 7, units = "in")
+if(run_LSfig == TRUE){
+  ggsave(paste0(LSfig_dir, "/biom_abd_barplots.png"), plot = bars, dpi = 300, height = 8, width = 7, units = "in")
+}
 
 # For HER:
 
@@ -702,8 +715,9 @@ ggplot(df, aes(x = year)) +
                      breaks = seq(0, 125000, 10000)) +
   labs(x = "", y = "Biomass (tons)\n", linetype = NULL, fill = NULL) -> catch_plot
 
-ggsave(paste0(LSfig_dir, "/biomasscatch_barplot.png"), plot = catch_plot, dpi = 300, height = 4, width = 6, units = "in")
-
+if(run_LSfig == TRUE){
+  ggsave(paste0(LSfig_dir, "/biomasscatch_barplot.png"), plot = catch_plot, dpi = 300, height = 4, width = 6, units = "in")
+}
 # Recruitment ----
 
 # Comparison: 
@@ -829,7 +843,9 @@ LS_byyear %>%
 
 cowplot::plot_grid(recruits, resids, sr_curve, align = "hv", nrow = 3) -> recruit_plot
 
-ggsave(paste0(LSfig_dir, "/recruit_plot.png"), plot = recruit_plot, dpi = 300, height = 8, width = 6, units = "in")
+if(run_LSfig == TRUE){
+  ggsave(paste0(LSfig_dir, "/recruit_plot.png"), plot = recruit_plot, dpi = 300, height = 8, width = 6, units = "in")
+}
 
 # For HER:
 
@@ -989,7 +1005,9 @@ LS_byyear %>%
 
 cowplot::plot_grid(obsfit, resids, align = "hv", nrow = 2) -> eggdep_plot
 
-ggsave(paste0(LSfig_dir, "/eggdep_plot.png"), plot = eggdep_plot, dpi = 300, height = 5, width = 6, units = "in")
+if(run_LSfig == TRUE){
+  ggsave(paste0(LSfig_dir, "/eggdep_plot.png"), plot = eggdep_plot, dpi = 300, height = 5, width = 6, units = "in")
+}
 
 # For HER with posterior predictive intervals:
 
@@ -1152,7 +1170,9 @@ ggplot(LS_byage, aes(x = Year, y = survival)) +
   scale_x_continuous(breaks = axis$breaks, labels = axis$labels) +
   labs(x = "", y = "Survival\n") -> survival_plot
 
-ggsave(paste0(LSfig_dir, "/survival.png"), plot = survival_plot, dpi = 300, height = 4, width = 6, units = "in")
+if(run_LSfig == TRUE){
+  ggsave(paste0(LSfig_dir, "/survival.png"), plot = survival_plot, dpi = 300, height = 4, width = 6, units = "in")
+}
 
 # For HER:
 
@@ -1216,13 +1236,13 @@ df2 %>% mutate(param = "Selectivity") %>%
 df %>% 
   gather("Age", "proportion", -c(Year, param)) %>% 
   mutate(Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
-                      labels = c("3", "4", "5", "6", "7", "8+")),
+                      labels = c("3", "4", "5", "6", "7", "8+"))) %>% #,
          # To make sure selectivity is differentiable, it was scaled to have a
          # mean of 1 across all ages. This was done in log space by substracting
          # the mean from the vector of age-specific selectivities. See Tech Doc
          # p 11. Here we normalize it from 0 to 1.
-         proportion = ifelse(param == "Selectivity", (proportion - 0)/(max(proportion) - 0), 
-                             proportion)) %>% 
+         # proportion = ifelse(param == "Selectivity", (proportion - 0)/(max(proportion) - 0), 
+         #                     proportion)) %>% 
   group_by(Age, param, proportion) %>% 
   mutate(min = min(Year),
          max = max(Year),
@@ -1360,7 +1380,9 @@ ggplot(par, aes(x = Age, y = proportion)) +
 
 cowplot::plot_grid(mat, sel, align = "h", nrow = 1) -> matsel_plot
 
-ggsave(paste0(LSfig_dir, "/mat_sel.png"), plot = matsel_plot, dpi = 300, height = 4, width = 6, units = "in")
+if(run_LSfig == TRUE){
+  ggsave(paste0(LSfig_dir, "/mat_sel.png"), plot = matsel_plot, dpi = 300, height = 4, width = 6, units = "in")
+}
 
 # Age comps bubbleplot ----
 
@@ -1382,7 +1404,9 @@ LS_byage %>%
   guides(size = FALSE) +
   scale_y_continuous(breaks = axisy$breaks, labels = axisy$labels) -> agecomps_bubbleplot
 
-ggsave(paste0(LSfig_dir, "/agecomps_bubbleplot.png"), plot = agecomps_bubbleplot, dpi = 300, height = 5, width = 6, units = "in")
+if(run_LSfig == TRUE){
+  ggsave(paste0(LSfig_dir, "/agecomps_bubbleplot.png"), plot = agecomps_bubbleplot, dpi = 300, height = 5, width = 6, units = "in")
+}
 
 # Same figure but using HER:
 df <- data.frame("Commercial fishery",
@@ -1452,7 +1476,9 @@ ggplot(df, aes(x = Age, y = Year, size = resid,
   scale_y_continuous(breaks = axis$breaks, labels = axis$labels) +
   theme(legend.position = "bottom") -> agecomps_residplot
 
-ggsave(paste0(LSfig_dir, "/LS_agecomps_residplot.png"), plot = agecomps_residplot, dpi = 300, height = 5, width = 6, units = "in")
+if(run_LSfig == TRUE){
+  ggsave(paste0(LSfig_dir, "/LS_agecomps_residplot.png"), plot = agecomps_residplot, dpi = 300, height = 5, width = 6, units = "in")
+}
 
 # Same figure for HER
 
@@ -1516,7 +1542,9 @@ LS_byage %>% # fishery
   scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
   labs(x = '\nAge', y = 'Proportion-at-age\n') -> catchage_barplot
 
-ggsave(paste0(LSfig_dir, "/catchage_comps_barplot.png"), plot = catchage_barplot, dpi = 300, height = 8, width = 6, units = "in")
+if(run_LSfig == TRUE){
+  ggsave(paste0(LSfig_dir, "/catchage_comps_barplot.png"), plot = catchage_barplot, dpi = 300, height = 8, width = 6, units = "in")
+}
 
 LS_byage %>% # cast net
   ggplot() +
@@ -1527,7 +1555,9 @@ LS_byage %>% # cast net
   scale_y_continuous(breaks = seq(0, 1, 0.25), labels = seq(0, 1, 0.25)) +
   labs(x = '\nAge', y = 'Proportion-at-age\n') -> spawnage_barplot
 
-ggsave(paste0(LSfig_dir, "/spawnage_comps_barplot.png"), plot = spawnage_barplot, dpi = 300, height = 8, width = 6, units = "in")
+if(run_LSfig == TRUE){
+  ggsave(paste0(LSfig_dir, "/spawnage_comps_barplot.png"), plot = spawnage_barplot, dpi = 300, height = 8, width = 6, units = "in")
+}
 
 # Same figs for HER
 her_agecomps %>% # fishery

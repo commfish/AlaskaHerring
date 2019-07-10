@@ -1,0 +1,13 @@
+condition,sigmaM,converged?,fn
+Catch,0.05,0,condition_Catch_sigmaM_0.05
+Effort,0.05,1,condition_Effort_sigmaM_0.05
+Catch,0.06,1,condition_Catch_sigmaM_0.06
+Effort,0.06,1,condition_Effort_sigmaM_0.06
+Catch,0.07,0,condition_Catch_sigmaM_0.07
+Effort,0.07,1,condition_Effort_sigmaM_0.07
+Catch,0.08,0,condition_Catch_sigmaM_0.08
+Effort,0.08,1,condition_Effort_sigmaM_0.08
+Catch,0.09,1,condition_Catch_sigmaM_0.09
+Effort,0.09,1,condition_Effort_sigmaM_0.09
+Catch,0.1,0,condition_Catch_sigmaM_0.1
+Effort,0.1,1,condition_Effort_sigmaM_0.1
