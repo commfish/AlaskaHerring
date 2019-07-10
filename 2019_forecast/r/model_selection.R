@@ -24,6 +24,11 @@ library(data.table)
 # Forecast year
 YEAR <- 2019
 
+# IMPORTANT: this will create a subdirectory in results/model_selection/ and allow you to run a
+# model selection on multiple model versions for comparison. User must update
+# write_ctl() function below to match MODEL_VERSION ctl!!!
+MODEL_VERSION <- "HER_condEffort"   # HER with the "best" LS parameterization
+
 source(paste0(YEAR, "_forecast/r/helper.r"))
 source(paste0(YEAR, "_forecast/r/figure_fxns.r"))
 
@@ -211,7 +216,7 @@ write_selectivity_blocks(i),
 8
 ## Value    # # - Description
 0.90718     # 1 - Catch Scaler (convert from short tons to metric tons)
-0           # 2 - Condition on Catch = 0, Condition of Ft = 1
+1           # 2 - Condition on Catch = 0, Condition of Ft = 1
 25000       # 3 - harvest threshold
 0.2         # 4 - target harvest rate
 20000       # 5 - threshold denominator
@@ -231,6 +236,8 @@ tpl_dir <- file.path(root_dir, paste0(YEAR, "_forecast/admb/HER_bestLS")) # loca
 results_dir <- file.path(root_dir, paste0(YEAR, "_forecast/results")) # results
 dir.create(paste0(results_dir, "/model_selection")) # new folder for model selection
 modsel_dir <- file.path(results_dir, "model_selection")
+dir.create(paste0(modsel_dir, "/", MODEL_VERSION))
+modsel_dir <- file.path(modsel_dir, MODEL_VERSION)
 files <- list.files(file.path(tpl_dir)) # searchable file list
 tpl <- file.path(tpl_dir, files[which(grepl(".tpl", files))]) # find .tpl
 name <- strsplit(files[grepl("tpl",files)],".tpl")[[1]][1] # program name
@@ -257,9 +264,9 @@ check_converge <- matrix(ncol = 7, nrow = nrow(perms))
 
 for(i in 1:nrow(perms)){
   
-  # Model naming convention: model combination # followed by number of time
+  # Model naming convention: model version name . combination # followed by number of time
   # blocks for natural survival, maturity, and selectivity
-  model_name <- paste0("model.", i, "_",
+  model_name <- paste0(MODEL_VERSION, ".", i, "_",
                        n_blocks[[perms[i,'survival']]],
                        n_blocks[[perms[i,'maturity']]],
                        n_blocks[[perms[i,'selectivity']]])
@@ -291,8 +298,7 @@ for(i in 1:nrow(perms)){
   check_converge[i,5] <- write_blks(i, param = 'maturity')
   check_converge[i,6] <- write_blks(i, param = 'selectivity')
   # check for convergence (1 = converged, 0 = not converged)
-  if (file.exists(std)) {check_converge[i,7] <- 1} 
-  else {check_converge[i,7] <- 0 }
+  if (file.exists(std)) {check_converge[i,7] <- 1} else {check_converge[i,7] <- 0 }
 }
 
 # 6. Check convergence ----
@@ -308,8 +314,7 @@ if(exists("check_converge")) {
 } else {
   check_converge <- read_csv("convergence.csv") }
 
-# Models that did not converge - as of 2019-01-31 only the models with a single
-# time block for maturity did not converge
+# Models that did not converge 
 filter(check_converge, Convergence == 0)
 
 # Filter out models that did not converge
