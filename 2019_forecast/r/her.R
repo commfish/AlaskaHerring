@@ -1,7 +1,7 @@
-# Run HER and compare results to LS
+# Run HER, including Bayesian analysis, and compare results to LS
 # Author: Jane Sullivan
 # Contact: jane.sullivan1@alaska.gov
-# Last edited: 2019-06-03
+# Last edited: 2019-07-10
 
 # HER - ADFG's new herring model. Original ADMB code written by SJD Martell. Helper
 # files and documentation contributed by M. Rudd.
