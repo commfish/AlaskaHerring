@@ -12,7 +12,7 @@ if(!require("lubridate"))   install.packages("lubridate") # dates functions like
 # if(!require("gridExtra"))   install.packages("gridExtra") # multipanneled plots
 if(!require("data.table"))   install.packages("data.table") # dcast, foverlaps
 # if(!require("ROracle"))   install.packages("ROracle") # database access through R
-# if(!require("broom"))   install.packages("broom") # tidying regression model output
+if(!require("broom"))   install.packages("broom") # tidying coda summary output
 # if(!require("padr"))   install.packages("padr") # fills in missing values in a time series
 if(!require("knitr"))   install.packages("knitr") # r markdown
 # if(!require("forcats"))   install.packages("forcats") # releveling factors
@@ -355,6 +355,13 @@ ps_byyear <- function(fn = "sp_B",
              q475 = quantile(value, 0.475),
              q525 = quantile(value, 0.525)),
      by = Year] 
+  
+  sum <- unique(df, by = c("Year", "mean", "median", "q025", "q975", "q250", "q750", "q475", "q525"))
+  sum[, iter:=NULL]
+  sum[, value:=NULL]
+  write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior.csv"))
+  
+  return(df)
 }
 
 # For posterior sample output that is structured by age and time blocks (i.e.
@@ -392,7 +399,23 @@ ps_byage <- function(fn = "maturity",
              q250 = quantile(value, 0.250),
              q750 = quantile(value, 0.750)),
      by = .(Age, Blocks)] 
-}
+  
+  # Eliminate accidental blocks 
+  keep <- df %>% group_by(Blocks) %>% 
+    summarize(tst = length(levels(Age))) %>% 
+    filter(tst == (D[["nage"]] - D[["sage"]] + 1)) %>% 
+    pull(Blocks)
+  df <- df[Blocks %in% keep, ]
+  
+  sum <- unique(df, by = c("Age", "Blocks", "mean", "median", "q025", "q975", "q250", "q750"))
+  sum[, `:=` (iter = NULL,
+              value = NULL,
+              min = NULL,
+              max = NULL)]
+  write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior.csv"))
+  
+  return(df)
+} 
 
 # For age composition posterior sample output (number of columns
 # = number of ages, number of rows = number of years * number of iterations)
@@ -416,7 +439,17 @@ ps_comps <- function(fn = "pred_sp_comp",
              q025 = quantile(value, 0.025),
              q975 = quantile(value, 0.975)),
      by = .(Year, Age)] 
-}
+  
+  sum <- unique(df, by = c("Year", "Age", "mean", "median", "q025", "q975"))
+  
+  sum[, `:=` (iter = NULL,
+              value = NULL)]
+  
+  fn <- str_split(fn, "pred_")[[1]][2]
+  write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior_predictive.csv"))
+  
+  return(df)
+  }
 
 # Summarize posterior samples of the multivariate logistic variance estimates 
 ps_tau <- function(fn = "pp_sp_tau2", 
@@ -428,11 +461,26 @@ ps_tau <- function(fn = "pp_sp_tau2",
   colnames(df) <- "tau2"
   df[, iter := .I] # row number
   df <- df[iter > burn, ] # Eliminate burn in
-}
+  
+  sum <- df[, `:=` (mean = mean(tau2),
+                    median = median(tau2),
+                    q025 = quantile(tau2, 0.025),
+                    q975 = quantile(tau2, 0.975))] 
+  
+  sum <- unique(df, by = c("mean", "median", "q025", "q975"))
+  sum[, `:=` (iter = NULL,
+              tau2 = NULL),]
+  
+  fn <- str_split(fn, "pp_")[[1]][2]
+  write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior.csv"))
+
+  return(df)
+  }
 
 # Posterior predictive interval for multivariate logistic distribution (age
 # compositions). Uses the posterior sample estimates and variance.
 ppi_rmvlogistic <- function(
+  fn = "sp_comp",
   ps_sum = sp_comp_sum,  # summarized posterior samples (output from ps_comps)
   tau2 = sp_tau2    # summarized variance estimates (output from ps_tau)
 ) {
@@ -449,13 +497,27 @@ ppi_rmvlogistic <- function(
   df[, new_value := exp(x) / sum_x]
   
   # Get posterior predictive intervals (syntax akin to dplyr::summarize)
-  df[, list(# 95% 
+  df <- df[, list(
+    # 95% 
     q025 = quantile(new_value, 0.025),
     q975 = quantile(new_value, 0.975),
     # 50% 
     q250 = quantile(new_value, 0.250),
     q750 = quantile(new_value, 0.750)),
     by = .(Age, Year)] 
+  
+  sum <- unique(ps_sum, by = c("Year", "Age", "mean", "median"))
+  sum[, `:=` (iter = NULL,
+              value = NULL,
+              # get rid of credible intervals to make way for posterior predictive
+              q025 = NULL, 
+              q975 = NULL)]
+
+  sum <- sum[df, on = c("Year", "Age")] # same as dplyr::left_join()
+  
+  write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior_predictive.csv"))
+  
+  return(df)
 }
 
 # Function to plot trace plots for derived variables

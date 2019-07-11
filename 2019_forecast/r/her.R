@@ -19,13 +19,13 @@ library(BayesianTools) # more mcmc diagnostics
 
 # IMPORTANT: User inputs model version name. This will create a subdirectory and
 # allow you to run multiple model versions for comparison.
-MODEL_VERSION <- "HER_bestLS"   # HER with the "best" LS parameterization
+MODEL_VERSION <- "HER_best_condEffort.12_322"   # HER with best HER parameterization by AIC, conditioned on catch
 
 # Forecast year
 YEAR <- 2019
 
 # User input: do you want to run the full MCMC?
-run_mcmc <- TRUE
+run_mcmc <- FALSE
 
 # Do you want to run LS figures? Option available so you don't end up with a
 # bunch of repeat figures
@@ -150,11 +150,12 @@ if (run_mcmc == TRUE){
 
 D <- read_admb("her")
 
-# NOTE: See helper.R for source code for all user-defined functions.
+# NOTE: See helper.R for source code for all user-defined functions. All
+# functions save a csv of the posterior/credible or posterior predictive
+# interval in the HERfig_dir
 
 # Posterior intervals (aka credible intervals, show variability around
 # the expected value)
-egg_sum <- ps_byyear(fn = "pred_egg_dep")
 spb_sum <- ps_byyear(fn = "sp_B", unit_conv = 0.90718)
 matb_sum <- ps_byyear(fn = "mat_B", unit_conv = 0.90718)
 catch_sum <- ps_byyear(fn = "pred_catch") # warning msg ok!
@@ -164,6 +165,30 @@ age3_sum <- ps_byyear(fn = "age3_rec", syr = D[["mod_syr"]],
                          lyr = D[["mod_nyr"]] + 1)
 fmort_sum <- ps_byyear(fn = "fmort", syr = D[["mod_syr"]], # won't be anything if conditioned on catch
                          lyr = D[["mod_nyr"]])
+egg_sum <- ps_byyear(fn = "pred_egg_dep")
+
+# Posterior predictive intervals for egg deposition
+df <- as.data.frame(D[["data_egg_dep"]])
+colnames(df) <- c("Year", "obs_egg", "log_se")
+df %>% 
+  filter(Year >= D[["mod_syr"]]) %>% 
+  mutate(Year = factor(Year)) %>% 
+  select(Year, log_se) %>% 
+  left_join(egg_sum) %>%  
+  mutate(log_value = log(value),
+         # Posterior predictive value (draw from random lognormal distribution
+         # given mean and sd of data)
+         pp_value = exp(rnorm(n(), mean = log_value, sd = log_se))) %>% 
+  group_by(Year) %>% 
+  mutate(p025 = quantile(pp_value, 0.025),
+         p975 = quantile(pp_value, 0.975),
+         p250 = quantile(pp_value, 0.250),
+         p750 = quantile(pp_value, 0.750)) %>% 
+  distinct(Year, mean, median, p025, p975, p250, p750) %>% 
+  ungroup() %>% 
+  mutate(Year = as.numeric(as.character(Year))) -> egg_pp
+
+write_csv(egg_pp, path = paste0(HERfig_dir, "/egg_dep_posterior_predictive.csv"))
 
 # Survival posterior distribution
 surv_sum <- ps_byage(fn = "survival", syr = D[["mod_syr"]],
@@ -185,7 +210,7 @@ sp_comp_sum <- ps_comps(fn = "pred_sp_comp", syr = D[["mod_syr"]],
 cm_comp_sum <- ps_comps(fn = "pred_cm_comp", syr = D[["mod_syr"]], 
                     lyr = D[["mod_nyr"]], n = niter / thin + 1)  
 
-# Posterior predictive intervals 
+# Posterior predictive intervals for age comp data
 
 # Variance estimates for each posterior sample from the multivariate logistic
 # distribution used for age comps
@@ -194,10 +219,12 @@ cm_tau2 <- ps_tau(fn = "pp_cm_tau2")
 
 # Get posterior predictive intervals for multivariate logistic distribution (age
 # compositions). Uses the posterior sample estimates and variance.
-cm_comp_ppi <- ppi_rmvlogistic(ps_sum = cm_comp_sum,
+cm_comp_ppi <- ppi_rmvlogistic(fn = "cm_comp",
+                               ps_sum = cm_comp_sum,
                                tau2 = cm_tau2)
 
-sp_comp_ppi <- ppi_rmvlogistic(ps_sum = sp_comp_sum,
+sp_comp_ppi <- ppi_rmvlogistic(fn = "sp_comp",
+                               ps_sum = sp_comp_sum,
                                tau2 = sp_tau2)
 
 # MCMC diagnostic plots ----
@@ -229,10 +256,19 @@ sel_labels <- unlist(out)
 colnames(pars) <- c("log_Mbar", "log_rinit", "log_rbar", "log_ro", "log_reck", 
                     paste0("log_rinit_devs_", ages), paste0("log_rbar_devs_", yrs),
                     mat_labels, paste0("log_Mdevs_", 1:length(unique(surv_sum$Blocks))),
-                    sel_labels)
+                    sel_labels, if(grepl("Effort", MODEL_VERSION)){paste0("log_ft_", yrs)})
+
+par_sum <- summary(coda::as.mcmc(pars))
+df <- tidy(par_sum$statistics)
+colnames(df)[1] <- "Parameter"
+write_csv(df, path = paste0(HERfig_dir, "/parameter_statsum.csv"))
+
+df <- tidy(par_sum$quantiles)
+colnames(df) <- c("Parameter", "q025", "q250", "median", "q750", "q975")
+write_csv(df, path = paste0(HERfig_dir, "/parameter_quantiles.csv"))
 
 pars <- as.data.frame(pars) %>% 
-  select(- contains("rinit_devs"), - contains("rbar_devs")) 
+  select(-contains("rinit_devs"), -contains("rbar_devs"), -contains("ft")) 
 
 pars <- coda::as.mcmc(pars)
 
@@ -1012,33 +1048,9 @@ if(run_LSfig == TRUE){
 # For HER with posterior predictive intervals:
 
 # Egg deposition
-df <- as.data.frame(D[["data_egg_dep"]])
-colnames(df) <- c("Year", "obs_egg", "log_se")
-df %>% 
-  filter(Year >= D[["mod_syr"]]) %>% 
-  mutate(Year = factor(Year)) %>% 
-  select(Year, log_se) %>% 
-  left_join(egg_sum) -> egg_sum
-
-egg_sum %>%  
-  mutate(log_value = log(value),
-         # Posterior predictive value
-         pp_value = exp(rnorm(n(), mean = log_value, sd = log_se))) -> egg_sum
-
-egg_sum %>% 
-  group_by(Year) %>% 
-  mutate(pp_mean = mean(pp_value),
-         p025 = quantile(pp_value, 0.025),
-         p975 = quantile(pp_value, 0.975),
-         p250 = quantile(pp_value, 0.250),
-         p750 = quantile(pp_value, 0.750)) -> egg_sum
 
 df <- as.data.frame(D[["data_egg_dep"]][ , 1:2])
 colnames(df) <- c("Year", "obs")
-
-egg_sum %>% distinct(Year, mean, p025, p975, p250, p750) %>% 
-  ungroup() %>% 
-  mutate(Year = as.numeric(as.character(Year))) -> egg_sum2
 
 df %>%filter(Year >= D[["mod_syr"]]) -> df
 
@@ -1053,11 +1065,11 @@ df %>%
   ggplot(aes(x = Year)) +
   # Posterior predictive intervals 
   geom_point(aes(y = obs, shape = "Historical estimates from survey")) +
-  geom_ribbon(data = egg_sum2, aes(x = Year, ymin = p025, ymax = p975),
+  geom_ribbon(data = egg_pp, aes(x = Year, ymin = p025, ymax = p975),
               alpha = 0.6, fill = "grey70") +
-  geom_ribbon(data = egg_sum2, aes(x = Year, ymin = p250, ymax = p750),
+  geom_ribbon(data = egg_pp, aes(x = Year, ymin = p250, ymax = p750),
               alpha = 0.6, fill = "grey40") +
-  geom_line(data = egg_sum2, aes(x = Year, y = mean)) + 
+  geom_line(data = egg_pp, aes(x = Year, y = mean)) + 
   # Egg dep confidence intervals (To add whiskers, remove width=0)
   geom_errorbar(aes(ymin = egg_lower, ymax = egg_upper), colour = "black", width = 0, size = 0.001) +  scale_colour_manual(values = "grey") +
   theme(legend.position = c(0.25, 0.8),
@@ -1330,21 +1342,21 @@ mat_sum %>%
 sel_sum %>% 
   distinct(Blocks, Age, mean, q025, q975) %>% 
   mutate(Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
-                      labels = c("3", "4", "5", "6", "7", "8+"))) %>% 
+                      labels = c("3", "4", "5", "6", "7", "8+"))) -> sel_sum 
   # To make sure selectivity is differentiable, it was scaled to have a
   # mean of 1 across all ages. This was done in log space by substracting
   # the mean from the vector of age-specific selectivities. See Tech Doc
   # p 11. Here we normalize it from 0 to 1.
-  mutate_if(is.numeric, funs((. - 0) / max(.) - 0)) %>%
-  ggplot(aes(x = Age, y = mean)) + 
+  # mutate_if(is.numeric, funs((. - 0) / max(.) - 0)) %>%
+ggplot(sel_sum, aes(x = Age, y = mean)) + 
   geom_line(aes(linetype = Blocks, group = Blocks)) +
   geom_hline(yintercept = 0.5, colour = "grey", linetype = 2) +
   expand_limits(y = 0) +
   labs(x = "\nAge", y = NULL, linetype = "Time blocks") +
-  geom_ribbon(aes(x = 1:length(Age), ymin = q025, ymax = q975, group = Blocks,
+  geom_ribbon(aes(x = sel_sum$Age, ymin = q025, ymax = q975, group = Blocks,
                   fill = Blocks),
               alpha = 0.4) +
-  scale_fill_manual(values = c("grey70"), guide = FALSE) +
+  scale_fill_manual(values = rep("grey70", length(unique(sel_sum$Blocks))), guide = FALSE) +
   ggtitle("Selectivity") +
   theme(legend.position = c(0.7, 0.2),
         plot.title = element_text(hjust = 0.5)) -> sel
