@@ -22,7 +22,7 @@ YEAR <- 2019 # Forecast year
 
 # IMPORTANT: User inputs model version name. This will create a subdirectory and
 # allow you to run multiple model versions for comparison.
-MODEL_VERSION <- "HER_bestLS"   # HER with the "best" LS parameterization
+MODEL_VERSION <- "HER_bestLS_321"   # HER with the "best" LS parameterization
 
 source(paste0(YEAR, "_forecast/r/create_ctl.r")) # function that writes new ctl file
 source(paste0(YEAR, "_forecast/r/helper.r"))

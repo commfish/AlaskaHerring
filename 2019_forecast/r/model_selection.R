@@ -29,6 +29,10 @@ YEAR <- 2019
 # write_ctl() function below to match MODEL_VERSION ctl!!!
 MODEL_VERSION <- "HER_condEffort"   # HER with the "best" LS parameterization
 
+# location of tpl (note that tpl sould be the same regardless of MODEL_VERSION)
+root_dir <- getwd() # project root
+tpl_dir <- file.path(root_dir, paste0(YEAR, "_forecast/admb/HER_bestLS_321")) 
+
 source(paste0(YEAR, "_forecast/r/helper.r"))
 source(paste0(YEAR, "_forecast/r/figure_fxns.r"))
 
@@ -231,8 +235,6 @@ write.table(ctl, file = "sitka.ctl", sep=",", quote = FALSE, row.names = FALSE, 
 }
 
 # 4. Directory setup ----
-root_dir <- getwd() # project root
-tpl_dir <- file.path(root_dir, paste0(YEAR, "_forecast/admb/HER_bestLS")) # location of tpl
 results_dir <- file.path(root_dir, paste0(YEAR, "_forecast/results")) # results
 dir.create(paste0(results_dir, "/model_selection")) # new folder for model selection
 modsel_dir <- file.path(results_dir, "model_selection")

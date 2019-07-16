@@ -1,13 +1,13 @@
 # Run HER, including Bayesian analysis, and compare results to LS
 # Author: Jane Sullivan
 # Contact: jane.sullivan1@alaska.gov
-# Last edited: 2019-07-10
+# Last edited: 2019-07-15
 
 # HER - ADFG's new herring model. Original ADMB code written by SJD Martell. Helper
 # files and documentation contributed by M. Rudd.
 
 # This code creates figures for the least-squares (LS) model and HER and a set
-# of comparison figures.
+# of comparison figures. It runs the full Bayesian analysis.
 
 # Set up and user inputs ----
 
@@ -19,7 +19,10 @@ library(BayesianTools) # more mcmc diagnostics
 
 # IMPORTANT: User inputs model version name. This will create a subdirectory and
 # allow you to run multiple model versions for comparison.
-MODEL_VERSION <- "HER_best_condEffort.12_322"   # HER with best HER parameterization by AIC, conditioned on catch
+# MODEL_VERSION <- "HER_bestLS_321" 
+MODEL_VERSION <- "HER_best_condEffort.12_322"   # HER with best HER parameterization by AIC, conditioned on effort
+# MODEL_VERSION <- "HER_best_condCatch.12_322"   # HER with best HER parameterization by AIC, conditioned on catch
+
 
 # Forecast year
 YEAR <- 2019
@@ -283,7 +286,7 @@ dev.off()
 # Trace plots (aka caterpillar plots) with posterior marginal densities:
 # Trace plots shouldn't have any trends, should be well-mixed.
 png(paste0(HERmcmc_dir, "/param_trace.png"),
-    width = 11, height = 11, units = "in", res = 300)
+    width = 16, height = 10, units = "in", res = 300)
 par(mfrow = c(7, 4))
 plot(pars, auto.layout = FALSE, ask = FALSE)
 dev.off()
@@ -292,7 +295,7 @@ dev.off()
 # correlation coefficien (upper panels) - when there is strong correlation, the
 # marginal density (uncertainty) in the parameter estimate is affected.
 png(paste0(HERmcmc_dir, "/param_correlation.png"),
-    width = 11, height = 11, units = "in", res = 300)
+    width = 12, height = 12, units = "in", res = 300)
 BayesianTools::correlationPlot(data.frame(pars)) 
 dev.off()
 
@@ -302,7 +305,7 @@ dev.off()
 pnorm(geweke.diag(pars)$z,lower.tail=FALSE)*2
 png(paste0(HERmcmc_dir, "/geweke_diagnostic.png"),
     width = 8, height = 8, units = "in", res = 300)
-par(mfrow = c(5, 3))
+par(mfrow = c(5, 4))
 geweke.plot(pars, auto.layout = FALSE) # should stay within the 2 sd bounds
 dev.off()
 # More on Geweke:
@@ -1823,65 +1826,65 @@ ggsave(paste0(fig_dir, "/waa_plot.png"), plot = waa_plot, dpi = 300, height = 4,
 # recruitment relationship because I was unable to pull beta from D via
 # D[["beta"]] (rounding issue?)
 
-df <- as.data.frame(D[["data_sp_waa"]])
-colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
-df %>% 
-  gather("Age", "weight", -Year) %>% 
-  filter(Year >= D[["mod_syr"]]) %>% 
-  group_by(Age) %>% 
-  summarise(waa = mean(weight)) -> waa_bar
-
-df <- as.data.frame(D[["mat"]])
-colnames(df) <- c(paste(D[['sage']] : D[['nage']]))
-df %>% 
-  mutate(Year = D[["year"]]) %>% 
-  gather("Age", "maturity", -Year) %>% 
-  filter(Year >= D[["mod_syr"]]) %>% 
-  group_by(Age) %>% 
-  summarise(mat = mean(maturity)) -> mat_bar
-
-df <- as.data.frame(D[["Mij"]])
-colnames(df) <- c(paste(D[['sage']] : D[['nage']]))
-df %>% 
-  mutate(Year = D[["year"]]) %>% 
-  gather("Age", "mort", -Year) %>% 
-  filter(Year >= D[["mod_syr"]]) %>% 
-  #group_by(Age) %>% 
-  summarise(mort = mean(mort)) %>% 
-  pull(mort) -> mort_bar
-
-lx <- c(1:6)
-
-lx[1] <- 1
-
-for(i in 2:6){
-  lx[i] <- lx[i-1] * exp(-mort_bar)
-}
-# plus group
-lx[6] = lx[6] / (1 - exp(-mort_bar))
-lx  
-
-waa_bar %>% 
-  left_join(mat_bar) %>% 
-  mutate(lx = lx,
-         fec = waa * mat,
-         phi = lx * fec) %>% 
-  summarize(phie = sum(phi)) %>% 
-  pull(phie) -> phie
-
-# From .par file 
-log_ro <- D[["theta"]][4] # theta(4)
-log_reck <- D[["theta"]][5]  # theta(5)
-
-ro <- exp(log_ro) # equilibrium recruitment
-reck <-  exp(log_reck) + 1.0 # recruitment compensation ratio
-
-# stock-recruit parameters
-so <- reck/phie;
-beta <- log(reck) / (ro * phie) # beta = (reck - 1.0)/(ro *phiE)
-
-so; beta
-D[["so"]];D[["beta"]]
+# df <- as.data.frame(D[["data_sp_waa"]])
+# colnames(df) <- c("Year", paste(D[['sage']] : D[['nage']]))
+# df %>% 
+#   gather("Age", "weight", -Year) %>% 
+#   filter(Year >= D[["mod_syr"]]) %>% 
+#   group_by(Age) %>% 
+#   summarise(waa = mean(weight)) -> waa_bar
+# 
+# df <- as.data.frame(D[["mat"]])
+# colnames(df) <- c(paste(D[['sage']] : D[['nage']]))
+# df %>% 
+#   mutate(Year = D[["year"]]) %>% 
+#   gather("Age", "maturity", -Year) %>% 
+#   filter(Year >= D[["mod_syr"]]) %>% 
+#   group_by(Age) %>% 
+#   summarise(mat = mean(maturity)) -> mat_bar
+# 
+# df <- as.data.frame(D[["Mij"]])
+# colnames(df) <- c(paste(D[['sage']] : D[['nage']]))
+# df %>% 
+#   mutate(Year = D[["year"]]) %>% 
+#   gather("Age", "mort", -Year) %>% 
+#   filter(Year >= D[["mod_syr"]]) %>% 
+#   #group_by(Age) %>% 
+#   summarise(mort = mean(mort)) %>% 
+#   pull(mort) -> mort_bar
+# 
+# lx <- c(1:6)
+# 
+# lx[1] <- 1
+# 
+# for(i in 2:6){
+#   lx[i] <- lx[i-1] * exp(-mort_bar)
+# }
+# # plus group
+# lx[6] = lx[6] / (1 - exp(-mort_bar))
+# lx  
+# 
+# waa_bar %>% 
+#   left_join(mat_bar) %>% 
+#   mutate(lx = lx,
+#          fec = waa * mat,
+#          phi = lx * fec) %>% 
+#   summarize(phie = sum(phi)) %>% 
+#   pull(phie) -> phie
+# 
+# # From .par file 
+# log_ro <- D[["theta"]][4] # theta(4)
+# log_reck <- D[["theta"]][5]  # theta(5)
+# 
+# ro <- exp(log_ro) # equilibrium recruitment
+# reck <-  exp(log_reck) + 1.0 # recruitment compensation ratio
+# 
+# # stock-recruit parameters
+# so <- reck/phie;
+# beta <- log(reck) / (ro * phie) # beta = (reck - 1.0)/(ro *phiE)
+# 
+# so; beta
+# D[["so"]];D[["beta"]]
 
 # her_test.r code ----
 # 

@@ -1,7 +1,7 @@
 # Retrospective analysis
 # Author: Jane Sullivan
 # Contact: jane.sullivan1@alaska.gov
-# Last edited: 2019-07-10
+# Last edited: 2019-07-15
 
 # This script runs a sensitivity analysis on the HER model, generates figures,
 # and calculates Mohn's and Woods Hole Rho.
@@ -13,30 +13,37 @@ library(tidyverse)
 library(data.table)
 
 # Forecast year, model start and last yrs
-YEAR <- 2018
+YEAR <- 2019
 syr <- 1980 
 lyr <- YEAR - 1
 
 # IMPORTANT: this will create a subdirectory and allow you to run a
 # retrospective on multiple model versions for comparison. User must update
 # write_ctl() function below to match MODEL_VERSION ctl!!!
-MODEL_VERSION <- "HER_bestLS"   # HER with the "best" LS parameterization
+# MODEL_VERSION <- "HER_bestLS_321"   # HER with the "best" LS parameterization
+MODEL_VERSION <- "HER_best_condEffort.12_322"   # HER with best HER parameterization by AIC, conditioned on effort
+# MODEL_VERSION <- "HER_best_condCatch.12_322"   # HER with best HER parameterization by AIC, conditioned on catch
 
 # For MODEL_VERSION, what are the time blocks? This information is needed
 # to accomodate short time blocks. Vector is the last year in each time block
 survival_blk <- c(1998, 2014, lyr) # Natural mortality/survival
-maturity_blk <- c(2014, lyr) # Maturity
-selectivity_blk <- c(lyr) # Selectivity
+maturity_blk <- c(1998, lyr) # Maturity
+selectivity_blk <- c(1998, lyr) # Selectivity
 
 source(paste0(YEAR, "_forecast/r/helper.r"))
 
 # Directory set up ----
 
 root_dir <- getwd() # project root
-tpl_dir <- file.path(root_dir, paste0(YEAR, "_forecast/admb/HER_bestLS")) # location of tpl
+tpl_dir <- file.path(root_dir, paste0(YEAR, "_forecast/admb/", MODEL_VERSION)) # location of tpl
 results_dir <- file.path(root_dir, paste0(YEAR, "_forecast/results")) # results
-dir.create(paste0(results_dir, "/retrospective/", MODEL_VERSION)) # new folder for retrospective
+if (!dir.exists(file.path(results_dir, "/retrospective"))){
+  dir.create(file.path(results_dir, "/retrospective"))
+} else {
+  print("Dir already exists!")
+}
 run_dir <- file.path(results_dir, paste0("retrospective/", MODEL_VERSION)) # folder to run the retrospective in
+dir.create(run_dir) # new folder for retrospective
 files <- list.files(file.path(tpl_dir)) # searchable file list
 tpl <- file.path(tpl_dir, files[which(grepl(".tpl", files))]) # find .tpl
 ctl <- file.path(tpl_dir, files[which(grepl(".ctl", files))]) # find .ctl
@@ -111,7 +118,7 @@ write_maturity_blocks <- function(i) {
   for(i in 1:length(new_maturity_blk$lyr)) {
     tmp <- new_maturity_blk$lyr[i]
     # user-defined starting values for a50, a95 and estimation phase
-    out[[i]] <- paste0("4.5       7.0       2       ", tmp, collapse = "     ")
+    out[[i]] <- paste0("3.0       4.5       2       ", tmp, collapse = "     ")
   }
   txt <- paste(unlist(out), sep = "\n")
   return(txt)
@@ -125,7 +132,7 @@ write_selectivity_blocks <- function(i) {
     lyr_tmp <- new_selectivity_blk$lyr[i]
     # user-defined starting values for gear index, sel type, sel mu and sd, age
     # nodes, year nodes, and the phase for estimation
-    out[[i]] <- paste("1     1     5.0     0.3     0     0     2     ", 
+    out[[i]] <- paste("1     1     4.0     0.3     0     0     2     ", 
                       syr_tmp, lyr_tmp, sep = "     ", collapse = "    ")
   }
   txt <- paste(unlist(out), sep = "\n")
@@ -211,11 +218,11 @@ write_ctl <- function(i) {
     8
     ## Value    # # - Description
     0.90718     # 1 - Catch Scaler (convert from short tons to metric tons)
-    0           # 2 - Condition on Catch = 0, Condition of Ft = 1
+    1           # 2 - Condition on Catch = 0, Condition of Ft = 1
     25000       # 3 - harvest threshold
     0.2         # 4 - target harvest rate
     20000       # 5 - threshold denominator
-    0.08        # 6 - standard deviation in natural mortality devs SM=0.001
+    0.09        # 6 - standard deviation in natural mortality devs SM=0.001
     1.00        # 7 - sd in recruitment deviations in all phases of estimate up until the last
     5.00        # 8 - sd in recruitment deviation in the final phase of estimation
     ## EOF
@@ -263,11 +270,11 @@ for(i in 1:length(retro)){
     check_converge[[i]] <- 1
   } else { check_converge[[i]] <- 0 }
   
-  mgc <- readMGC(name)
-  
-  if (mgc < 1e-3) {
-    check_converge[[i]] <- 1
-  } else {check_converge[[i]] <- 0 } 
+  # mgc <- readMGC(name)
+  # 
+  # if (mgc < 1e-3) {
+  #   check_converge[[i]] <- 1
+  # } else {check_converge[[i]] <- 0 } 
   
 }
 
