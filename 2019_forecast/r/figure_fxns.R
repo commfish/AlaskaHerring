@@ -361,7 +361,12 @@ plot_biomass <- function(D = D, path = path) {
   df <- data.frame(Year = D[["year"]],
                    matB = D[["mat_B"]] / 0.90718, # convert to short tons
                    catch = D[["data_catch"]][syr_index:tot_yrs, 2]  / 0.90718) %>% 
-    mutate(spB = matB - catch) %>% 
+    mutate(#spB_derived = matB - catch,
+           spB_estimated = D[["sp_B"]] #,
+           # diff = spB_derived - spB_estimated, 
+           # pred_catch = D[["pred_catch"]] * 1.10231,
+           #diff_catch = catch - pred_catch
+           ) %>% 
     gather("Biomass", "tons", -Year) %>% 
     mutate(Type = "Estimate") %>% 
     # Bind to forecast values
