@@ -93,6 +93,8 @@ wa <-	wa %>%
   pull(weight)
 
 # Posterior samples for r0 and reck
+data.table(D[["post.samp"]][,3:4])
+
 pars <- data.table(D[["post.samp"]][,4:5]) # (see her.ctl to check parameter order)
 colnames(pars) <- c("log_r0", "log_reck")
 pars[, iter := .I] # row number = iteration number
@@ -102,31 +104,47 @@ pars <- pars[burn:(niter/thin),] # Remove burn-in
 # Functions for getting BRPs
 
 # Inputs
+
+iter_i = 1112
+
 age <- sage:nage
-fmort <- seq(0, 1, 0.01)
+fmort <- seq(0, 4, 0.01)
 rec_mod <- 1 # 1 = Ricker, 2 = Beverton-Holt
-m_iter = 1112
 
 # Natural mortality
-mort <- survival[iter == m_iter, ]
+mort <- survival[iter == iter_i, ]
 mort[, mort := -log(survival)]
 mort <- mort$mort
 
 # Selectivity
-sel <- selectivity[iter == m_iter, ]
+sel <- selectivity[iter == iter_i, ]
 sel <- sel$selectivity
 
 # Maturity
-mat <- maturity[iter == m_iter, ]
+mat <- maturity[iter == iter_i, ]
 mat <- mat$maturity
 
 # Recruitment k (compensation ratio) and Equilibrium recruitment
-pars_s <- pars[iter == m_iter, ]
-reck <- exp(pars_s$log_reck) 
+pars_s <- pars[iter == iter_i, ]
+reck <- exp(pars_s$log_reck) + 1
 r0 <- exp(pars_s$log_r0)  
 
+# Derive steepness (h) from compensation ratio (reck)
+get_steepness <- function(rec_mod) {
+  
+  # Ricker
+  if(rec_mod == 1) { h <- reck / (4 + reck) }
+  
+  # Beverton-Holt
+  if(rec_mod == 2) { h <- 0.2 * reck ^ (4 / 5) }
+  
+  return(h)
+}
+
+h <- get_steepness(rec_mod = rec_mod)
+
 # lx = survivorship under unfished conditions  
-get_survivorship <- function() {
+get_survivorship <- function(fmort) {
   
   lx <- matrix(ncol = length(unique(age)), 
                nrow = length(unique(fmort)))
@@ -148,8 +166,8 @@ get_survivorship <- function() {
   return(lx)
 }
 
-# Yield-per-recruit
-get_ypr <- function() { 
+# Yield-per-recruit (note that ypr = phi_q * fmort in Martell et al. 2009)
+get_ypr <- function(fmort, lx) { 
   
   ypr <- matrix(ncol = length(unique(age)), 
                 nrow = length(unique(fmort))) 
@@ -167,9 +185,26 @@ get_ypr <- function() {
   return(ypr)
 }
 
-# Function to get spawner-per-recruit
-get_spr <-
-  function() { 
+# Vulnerable biomass-per-recruit (phi_b in Martell et al. 2009)
+get_bpr <- function(fmort, lx) {
+  
+  bpr <- matrix(ncol = length(unique(age)), 
+                nrow = length(unique(fmort)))
+  
+  for(f in 1:length(fmort)) {
+    for(a in 1:length(age)) {
+      bpr[f,a] <- lx[f,a] * wa[a] * sel[a]
+    }
+  }
+  # Sum across ages for each F value
+  bpr <- rowSums(bpr)
+  
+  return(bpr)
+  
+}
+
+# Function to get spawner-per-recruit (phi_e in Martell et al. 2009)
+get_spr <- function(fmort, lx) { 
     
     # spr matrix of same dimensions as N matrix
     spr <- matrix(ncol = length(unique(age)), 
@@ -184,18 +219,6 @@ get_spr <-
     spr <- rowSums(spr) 
     return(spr)
   }
-
-# Derive steepness (h) from compensation ratio (reck)
-get_steepness <- function() {
-  
-  # Ricker
-  if(rec_mod == 1) { h <- reck / (4 + reck) }
-  
-  # Beverton-Holt
-  if(rec_mod == 2) { h <- 0.2 * reck ^ (4 / 5) }
-  
-  return(h)
-}
 
 # Derive stock-recruitment parameters 
 get_recruit_pars <- function() {
@@ -215,7 +238,7 @@ get_recruit_pars <- function() {
   }
 
 # Get recruitment conditioned on alpha/beta and spr
-get_recruitment <- function() { 
+get_recruitment <- function(spr) { 
   # Beverton-Holt model (Eqn 9)
   if(rec_mod == 1) {
     r <- (spr-alpha)/(beta*spr) }
@@ -227,99 +250,142 @@ get_recruitment <- function() {
   return(r)
 }
 
-h <- get_steepness()
-
-get_equilibrium <- function(fmort = fmort) {
+# Get equilibrium conditions
+get_equilibrium <- function(ff) {
   
-  lx <- get_survivorship()  
-  ypr <- get_ypr()
-  spr <- get_spr() 
-  spr0 <- spr[1] # unfished spawner per recruit
-  alpha <- get_recruit_pars()[[1]]
-  beta <- get_recruit_pars()[[2]]
-  r <- get_recruitment()
-  s0 <- r0 * spr0 # unfished spawning biomass 
+  lx_e <- get_survivorship(fmort = ff)  
+  ypr_e <- get_ypr(fmort = ff, lx = lx_e)
+  spr_e <- get_spr(fmort = ff, lx = lx_e) 
+  bpr_e <- get_bpr(fmort = ff, lx = lx_e)
+  r_e <- get_recruitment(spr = spr_e)
+  
   
   out <- NULL
-  out$ypr <- ypr
-  out$spr <- spr
+  out$ypr <- ypr_e
+  out$spr <- spr_e
   out$spr0 <- spr0
   out$h <- h
   out$alpha <- alpha
   out$beta <- beta
-  out$r <- r
+  out$r <- r_e
   out$s0 <- s0
-  out$s <- spr*r
-  out$s_ratio <- (spr*r)/s0 # Express spawners as a proportion of unfished spawners
-  out$y <- ypr*r
+  out$bpr <- bpr_e
+  out$b <- bpr_e * r_e
+  out$s <- spr_e * r_e
+  out$s_ratio <- (spr_e * r_e) / s0 # Express spawners as a proportion of unfished spawners
+  out$y <- ypr_e * r_e
+  out$lx <- lx_e
   
   return(out)
 }
 
-equilibrium <- get_equilibrium(fmort = fmort)
-
-
-# Function to get derivative of ypr with respect to F (use uniroot() to solve for dY(F)/df=0)
-dfx.dx <- function(fmort, get_equilibrium, delta, h) {
-  y1 <- get_equilibrium(fmort = fmort-delta/2)$y
-  y2 <- get_equilibrium(fmort = fmort+delta/2)$y
+# Derivative of ypr with respect to F (use uniroot() to solve for dY(F)/df=0)
+dfx.dx <- function(ff, delta) {
+  y1 <- get_equilibrium(ff = ff-delta/2)$y
+  y2 <- get_equilibrium(ff = ff+delta/2)$y
   approx.gradient <- (y2-y1)/delta
   return(approx.gradient)
 }
 
 # Get F crash (where F is minimized and S ~ 0 using the bisection method - MK helped me with this.
-bisect <- function(Fmin = 0, Fmax = 1){
-  for(b in 1:10000){
+bisect <- function(Fmin = 1, Fmax = 4){
+  for(b in 1:100000){
     F_tst <- (Fmin + Fmax)/2 # update
-    s_tmp <- get_equilibrium(fmort = F_tst)$s
-    if(round(s_tmp,4) == 0 & (Fmax - Fmin) > 0.0002){ return(F_tst)
+    s_tmp <- get_equilibrium(ff = F_tst)$s
+    if(round(s_tmp,0) == 0 & (Fmax - Fmin) > 0.0001){ return(F_tst)
     } else if(round(s_tmp,4) > 0) { Fmin <- F_tst 
     } else if(round(s_tmp,4) < 0) { Fmax <- F_tst }
   }
   print('max iter')
 }
 
-mod_names <- c("Beverton-Holt", "Ricker")
+
+
+mod_names <- c("Ricker", "Beverton-Holt")
 
 # Get biological reference points 
-brps <- data.frame(Model = NA, Fmsy = NA, MSY = NA, Fcrash = NA)
+brps <- data.frame(Model = NA, Fmsy = NA, MSY = NA, Fcrash = NA, Bmsy = NA, B0 = NA, B0_naive = NA)
 
-# Loop over the 3 S-R models
-for(rec_mod in 1:2){
-  # uniroot will only take one value at a time, it will pick values on the interval and feed them as FF's to dfx.dx
-  Fmsy <- uniroot(f = dfx.dx, interval = c(0.01,1), tol = 0.000001, 
-                  get_equilibrium = get_equilibrium, delta = 0.001)$root[1]
-  msy <- get_equilibrium(fmort = Fmsy)$y
-  Fcrash <- bisect()
-  brps[mod,] <- c(mod_names[mod], round(Fmsy, 4), round(msy, 4), round(Fcrash, 4))
+
+# for(rec_mod in 1:2){
+  
+h <- get_steepness(rec_mod = rec_mod)
+
+# Unfished survival, spawning biomass per recruit, and unfished spawning biomass
+lx0 <- get_survivorship(fmort = 0)
+spr0 <- get_spr(fmort = 0, lx = lx0)
+bpr0 <- get_bpr(fmort = 0, lx = lx0)
+s0 <- r0 * spr0
+
+# Recruitment parameters
+alpha <- get_recruit_pars()[[1]]
+beta <- get_recruit_pars()[[2]]
+
+# uniroot will only take one value at a time, it will pick values on the interval and feed them as FF's to dfx.dx
+Fmsy <- uniroot(f = dfx.dx, interval = c(0.1,4), tol = 0.000001, 
+                delta = 0.0001)$root[1]
+msy <- get_equilibrium(ff = Fmsy)$y
+Fcrash <- bisect()
+
+# Get components of B0
+lx_Fmsy <- get_equilibrium(ff = Fmsy)$lx
+ypr_Fmsy <- get_ypr(fmort = Fmsy, lx = lx_Fmsy) # Fmsy * phi_q evaluated at Fmsy
+spr_Fmsy <- get_spr(fmort = Fmsy, lx = lx_Fmsy) # phi_e evaluated at Fmsy
+r_Fmsy <- get_recruitment(spr = spr_Fmsy)
+
+
+bmsy <- r_Fmsy * spr_Fmsy # from msy.cpp
+b0_naive <- ro * spr0 # from msy.cpp
+
+# equation (8) in Martell et al. 2009
+if(rec_mod == 1) {
+  b0 <- - (log(reck) * bpr0 * spr_Fmsy * msy) / (log(spr0/(reck*spr_Fmsy)) * spr0 * ypr_Fmsy)
+}
+# equation (5) in Martell et al. 2009
+if(rec_mod == 2) {
+  b0 <- (msy * bpr0 * (reck - 1)) / (ypr_Fmsy * (reck - spr0/spr_Fmsy))
 }
 
+brps[rec_mod,] <- c(mod_names[rec_mod], round(Fmsy, 4), round(msy, 0), round(Fcrash, 4), round(bmsy, 1), round(b0, 1), round(b0_naive, 1))
+#}
 
-for(MOD in 1:3){
+#for(rec_mod in 1){
   
-  out <- yield_f(FF, h, MOD = MOD)
-  refs <- brps[MOD,]
-  
-  par(mar=c(4,4,3,3), mfrow = c(2,2))
-  
-  plot(out$s_ratio, out$r, type = "l", xlab = "S(F)", ylab = "R(F)",
-       xlim = c(0, max(out$s_ratio)), ylim = c(0, max(out$r)*1.1))
-  abline(0,1, col = "grey", lty = 2)
-  
-  plot(out$s_ratio, out$y, type = "l", xlab = "S(F)", ylab = "Y(F)",
-       xlim = c(0, max(out$s_ratio)), ylim = c(0, max(out$y)*1.1))
-  
-  text(line2user(line=mean(par('mar')[c(2, 4)]), side=2),
-       line2user(line=2, side=3), MOD_NAMES[MOD], xpd=NA, cex=2, font=2)
-  
-  plot(FF, out$y, type = "l", xlab = "F", ylab = "Y(F)",
-       xlim = c(0, as.numeric(refs$Fcrash)*1.2), ylim = c(0, max(out$y)*1.1))
-  abline(h = refs$MSY, col = "grey", lty = 2)
-  abline(v = refs$Fmsy, col = "grey", lty = 2)
-  abline(v = refs$Fcrash, col = "grey", lty = 2)
-  
-  plot(FF, out$s_ratio, type = "l", xlab = "F", ylab = "S(F)",
-       xlim = c(0, as.numeric(refs$Fcrash)*1.2), ylim = c(0, max(out$s_ratio)*1.1))
-  abline(v = refs$Fcrash, col = "grey", lty = 2)
-  
-}
+out <- get_equilibrium(fmort)
+refs <- brps[rec_mod,]
+
+par(mar=c(4,4,3,3), mfrow = c(2,2))
+
+plot(fmort, out$s, type = "l")
+abline(h = refs$Bmsy, col = "grey", lty = 2)
+abline(v = refs$Fmsy, col = "grey", lty = 2)
+abline(h = refs$B0, col = "grey", lty = 2)
+abline(h = refs$B0_naive, col = "grey", lty = 2)
+
+plot(fmort, out$b, type = "l")
+abline(h = refs$Bmsy, col = "grey", lty = 2)
+abline(v = refs$Fmsy, col = "grey", lty = 2)
+abline(h = refs$B0, col = "grey", lty = 2)
+
+plot(out$s_ratio, out$r / r0, type = "l", xlab = "S(F)", ylab = "R(F)",
+     xlim = c(0, max(out$s_ratio)), ylim = c(0, max(out$r / r0)*1.1))
+abline(0,1, col = "grey", lty = 2)
+
+plot(out$s_ratio, out$y, type = "l", xlab = "S(F)", ylab = "Y(F)",
+     xlim = c(0, max(out$s_ratio)), ylim = c(0, max(out$y)*1.1))
+
+text(line2user(line=mean(par('mar')[c(2, 4)]), side=2),
+     line2user(line=2, side=3), mod_names[rec_mod], xpd=NA, cex=2, font=2)
+
+plot(fmort, out$y, type = "l", xlab = "F", ylab = "Y(F)",
+     xlim = c(0, as.numeric(refs$Fcrash)*1.2), ylim = c(0, max(out$y)*1.1))
+abline(h = refs$MSY, col = "grey", lty = 2)
+abline(v = refs$Fmsy, col = "grey", lty = 2)
+abline(v = refs$Fcrash, col = "grey", lty = 2)
+
+plot(fmort, out$s_ratio, type = "l", xlab = "F", ylab = "S(F)",
+     xlim = c(0, as.numeric(refs$Fcrash)*1.2), ylim = c(0, max(out$s_ratio)*1.1))
+abline(v = refs$Fcrash, col = "grey", lty = 2)
+
+#}
+
