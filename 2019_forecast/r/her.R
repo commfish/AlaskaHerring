@@ -230,6 +230,24 @@ sp_comp_ppi <- ppi_rmvlogistic(fn = "sp_comp",
                                ps_sum = sp_comp_sum,
                                tau2 = sp_tau2)
 
+# Posterior distribution of forecasted mature biomass 
+df <- data.frame(read.table("fore_matb.ps"))
+colnames(df) <- "quantity"
+df %>% 
+  mutate(Year = D[["mod_nyr"]] + 1,
+         iter = row_number(),
+         mean = mean(quantity),
+         median = median(quantity),
+         # 95% cred
+         q025 = quantile(quantity, 0.025),
+         q975 = quantile(quantity, 0.975),
+         # 50% cred
+         q250 = quantile(quantity, 0.250),
+         q750 = quantile(quantity, 0.750),
+         # 5% cred
+         q475 = quantile(quantity, 0.475),
+         q525 = quantile(quantity, 0.525)) -> fore_matb_sum
+
 # MCMC diagnostic plots ----
 
 # Parameter draws
@@ -335,24 +353,6 @@ mcmc_plot(df = age3_sum, type = "ps_byyear", "ASA-estimated age-3 recruitment", 
 # mcmc_plot(df = fmort_sum, type = "ps_byyear", "Fishing mortality") # If conditioned on catch
 mcmc_plot(df = cm_comp_sum, type = "ps_comps", "Commercial fishery age composition", height = 20, width = 14)
 mcmc_plot(df = sp_comp_sum, type = "ps_comps", "Cast net survey age composition", height = 20, width = 14)
-
-# Posterior distribution of forecasted mature biomass 
-df <- data.frame(read.table("fore_matb.ps"))
-colnames(df) <- "quantity"
-df %>% 
-  mutate(Year = D[["mod_nyr"]] + 1,
-         iter = row_number(),
-         mean = mean(quantity),
-         median = median(quantity),
-         # 95% cred
-         q025 = quantile(quantity, 0.025),
-         q975 = quantile(quantity, 0.975),
-         # 50% cred
-         q250 = quantile(quantity, 0.250),
-         q750 = quantile(quantity, 0.750),
-         # 5% cred
-         q475 = quantile(quantity, 0.475),
-         q525 = quantile(quantity, 0.525)) -> fore_matb_sum
 
 fore_matb_sum %>% 
   ggplot(aes(x = iter, y = quantity)) +
@@ -757,6 +757,13 @@ ggplot(df, aes(x = year)) +
 if(run_LSfig == TRUE){
   ggsave(paste0(LSfig_dir, "/biomasscatch_barplot.png"), plot = catch_plot, dpi = 300, height = 4, width = 6, units = "in")
 }
+
+# HER
+if(grepl("Effort", MODEL_VERSION)) {
+  
+  df <- data.frame(catch = )
+  
+}
 # Recruitment ----
 
 # Comparison: 
@@ -1078,7 +1085,7 @@ df %>%
   theme(legend.position = c(0.25, 0.8),
         legend.spacing.y = unit(0, "cm")) +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
-  scale_y_continuous(limits = c(0, max(df$obs) * 1.2)) +
+  scale_y_continuous(limits = c(0, max(df$obs) * 1.3)) +
   labs(x = NULL, y = "Eggs spawned (trillions)\n", shape = NULL, linetype = NULL)  -> obsfit
 
 # residuals
