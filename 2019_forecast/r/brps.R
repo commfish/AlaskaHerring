@@ -20,6 +20,8 @@ burn_in <- 0.1 # 10% (this is the first 10% of the thinned/saved iterations)
 nout <- round((niter / thin + 1) - burn_in * (niter / thin + 1), 0)
 
 source(paste0(YEAR, "_forecast/r/helper.r"))
+# install.packages("svMisc")
+library(svMisc)
 
 # Directories ----
 main_dir <- getwd()
@@ -47,6 +49,7 @@ syr <- D[['mod_syr']]
 nyr <- D[['mod_nyr']]
 yrs <- syr:nyr
 
+
 # Function to read time-varying parameter posterior samples
 read_tvpar_ps <- function(fn = "maturity", 
                      syr = D[["mod_syr"]], 
@@ -60,7 +63,8 @@ read_tvpar_ps <- function(fn = "maturity",
   df[, Year := rep(syr:lyr, n)]
   df[, iter := rowid(Year)] 
   df <- melt(df, id.vars = c("Year", "iter"), variable.name = "Age")
-  df <- df[iter > burn, ] # Eliminate burn in
+  df <- df[iter >= burn, ] # Eliminate burn in
+  # df <- df[iter < max(iter)]
   
   # Selectivity has a row for the forecast year. Get rid of that row before
   # getting mean for each iter
@@ -98,36 +102,10 @@ data.table(D[["post.samp"]][,3:4])
 pars <- data.table(D[["post.samp"]][,4:5]) # (see her.ctl to check parameter order)
 colnames(pars) <- c("log_r0", "log_reck")
 pars[, iter := .I] # row number = iteration number
-burn <- round(burn_in * (niter / thin + 1), 0) # index for end of burn in
-pars <- pars[burn:(niter/thin),] # Remove burn-in
+burn <- round(burn_in * (niter / thin + 1), 0)  # index for end of burn in
+pars <- pars[burn:(niter/thin), ] # Remove burn-in
 
-# Functions for getting BRPs
-
-# Inputs
-
-iter_i = 1112
-
-age <- sage:nage
-fmort <- seq(0, 4, 0.01)
-rec_mod <- 1 # 1 = Ricker, 2 = Beverton-Holt
-
-# Natural mortality
-mort <- survival[iter == iter_i, ]
-mort[, mort := -log(survival)]
-mort <- mort$mort
-
-# Selectivity
-sel <- selectivity[iter == iter_i, ]
-sel <- sel$selectivity
-
-# Maturity
-mat <- maturity[iter == iter_i, ]
-mat <- mat$maturity
-
-# Recruitment k (compensation ratio) and Equilibrium recruitment
-pars_s <- pars[iter == iter_i, ]
-reck <- exp(pars_s$log_reck) + 1
-r0 <- exp(pars_s$log_r0)  
+# Functions for getting BRPs  ----
 
 # Derive steepness (h) from compensation ratio (reck)
 get_steepness <- function(rec_mod) {
@@ -198,9 +176,7 @@ get_bpr <- function(fmort, lx) {
   }
   # Sum across ages for each F value
   bpr <- rowSums(bpr)
-  
   return(bpr)
-  
 }
 
 # Function to get spawner-per-recruit (phi_e in Martell et al. 2009)
@@ -259,23 +235,16 @@ get_equilibrium <- function(ff) {
   bpr_e <- get_bpr(fmort = ff, lx = lx_e)
   r_e <- get_recruitment(spr = spr_e)
   
-  
   out <- NULL
   out$ypr <- ypr_e
   out$spr <- spr_e
-  out$spr0 <- spr0
-  out$h <- h
-  out$alpha <- alpha
-  out$beta <- beta
   out$r <- r_e
-  out$s0 <- s0
   out$bpr <- bpr_e
   out$b <- bpr_e * r_e
   out$s <- spr_e * r_e
   out$s_ratio <- (spr_e * r_e) / s0 # Express spawners as a proportion of unfished spawners
   out$y <- ypr_e * r_e
-  out$lx <- lx_e
-  
+
   return(out)
 }
 
@@ -288,7 +257,7 @@ dfx.dx <- function(ff, delta) {
 }
 
 # Get F crash (where F is minimized and S ~ 0 using the bisection method - MK helped me with this.
-bisect <- function(Fmin = 1, Fmax = 4){
+bisect <- function(Fmin = 1, Fmax = 50){
   for(b in 1:100000){
     F_tst <- (Fmin + Fmax)/2 # update
     s_tmp <- get_equilibrium(ff = F_tst)$s
@@ -299,93 +268,137 @@ bisect <- function(Fmin = 1, Fmax = 4){
   print('max iter')
 }
 
-
-
+# Model names (currently only uses Ricker)
 mod_names <- c("Ricker", "Beverton-Holt")
 
-# Get biological reference points 
-brps <- data.frame(Model = NA, Fmsy = NA, MSY = NA, Fcrash = NA, Bmsy = NA, B0 = NA, B0_naive = NA)
+age <- sage:nage
+fmort <- seq(0, 20, 0.01)
+rec_mod <- 1 # 1 = Ricker, 2 = Beverton-Holt
 
+output <- list()
+brps <- list()
 
-# for(rec_mod in 1:2){
+for(i in 1:length(unique(pars$iter))) {
   
-h <- get_steepness(rec_mod = rec_mod)
-
-# Unfished survival, spawning biomass per recruit, and unfished spawning biomass
-lx0 <- get_survivorship(fmort = 0)
-spr0 <- get_spr(fmort = 0, lx = lx0)
-bpr0 <- get_bpr(fmort = 0, lx = lx0)
-s0 <- r0 * spr0
-
-# Recruitment parameters
-alpha <- get_recruit_pars()[[1]]
-beta <- get_recruit_pars()[[2]]
-
-# uniroot will only take one value at a time, it will pick values on the interval and feed them as FF's to dfx.dx
-Fmsy <- uniroot(f = dfx.dx, interval = c(0.1,4), tol = 0.000001, 
-                delta = 0.0001)$root[1]
-msy <- get_equilibrium(ff = Fmsy)$y
-Fcrash <- bisect()
-
-# Get components of B0
-lx_Fmsy <- get_equilibrium(ff = Fmsy)$lx
-ypr_Fmsy <- get_ypr(fmort = Fmsy, lx = lx_Fmsy) # Fmsy * phi_q evaluated at Fmsy
-spr_Fmsy <- get_spr(fmort = Fmsy, lx = lx_Fmsy) # phi_e evaluated at Fmsy
-r_Fmsy <- get_recruitment(spr = spr_Fmsy)
-
-
-bmsy <- r_Fmsy * spr_Fmsy # from msy.cpp
-b0_naive <- ro * spr0 # from msy.cpp
-
-# equation (8) in Martell et al. 2009
-if(rec_mod == 1) {
-  b0 <- - (log(reck) * bpr0 * spr_Fmsy * msy) / (log(spr0/(reck*spr_Fmsy)) * spr0 * ypr_Fmsy)
-}
-# equation (5) in Martell et al. 2009
-if(rec_mod == 2) {
-  b0 <- (msy * bpr0 * (reck - 1)) / (ypr_Fmsy * (reck - spr0/spr_Fmsy))
-}
-
-brps[rec_mod,] <- c(mod_names[rec_mod], round(Fmsy, 4), round(msy, 0), round(Fcrash, 4), round(bmsy, 1), round(b0, 1), round(b0_naive, 1))
-#}
-
-#for(rec_mod in 1){
+  # Inputs
+  # Natural mortality
+  mort <- survival[iter == unique(iter)[i], ]
+  mort[, mort := -log(survival)]
+  mort <- mort$mort
   
-out <- get_equilibrium(fmort)
+  # Selectivity
+  sel <- selectivity[iter == unique(iter)[i], ]
+  sel <- sel$selectivity
+  
+  # Maturity
+  mat <- maturity[iter == unique(iter)[i], ]
+  mat <- mat$maturity
+  
+  # Recruitment k (compensation ratio) and Equilibrium recruitment
+  pars_s <- pars[iter == unique(iter)[i], ]
+  reck <- exp(pars_s$log_reck) + 1 # FLAG - in her.tpl, he adds 1. Assuming we should do the same.
+  r0 <- exp(pars_s$log_r0)  
+  h <- get_steepness(rec_mod = rec_mod)
+  
+  # Get BRPs
+
+  # Unfished survival, spawning biomass per recruit, and unfished spawning biomass
+  lx0 <- get_survivorship(fmort = 0)
+  spr0 <- get_spr(fmort = 0, lx = lx0)
+  bpr0 <- get_bpr(fmort = 0, lx = lx0)
+  s0 <- r0 * spr0
+  
+  # Recruitment parameters
+  alpha <- get_recruit_pars()[[1]]
+  beta <- get_recruit_pars()[[2]]
+  
+  # uniroot will only take one value at a time, it will pick values on the interval and feed them as FF's to dfx.dx
+  Fmsy <- uniroot(f = dfx.dx, interval = c(0.1,20), tol = 0.000001, 
+                  delta = 0.0001)$root[1]
+  msy <- get_equilibrium(ff = Fmsy)$y
+  Fcrash <- bisect()
+  
+  # Get components of B0
+  lx_Fmsy <- get_survivorship(fmort = Fmsy)
+  ypr_Fmsy <- get_ypr(fmort = Fmsy, lx = lx_Fmsy) # Fmsy * phi_q evaluated at Fmsy
+  spr_Fmsy <- get_spr(fmort = Fmsy, lx = lx_Fmsy) # phi_e evaluated at Fmsy
+  r_Fmsy <- get_recruitment(spr = spr_Fmsy)
+  
+  bmsy <- r_Fmsy * spr_Fmsy  # Equilibrium spawning biomass at Fmsy
+  b0 <- r0 * spr0 # Equilibrium unfished spawning biomass
+  
+  brps[[i]] <- data.frame(Model = mod_names[rec_mod], iter = i, h = round(h, 4), 
+                     alpha = round(alpha, 3), beta = round(beta, 3), s0 = round(s0, 0), 
+                     spr0 = round(spr0, 0), Fmsy = round(Fmsy, 4), MSY = round(msy, 0), 
+                     Fcrash = round(Fcrash, 4), Bmsy = round(bmsy, 0), B0 = round(b0, 0))
+  
+  out <- get_equilibrium(fmort)
+  
+  out <- out %>% 
+    map(~data.frame(.x)) %>% 
+    imap(~mutate(.x, variable = .y)) %>%
+    map(~mutate(.x, iter = i))
+  out <- bind_rows(out)
+  colnames(out) <- c("value", "variable", "iter")
+  output[[i]] <- out
+  
+  # progress(value = i, progress.bar = TRUE, init = 1)
+  # Sys.sleep(0.03)
+  # if (i == max(length(unique(pars$iter)))) cat("Done!\n")
+}
+
+
+
 refs <- brps[rec_mod,]
+refs <- brps[[i]]
 
 par(mar=c(4,4,3,3), mfrow = c(2,2))
-
 plot(fmort, out$s, type = "l")
 abline(h = refs$Bmsy, col = "grey", lty = 2)
 abline(v = refs$Fmsy, col = "grey", lty = 2)
-abline(h = refs$B0, col = "grey", lty = 2)
-abline(h = refs$B0_naive, col = "grey", lty = 2)
 
+
+# abline(h = refs$B0, col = "grey", lty = 2)
+# abline(v = 0, col = "grey", lty = 2)
+# abline(h = 0, col = "grey", lty = 2)
+# abline(v = refs$Fcrash, col = "grey", lty = 2)
+#
+#
 plot(fmort, out$b, type = "l")
-abline(h = refs$Bmsy, col = "grey", lty = 2)
-abline(v = refs$Fmsy, col = "grey", lty = 2)
-abline(h = refs$B0, col = "grey", lty = 2)
-
+# abline(h = refs$Bmsy, col = "grey", lty = 2)
+# abline(v = refs$Fmsy, col = "grey", lty = 2)
+# abline(h = refs$B0, col = "grey", lty = 2)
+#
 plot(out$s_ratio, out$r / r0, type = "l", xlab = "S(F)", ylab = "R(F)",
      xlim = c(0, max(out$s_ratio)), ylim = c(0, max(out$r / r0)*1.1))
-abline(0,1, col = "grey", lty = 2)
-
+# abline(0,1, col = "grey", lty = 2)
+#
 plot(out$s_ratio, out$y, type = "l", xlab = "S(F)", ylab = "Y(F)",
      xlim = c(0, max(out$s_ratio)), ylim = c(0, max(out$y)*1.1))
-
-text(line2user(line=mean(par('mar')[c(2, 4)]), side=2),
-     line2user(line=2, side=3), mod_names[rec_mod], xpd=NA, cex=2, font=2)
-
+#
+# text(line2user(line=mean(par('mar')[c(2, 4)]), side=2),
+#      line2user(line=2, side=3), mod_names[rec_mod], xpd=NA, cex=2, font=2)
+#
 plot(fmort, out$y, type = "l", xlab = "F", ylab = "Y(F)",
-     xlim = c(0, as.numeric(refs$Fcrash)*1.2), ylim = c(0, max(out$y)*1.1))
-abline(h = refs$MSY, col = "grey", lty = 2)
-abline(v = refs$Fmsy, col = "grey", lty = 2)
-abline(v = refs$Fcrash, col = "grey", lty = 2)
-
-plot(fmort, out$s_ratio, type = "l", xlab = "F", ylab = "S(F)",
-     xlim = c(0, as.numeric(refs$Fcrash)*1.2), ylim = c(0, max(out$s_ratio)*1.1))
-abline(v = refs$Fcrash, col = "grey", lty = 2)
+     xlim = c(0, 30), ylim = c(0, max(out$y)*1.1))
+# abline(h = refs$MSY, col = "grey", lty = 2)
+# abline(v = refs$Fmsy, col = "grey", lty = 2)
+# abline(v = refs$Fcrash, col = "grey", lty = 2)
+#
+# plot(fmort, out$s_ratio, type = "l", xlab = "F", ylab = "S(F)",
+#      xlim = c(0, as.numeric(refs$Fcrash)*1.2), ylim = c(0, max(out$s_ratio)*1.1))
+# abline(v = refs$Fcrash, col = "grey", lty = 2)
+# abline(v = refs$Fmsy, col = "grey", lty = 2)
 
 #}
+
+# Need more details from SM before I'd use these.
+# # equation (8) in Martell et al. 2009
+# if(rec_mod == 1) {
+#   b0 <- - (log(reck) * bpr0 * spr_Fmsy * msy) / (log(spr0/(reck*spr_Fmsy)) * spr0 * ypr_Fmsy * Fmsy)
+# }
+# # equation (5) in Martell et al. 2009
+# if(rec_mod == 2) {
+#   b0 <- (msy * bpr0 * (reck - 1)) / (ypr_Fmsy * (reck - spr0/spr_Fmsy))
+# }
 
