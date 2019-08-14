@@ -84,9 +84,7 @@ tickr <- function(
 
 # Functions from SJD Martell, formerly in globals.r
 
-read_admb <-
-  function(ifile)
-  {
+read_admb <- function(ifile) {
     ret=read_fit(ifile)
 
     fn=paste(ifile,'.rep', sep='')
@@ -193,19 +191,17 @@ read_rep <-
     return(A)
   }
 
-read_psv <-
-  function(fn, nsamples=11110)
-  {
-    #This function reads the binary output from ADMB
-    #-mcsave command line option.
-    #fn = paste(ifile,'.psv',sep='')
-    filen <- file(fn, "rb")
-    nopar <- readBin(filen, what = integer(), n = 1)
-    mcmc <- readBin(filen, what = numeric(), n = nopar * nsamples)
-    mcmc <- matrix(mcmc, byrow = TRUE, ncol = nopar)
-    close(filen)
-    return(mcmc)
-  }
+read_psv <- function(fn, nsamples=11112) { #=11111
+  #This function reads the binary output from ADMB
+  #-mcsave command line option.
+  #fn = paste(ifile,'.psv',sep='')
+  filen <- file(fn, "rb")
+  nopar <- readBin(filen, what = integer(), n = 1)
+  mcmc <- readBin(filen, what = numeric(), n = nopar * nsamples)
+  mcmc <- matrix(mcmc, byrow = TRUE, ncol = nopar)
+  close(filen)
+  return(mcmc)
+}
 
 # Function to just read max gradient component (for quick and dirty convergence
 # check, used in sensitivity and retrospective analyses)
