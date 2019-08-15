@@ -143,4 +143,4 @@ ggplot(data = pdo, aes(year, PDO)) +
   labs(y = "Mean annual PDO index") +
   ggtitle("2019 forecast")
 
-ggsave(file=paste0(pdo_path, "/pdo_", YEAR, "_forcast.png"), dpi = 300, height = 4, width = 8.5, units = "in")
+ggsave(file=paste0(pdo_path, "/pdo_", YEAR, "_forecast.png"), dpi = 300, height = 4, width = 8.5, units = "in")
