@@ -38,32 +38,30 @@ pdo_path <- paste0(YEAR, "_forecast/results/stars_pdo")
 if(!exists(pdo_path)){dir.create(pdo_path)}
 
 # Access PDO from JISAO ----
-raw_data <- read.table('http://research.jisao.washington.edu/pdo/PDO.latest', 
-                       skip=30, fill=TRUE, header=TRUE) 
-write.table(raw_data, paste0(pdo_path, "/raw_pdo_accessed_", Sys.Date(), ".csv"))
+raw_data<-read.csv('https://oceanview.pfeg.noaa.gov/erddap/tabledap/cciea_OC_PDO.csv', fill=TRUE, header=TRUE) 
+write.csv(raw_data, paste0(pdo_path, "/raw_pdo_accessed_", Sys.Date(), ".csv")) 
 
 # Summarize PDO ----
 files <- list.files(file.path(pdo_path)) # searchable file list
 pdo_file <- file.path(pdo_path, files[which(grepl("raw_pdo", files))]) # find .tpl
 
-raw_pdo <- read.table(pdo_file)
+raw_pdo <- read.csv(pdo_file)
 
 raw_pdo %>%
-  rename(year = YEAR) %>% 
-  mutate(year = gsub("[[:punct:]]", '', year)) %>% # get rid of metadata formatting
-  filter(year >= (START_YEAR-1) & year < YEAR) %>% 
-  mutate(year = as.numeric(year)) %>% 
-  tidyr::gather(key = month, value = pdo, gather.cols = 2:13) %>%
-  # April of the previous year through March of the current year
-  mutate(pdo = as.numeric(pdo),
-         year = ifelse(month %in% c('JAN', 'FEB', 'MAR'), year, year + 1),
-         pdo_shifted = ifelse(year == YEAR-1 & !(month %in% c('JAN', 'FEB', 'MAR')), 
-                              NA, pdo)) %>%
-  filter(year > (START_YEAR-1) & year < YEAR) %>% 
   drop_na() %>%
-  dplyr::select(-pdo) -> pdo
+  select (-c(X)) %>%
+  dplyr::mutate(year = lubridate::year(time), 
+                month = lubridate::month(time)) %>%
+  select (-c(time))  %>%
+  filter(year >= START_YEAR & year < YEAR) %>% 
+  mutate(year = as.numeric(year))  %>% 
+  mutate(year = ifelse(month %in% c(1, 2, 3), year, year + 1),
+         pdo_shifted = PDO) %>%
+  filter(year > START_YEAR-1 & year < YEAR) %>% 
+  select (-c(YEAR, PDO, month)) %>% 
+  as.data.frame() -> pdo 
 
-#Summarize and save
+# Summarize and save
 pdo %>%
   group_by(year) %>%
   dplyr::summarise(mean_pdo = mean(pdo_shifted)) %>%
