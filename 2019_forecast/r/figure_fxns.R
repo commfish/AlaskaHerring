@@ -354,19 +354,19 @@ plot_biomass <- function(D = D, path = path) {
                69907,101305,66111,84501,247088,110946,126230,161904,62518,103267,48561, 
                58183,77973,46919,55009)
   
-  
   tot_yrs <- D[["dat_nyr"]] - D[["dat_syr"]] + 1
   syr_index <- D[["mod_syr"]] - D[["dat_syr"]] + 1
 
-  df <- data.frame(Year = D[["year"]],
+  df <- data.frame(Year = D[["mod_syr"]]:D[["mod_nyr"]],
                    matB = D[["mat_B"]] / 0.90718, # convert to short tons
-                   catch = D[["data_catch"]][syr_index:tot_yrs, 2]  / 0.90718) %>% 
-    mutate(#spB_derived = matB - catch,
-           spB_estimated = D[["sp_B"]] #,
+                   catch = D[["data_catch"]][syr_index:tot_yrs, 2]  / 0.90718,
+                   spB = D[["sp_B"]]) %>% 
+    # mutate(spB_derived = matB - catch,
+            #, #spB_estimated
            # diff = spB_derived - spB_estimated, 
            # pred_catch = D[["pred_catch"]] * 1.10231,
            #diff_catch = catch - pred_catch
-           ) %>% 
+           # ) %>% 
     gather("Biomass", "tons", -Year) %>% 
     mutate(Type = "Estimate") %>% 
     # Bind to forecast values
@@ -380,12 +380,12 @@ plot_biomass <- function(D = D, path = path) {
                    prettyNum(tons, big.mark = ",", digits = 1), NA))
   
   # Historical estimates from survey
-  survey <- data.frame(Year = D[["year"]],
+  survey <- data.frame(Year = 1980:D[["mod_nyr"]],
                          srv_spB = srv_spB,
-                         catch = D[["data_catch"]][syr_index:tot_yrs, 2] / 0.90718) %>%
+                         catch = 1980:D[["mod_nyr"]] / 0.90718) %>%
     mutate(srv_matB = srv_spB + catch)
   
-  tickryr <- data.frame(Year = 1980:max(df$Year)+3)
+  tickryr <- data.frame(Year = D[["mod_syr"]]:max(df$Year)+3)
   axisx <- tickr(tickryr, Year, 5)
   
   # Spawning biomass ----
@@ -393,8 +393,8 @@ plot_biomass <- function(D = D, path = path) {
     geom_point(data = df %>% filter(Biomass == "spB" & Type == "Forecast"), 
                aes(x = Year, y = tons, colour = "Model predictions and forecast",
                    fill = "Model predictions and forecast"), size = 2, shape = 23) +
-    geom_line(data = df %>% filter(Biomass == "spB"), 
-              aes(x = Year, y = tons, colour = "Model predictions and forecast"), size = 1) +
+    geom_line(data = df %>% filter(Biomass == "spB" & Type == "Estimate"), 
+              aes(x = Year, y = tons, colour = "Model predictions and forecast", group = 1), size = 1) +
     scale_colour_manual(values = "darkgrey") + 
     scale_fill_manual(values = "darkgrey") + 
     geom_point(data = survey, aes(x = Year, y = srv_spB, shape = "Historical estimates from survey")) +
@@ -411,7 +411,6 @@ plot_biomass <- function(D = D, path = path) {
   ggsave(paste0(path, "/spbiomass_plot.png"), plot = spbiomass_plot, dpi = 300, height = 4, width = 7, units = "in")
   
   # Mature biomass ----
-  
   ggplot() +
     geom_point(data = df %>% filter(Biomass == "matB" & Type == "Forecast"), 
                aes(x = Year, y = tons, colour = "Model predictions and forecast",
@@ -422,7 +421,7 @@ plot_biomass <- function(D = D, path = path) {
     scale_fill_manual(values = "darkgrey") + 
     geom_point(data = survey, aes(x = Year, y = srv_matB, shape = "Historical estimates from survey")) +
     scale_shape_manual(values = 1) +
-    geom_text(data = df %>% filter(Biomass == "matB"), 
+    geom_text(data = df %>% filter(Biomass == "matB" & Type == "Estimate"), 
               aes(x = Year, y = tons, label = label), size = 3, nudge_x = 2) +
     theme(legend.position = c(0.25, 0.8),
           legend.spacing.y = unit(0, "cm")) +

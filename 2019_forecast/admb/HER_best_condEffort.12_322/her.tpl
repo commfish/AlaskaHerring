@@ -162,6 +162,12 @@ DATA_SECTION
   vector avg_sp_waa(sage,nage);
  LOCAL_CALCS
     int n = data_sp_waa.rowmax() - data_sp_waa.rowmin() + 1;
+    // int n = 0;
+    // for(int i = dat_syr; i <= dat_nyr; i++) {
+    //     if(data_cm_waa(i)(sage) > 0 ) {
+    //       n += 1;
+    //     }
+    // }
     avg_sp_waa = colsum(data_sp_waa)(sage,nage) / n;
  END_CALCS
 

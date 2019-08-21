@@ -19,8 +19,8 @@ library(BayesianTools) # more mcmc diagnostics
 
 # IMPORTANT: User inputs model version name. This will create a subdirectory and
 # allow you to run multiple model versions for comparison.
-# MODEL_VERSION <- "HER_bestLS_321" 
-MODEL_VERSION <- "HER_best_condEffort.12_322"   # HER with best HER parameterization by AIC, conditioned on effort
+MODEL_VERSION <- "HER_bestLS_321"
+# MODEL_VERSION <- "HER_best_condEffort.12_322"   # HER with best HER parameterization by AIC, conditioned on effort
 # MODEL_VERSION <- "HER_best_condCatch.12_322"   # HER with best HER parameterization by AIC, conditioned on catch
 
 
@@ -28,11 +28,11 @@ MODEL_VERSION <- "HER_best_condEffort.12_322"   # HER with best HER parameteriza
 YEAR <- 2019
 
 # User input: do you want to run the full MCMC?
-run_mcmc <- FALSE
+run_mcmc <- TRUE
 
 # Do you want to run LS figures? Option available so you don't end up with a
 # bunch of repeat figures
-run_LSfig <- FALSE
+run_LSfig <- TRUE
 
 # Create directory for HER/LS comparison figs, HER figs, and LS figs
 main_dir <- getwd()
@@ -50,7 +50,7 @@ LSfig_dir <- file.path(fig_dir, "LS")
 if(run_LSfig == TRUE){
   dir.create(LSfig_dir, showWarnings = FALSE)
 }
-# source(paste0(YEAR, "_forecast/r/tools.r"))
+
 source(paste0(YEAR, "_forecast/r/helper.r"))
 
 # LS results ----
@@ -146,10 +146,10 @@ thin <- 1000
 burn_in <- 0.1 # 10% (this is the first 10% of the thinned/saved iterations)
 nout <- round((niter / thin + 1) - burn_in * (niter / thin + 1), 0)
 
-if (run_mcmc == TRUE){
-  run_admb("her", extra.args = paste0("-mcmc ", niter, " -mcsave ", thin))
-  run_admb("her", extra.args="-mceval", verbose = TRUE)
-}
+# if (run_mcmc == TRUE){
+run_admb("her", extra.args = paste0("-mcmc ", niter, " -mcsave ", thin))
+run_admb("her", extra.args="-mceval", verbose = TRUE)
+# }
 
 D <- read_admb("her")
 

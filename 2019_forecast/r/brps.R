@@ -10,6 +10,7 @@
 # User-defined variables ----
 YEAR <- 2019 # Forecast year
 MODEL_VERSION <- "HER_best_condEffort.12_322"   # HER with best HER parameterization by AIC, conditioned on effort
+# MODEL_VERSION <- "HER_best_condCatch.12_322"   # HER with best HER parameterization by AIC, conditioned on effort
 TIME_PERIOD <- paste0("1980-",YEAR-1)
 
 # Number of interations (MCMC samples) and thinning rate (if 10, saves every
@@ -31,7 +32,7 @@ main_dir <- getwd()
 brp_dir <- file.path(main_dir, paste0(YEAR, "_forecast/results/reference_points"))
 dir.create(brp_dir, showWarnings = FALSE)
 brp_dir <- file.path(brp_dir, paste0(MODEL_VERSION))
-dir.create(sub_dir, showWarnings = FALSE)
+dir.create(brp_dir, showWarnings = FALSE)
 brp_dir <- file.path(brp_dir, paste0(TIME_PERIOD))
 dir.create(brp_dir, showWarnings = FALSE)
 
@@ -55,7 +56,9 @@ read_tvpar_ps <- function(fn = "maturity",
                      syr = D[["mod_syr"]], 
                      lyr = D[["mod_nyr"]], 
                      n = niter / thin + 1,
-                     burn = burn_in * (niter / thin + 1)) {
+                     burn = burn_in * (niter / thin + 1)
+                     # burn = burn_in * (niter / thin)
+                     ) {
   
   require(data.table)
   df <- fread(paste0(fn, ".ps"))
@@ -71,7 +74,6 @@ read_tvpar_ps <- function(fn = "maturity",
   if(fn == "selectivity") {
     df <- df[Year != YEAR]
   }
-  
   # akin to dplyr::summarize ~ get mean value for each iteration (mean over all
   # years)
   df <- df[, list(value = mean(value)),
@@ -86,6 +88,13 @@ maturity <- read_tvpar_ps(fn = "maturity")
 selectivity <- read_tvpar_ps(fn = "selectivity", lyr = D[["mod_nyr"]] + 1)
 survival <- read_tvpar_ps(fn = "survival")
 
+# Posterior samples for r0 and reck
+pars <- data.table(D[["post.samp"]][,4:5]) # (see her.ctl to check parameter order)
+colnames(pars) <- c("log_r0", "log_reck")
+pars[, iter := .I] # row number = iteration number
+burn <- round(burn_in * (niter / thin + 1), 0)  # index for end of burn in
+pars <- pars[burn:(niter/thin), ] # Remove burn-in
+
 # Spawner weight-at-age
 wa <-  as.data.frame(D[["data_sp_waa"]])
 colnames(wa) <- c("Year", paste(sage:nage))
@@ -95,15 +104,6 @@ wa <-	wa %>%
   group_by(Age) %>% 
   dplyr::summarise(weight = mean(weight)) %>% 
   pull(weight)
-
-# Posterior samples for r0 and reck
-data.table(D[["post.samp"]][,3:4])
-
-pars <- data.table(D[["post.samp"]][,4:5]) # (see her.ctl to check parameter order)
-colnames(pars) <- c("log_r0", "log_reck")
-pars[, iter := .I] # row number = iteration number
-burn <- round(burn_in * (niter / thin + 1), 0)  # index for end of burn in
-pars <- pars[burn:(niter/thin), ] # Remove burn-in
 
 # Functions for getting BRPs  ----
 
@@ -119,9 +119,7 @@ get_steepness <- function(rec_mod) {
   return(h)
 }
 
-h <- get_steepness(rec_mod = rec_mod)
-
-# lx = survivorship under unfished conditions  
+# Survivorship
 get_survivorship <- function(fmort) {
   
   lx <- matrix(ncol = length(unique(age)), 
@@ -198,30 +196,30 @@ get_spr <- function(fmort, lx) {
 
 # Derive stock-recruitment parameters 
 get_recruit_pars <- function() {
-    
-    # Beverton-Holt model
-    if(rec_mod == 1) {
-      alpha <- spr0*(1-h)/(4*h)
-      beta <- (5*h-1)/(4*h*r0) }
-    
-    # Ricker model
-    if(rec_mod == 2) {
-      alpha <- exp(log(5*h)/0.8)/spr0
-      beta <- log(5*h)/(0.8*spr0*r0) }
-    
-    recruit_params <- list(alpha, beta)
-    return(recruit_params)
-  }
+  
+  # Ricker model
+  if(rec_mod == 1) {
+    alpha <- exp(log(5*h)/0.8)/spr0
+    beta <- log(5*h)/(0.8*spr0*r0) }
+  
+  # Beverton-Holt model
+  if(rec_mod == 2) {
+    alpha <- spr0*(1-h)/(4*h)
+    beta <- (5*h-1)/(4*h*r0) }
+  
+  recruit_params <- list(alpha, beta)
+  return(recruit_params)
+}
 
 # Get recruitment conditioned on alpha/beta and spr
 get_recruitment <- function(spr) { 
-  # Beverton-Holt model (Eqn 9)
+    # Ricker model (Eqn 10a, put in terms of spr)
   if(rec_mod == 1) {
-    r <- (spr-alpha)/(beta*spr) }
-  
-  # Ricker model (Eqn 10a, put in terms of spr)
-  if(rec_mod == 2) {
     r <- log(alpha*spr)/(beta*spr) }
+  
+  # Beverton-Holt model (Eqn 9)
+  if(rec_mod == 2) {
+    r <- (spr-alpha)/(beta*spr) }
   
   return(r)
 }
@@ -257,7 +255,7 @@ dfx.dx <- function(ff, delta) {
 }
 
 # Get F crash (where F is minimized and S ~ 0 using the bisection method - MK helped me with this.
-bisect <- function(Fmin = 1, Fmax = 50){
+bisect <- function(Fmin = 1, Fmax = 100){
   for(b in 1:100000){
     F_tst <- (Fmin + Fmax)/2 # update
     s_tmp <- get_equilibrium(ff = F_tst)$s
@@ -268,6 +266,7 @@ bisect <- function(Fmin = 1, Fmax = 50){
   print('max iter')
 }
 
+# Run analyis ----
 # Model names (currently only uses Ricker)
 mod_names <- c("Ricker", "Beverton-Holt")
 
@@ -313,10 +312,10 @@ for(i in 1:length(unique(pars$iter))) {
   beta <- get_recruit_pars()[[2]]
   
   # uniroot will only take one value at a time, it will pick values on the interval and feed them as FF's to dfx.dx
-  Fmsy <- uniroot(f = dfx.dx, interval = c(0.1,20), tol = 0.000001, 
+  Fmsy <- uniroot(f = dfx.dx, interval = c(0.01,100), tol = 0.000001, 
                   delta = 0.0001)$root[1]
   msy <- get_equilibrium(ff = Fmsy)$y
-  Fcrash <- bisect()
+  # Fcrash <- bisect()
   
   # Get components of B0
   lx_Fmsy <- get_survivorship(fmort = Fmsy)
@@ -328,9 +327,10 @@ for(i in 1:length(unique(pars$iter))) {
   b0 <- r0 * spr0 # Equilibrium unfished spawning biomass
   
   brps[[i]] <- data.frame(Model = mod_names[rec_mod], iter = i, h = round(h, 4), 
-                     alpha = round(alpha, 3), beta = round(beta, 3), s0 = round(s0, 0), 
+                     alpha = round(alpha, 3), beta = round(beta, 5), s0 = round(s0, 0), 
                      spr0 = round(spr0, 0), Fmsy = round(Fmsy, 4), MSY = round(msy, 0), 
-                     Fcrash = round(Fcrash, 4), Bmsy = round(bmsy, 0), B0 = round(b0, 0))
+                     #Fcrash = round(Fcrash, 4), 
+                     Bmsy = round(bmsy, 0), B0 = round(b0, 0))
   
   out <- get_equilibrium(fmort)
   
@@ -347,6 +347,77 @@ for(i in 1:length(unique(pars$iter))) {
   # if (i == max(length(unique(pars$iter)))) cat("Done!\n")
 }
 
+# Summarize/save output ----
+
+brps <- bind_rows(brps)
+output <- bind_rows(output)
+
+brps <- melt(brps, id.vars = c("Model", "iter"))
+
+brps <- data.table(brps)
+brps[, `:=` (mean = mean(value),
+             median = median(value),
+             # 95% 
+             q025 = quantile(value, 0.025),
+             q975 = quantile(value, 0.975),
+             # 50% 
+             q250 = quantile(value, 0.250),
+             q750 = quantile(value, 0.750)),
+     by = .(variable)] 
+
+brp_sum <- unique(brps, by = c("variable", "mean", "median", "q025", "q975", "q250", "q750"))
+  
+# hist(brps[variable == "B0"]$value)
+
+output <- data.table(output)
+output[, fmort := rep(fmort, length(unique(iter))*length(unique(variable)))]
+# akin to dplyr::summarize()
+output <- output[, list(mean = mean(value),
+                        median = median(value),
+                        # 95% 
+                        q025 = quantile(value, 0.025),
+                        q975 = quantile(value, 0.975),
+                        # 50% 
+                        q250 = quantile(value, 0.250),
+                        q750 = quantile(value, 0.750)),
+                 by = .(variable, fmort)]
+
+write_csv(brps, paste0(brp_dir, "/raw_brps.csv"))
+write_csv(brp_sum, paste0(brp_dir, "/brps_sum.csv"))
+write_csv(output, paste0(brp_dir, "/raw_output.csv"))
+
+# ---
+brps <- read_csv(paste0(brp_dir, "/raw_brps.csv"))
+brp_sum <- read_csv(paste0(brp_dir, "/brps_sum.csv"))
+output <- read_csv(paste0(brp_dir, "/raw_output.csv"))
+brps <- data.table(brps)
+brp_sum <- data.table(brp_sum)
+output <- data.table(output)
+
+# Graphics ----
+y <- output[variable == "y", ]
+
+ggplot(y) +
+  geom_line(aes(x = fmort, y = mean)) +
+  geom_line(aes(x = fmort, y = median), col = "red") +
+  geom_ribbon(aes(x = fmort, ymin = q025, ymax = q975),
+              alpha = 0.4, fill = "grey80") +
+  geom_ribbon(aes(x = fmort, ymin = q250, ymax = q750),
+              alpha = 0.4, fill = "grey60") +
+  geom_hline(yintercept = c(brp_sum[variable == "MSY",]$median)) +
+  coord_cartesian(ylim = c(0, max(y$q975)), xlim = c(0, 7)) +
+  labs(x = "Fishing mortality", y = "Yield")
+  
+hist(brps[variable == "B0"]$value)
+brps[variable == "Bmsy"]
+brps[variable == "Fmsy"]
+(15234 / 0.90718) / 2
+
+
+ggplot(output, aes)
+
+
+# 
 
 
 refs <- brps[rec_mod,]

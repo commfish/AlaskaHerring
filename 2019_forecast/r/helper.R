@@ -328,7 +328,9 @@ ps_byyear <- function(fn = "sp_B",
                       syr = D[["mod_syr"]], 
                       lyr = D[["mod_nyr"]],
                       unit_conv = 1,
-                      burn = burn_in * (niter / thin + 1)) {
+                      burn = burn_in * (niter / thin + 1),
+                      save = TRUE,
+                      path = HERfig_dir) {
   require(data.table)
   df <- fread(paste0(fn, ".ps"))
   colnames(df) <- paste(syr:lyr)
@@ -355,7 +357,8 @@ ps_byyear <- function(fn = "sp_B",
   sum <- unique(df, by = c("Year", "mean", "median", "q025", "q975", "q250", "q750", "q475", "q525"))
   sum[, iter:=NULL]
   sum[, value:=NULL]
-  write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior.csv"))
+  
+  if(save == TRUE) {write_csv(sum, path = paste0(path, "/", fn, "_posterior.csv"))}
   
   return(df)
 }
@@ -367,7 +370,9 @@ ps_byage <- function(fn = "maturity",
                      syr = D[["mod_syr"]], 
                      lyr = D[["mod_nyr"]], 
                      n = niter / thin + 1,
-                     burn = burn_in * (niter / thin + 1)) {
+                     burn = burn_in * (niter / thin + 1),
+                     save = TRUE,
+                     path = HERfig_dir) {
   
   require(data.table)
   df <- fread(paste0(fn, ".ps"))
@@ -408,7 +413,7 @@ ps_byage <- function(fn = "maturity",
               value = NULL,
               min = NULL,
               max = NULL)]
-  write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior.csv"))
+  if(save == TRUE) {write_csv(sum, path = paste0(path, "/", fn, "_posterior.csv"))}
   
   return(df)
 } 
@@ -419,7 +424,9 @@ ps_comps <- function(fn = "pred_sp_comp",
                      syr = D[["mod_syr"]], 
                      lyr = D[["mod_nyr"]], 
                      n = niter / thin + 1,
-                     burn = burn_in * (niter / thin + 1)) {
+                     burn = burn_in * (niter / thin + 1),
+                     save = TRUE,
+                     path = HERfig_dir) {
   
   require(data.table)
   df <- fread(paste0(fn, ".ps"))
@@ -442,7 +449,7 @@ ps_comps <- function(fn = "pred_sp_comp",
               value = NULL)]
   
   fn <- str_split(fn, "pred_")[[1]][2]
-  write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior_predictive.csv"))
+  if(save == TRUE) {write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior_predictive.csv"))}
   
   return(df)
   }
@@ -450,7 +457,9 @@ ps_comps <- function(fn = "pred_sp_comp",
 # Summarize posterior samples of the multivariate logistic variance estimates 
 ps_tau <- function(fn = "pp_sp_tau2", 
                    n = niter / thin + 1,
-                   burn = burn_in * (niter / thin + 1)) {
+                   burn = burn_in * (niter / thin + 1),
+                   save = TRUE,
+                   path = HERfig_dir) {
   
   require(data.table)
   df <- fread(paste0(fn, ".ps")) # Read in variance estimates
@@ -468,17 +477,18 @@ ps_tau <- function(fn = "pp_sp_tau2",
               tau2 = NULL),]
   
   fn <- str_split(fn, "pp_")[[1]][2]
-  write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior.csv"))
+  if(save == TRUE) {write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior.csv"))}
 
   return(df)
   }
 
 # Posterior predictive interval for multivariate logistic distribution (age
 # compositions). Uses the posterior sample estimates and variance.
-ppi_rmvlogistic <- function(
-  fn = "sp_comp",
-  ps_sum = sp_comp_sum,  # summarized posterior samples (output from ps_comps)
-  tau2 = sp_tau2    # summarized variance estimates (output from ps_tau)
+ppi_rmvlogistic <- function(fn = "sp_comp",
+                            ps_sum = sp_comp_sum,  # summarized posterior samples (output from ps_comps)
+                            tau2 = sp_tau2,    # summarized variance estimates (output from ps_tau)
+                            save = TRUE,
+                            path = HERfig_dir
 ) {
   
   df <- unique(ps_sum[, list(Year, iter, Age, value)]) # same as dplyr::distinct()
@@ -511,7 +521,7 @@ ppi_rmvlogistic <- function(
 
   sum <- sum[df, on = c("Year", "Age")] # same as dplyr::left_join()
   
-  write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior_predictive.csv"))
+  if(save == TRUE) {write_csv(sum, path = paste0(HERfig_dir, "/", fn, "_posterior_predictive.csv"))}
   
   return(df)
 }

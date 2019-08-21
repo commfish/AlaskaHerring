@@ -27,19 +27,26 @@ YEAR <- 2019
 # IMPORTANT: this will create a subdirectory in results/model_selection/ and allow you to run a
 # model selection on multiple model versions for comparison. User must update
 # write_ctl() function below to match MODEL_VERSION ctl!!!
-MODEL_VERSION <- "HER_condEffort"   # HER with the "best" LS parameterization
+# MODEL_VERSION <- "HER_condEffort"   # HER conditioned on effort
+MODEL_VERSION <- "HER_condEffort_1929"   # HER starting in 1929
 
 # location of tpl (note that tpl sould be the same regardless of MODEL_VERSION)
 root_dir <- getwd() # project root
-tpl_dir <- file.path(root_dir, paste0(YEAR, "_forecast/admb/HER_bestLS_321")) 
+# tpl_dir <- file.path(root_dir, paste0(YEAR, "_forecast/admb/HER_bestLS_321")) 
+tpl_dir <- file.path(root_dir, paste0(YEAR, "_forecast/admb/HER_condEffort_1929")) 
 
 source(paste0(YEAR, "_forecast/r/helper.r"))
 source(paste0(YEAR, "_forecast/r/figure_fxns.r"))
 
-# Start year, last year, and breaks
-syr <- 1980
-lyr <- YEAR - 1
-breaks <- c(1998, 2014) # last year of time block, defined by PDO or other method
+# Start year, last year, and breaks - FOR MODERN TIME SERIES 1980-present
+# syr <- 1980
+# lyr <- YEAR - 1
+# breaks <- c(1998, 2014) # last year of time block, defined by PDO or other method
+
+# Start year, last year, and breaks - FOR FULL HISTORICAL TIME SERIES 1929-present
+syr <- 1929
+lyr <- YEAR-1
+breaks <- c(1944, 1976, 2007, 2014)
 
 # 1. Time block combos ----
 
@@ -324,7 +331,8 @@ filter(check_converge, Convergence == 1) -> selection_summary
 
 # Save output for final model selection summaries
 selection_summary %>% 
-  mutate(AIC = NA,
+  mutate(NLL = NA,
+         AIC = NA,
          max_grad = NA,
          GHL = NA,
          nopar = NA) -> selection_summary
@@ -368,6 +376,7 @@ for(i in 1:length(selection_summary$Folder_name)){
   dir.create(results, showWarnings = FALSE)
   
   # Store salient results for selection summary
+  selection_summary[i, "NLL"] <- round(P[["nlogl"]], 3)
   selection_summary[i,"AIC"] <- 2 * P[["nlogl"]] + 2 * P[["nopar"]]
   selection_summary[i,"max_grad"] <- P[["maxgrad"]]
   selection_summary[i, "GHL"] <- D[["ghl"]] # Already in short tons
@@ -432,6 +441,7 @@ for(i in 1:length(selection_summary$Folder_name)){
   # Catch biomass-at-age
   catch_Bij <- D[['data_cm_waa']][syr_index:n_dat_yrs, ] * Cij
   catch_Bij <- catch_Bij %>% mutate(Year = D[['year']])
+  
   # Spawning biomass-at-age with assumption at 100% of the catch is mature
   sp_Bij <- mat_Bij - catch_Bij
   # Surivival
@@ -467,7 +477,7 @@ for(i in 1:length(selection_summary$Folder_name)){
                   "\n",
                   "Forecast", "\n",
                   "Mature biomass forecast (tons):,", round(D[['fore_matb']] / 0.90718, 1),  "\n",
-                  "Threshold placeholder, TODO",  "\n",
+                  "Threshold:", D[['threshold']],  "\n",
                   "GHL (tons):,", round(D[['ghl']], 1),  "\n",
                   "Harvest rate:, 0.2", "\n",
                   "\n",
@@ -532,13 +542,12 @@ for(i in 1:length(selection_summary$Folder_name)){
   rep <- c(paste0("\n", "Observed commercial age composition (spring seine)"))
   write.table(rep, file = paste0(results, "/report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = FALSE, eol = "\n", append = TRUE)
   write.table(catch_comp, file = paste0(results, "/report.csv"), sep=",", quote = FALSE, row.names = FALSE, col.names = TRUE, eol = "\n", append = TRUE)
-  
   }
 
 # 8. Final AIC summary ----
 selection_summary %>% 
   mutate(deltaAIC = abs(min(selection_summary$AIC) - AIC)) %>% 
-  select(Folder_name, Structure, deltaAIC, AIC, GHL, nopar, max_grad, Survival, Maturity, Selectivity) %>% 
+  select(Folder_name, Structure, deltaAIC, NLL, AIC, GHL, nopar, max_grad, Survival, Maturity, Selectivity) %>% 
   arrange(deltaAIC) -> selection_summary
 
 write_csv(selection_summary, paste0(modsel_dir, "/AIC_selection_summary.csv"))
