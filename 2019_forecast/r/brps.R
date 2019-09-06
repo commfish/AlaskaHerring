@@ -20,6 +20,34 @@ thin <- 1000
 burn_in <- 0.1 # 10% (this is the first 10% of the thinned/saved iterations)
 nout <- round((niter / thin + 1) - burn_in * (niter / thin + 1), 0)
 
+LS_byyear <- read_csv(paste0(YEAR, "_forecast/data/LS_", YEAR, "forec_results_byyear.csv"))
+# Recruitment (age-3 abundance) and associated residuals in LS_byyear. Should be
+# NA in the first three years, it is currently 0. 
+LS_byyear %>% 
+  mutate(SR = ifelse(SR == 0, NA, SR),
+         res_SR = ifelse(res_SR == 0, NA, res_SR)) -> LS_byyear
+
+LS_byyear %>% 
+  select(-c(SR, res_SR)) %>% 
+  full_join(LS_byyear %>% 
+              select(year, SR, res_SR) %>% 
+              mutate(year = year + 3) %>% 
+              filter(year < max(year) - 2), by = "year") -> LS_byyear
+
+# LS results of year minus one, two, and three year estimates and forecast of
+# pre-fishery mature biomass. 
+
+# FLAG! The sitka and craig fig loop files have different definitions for 'num'
+# (neither of which are accurate). numbers from excel spread sheet for spawn
+# deposition in SPAWN folder. this 'spawn_dep' is NOT egg deposition, it's
+# spawning biomass calculated in craig fig loop code as 1e12*tot_obs_egg/num,
+# where num is not defined but is presumably spawners or weight or something
+# like that.
+LS_byyear$surv_est_spB <- LS_byyear$spawn_dep
+
+# survey estimated mature biomass (add catch to survey estimated spawning biomass)
+LS_byyear %>% 
+  mutate(surv_est_matbio = surv_est_spB + tcb) -> LS_byyear
 source(paste0(YEAR, "_forecast/r/helper.r"))
 # install.packages("svMisc")
 library(svMisc)
@@ -104,167 +132,6 @@ wa <-	wa %>%
   group_by(Age) %>% 
   dplyr::summarise(weight = mean(weight)) %>% 
   pull(weight)
-
-# Functions for getting BRPs  ----
-
-# Derive steepness (h) from compensation ratio (reck)
-get_steepness <- function(rec_mod) {
-  
-  # Ricker
-  if(rec_mod == 1) { h <- reck / (4 + reck) }
-  
-  # Beverton-Holt
-  if(rec_mod == 2) { h <- 0.2 * reck ^ (4 / 5) }
-  
-  return(h)
-}
-
-# Survivorship
-get_survivorship <- function(fmort) {
-  
-  lx <- matrix(ncol = length(unique(age)), 
-               nrow = length(unique(fmort)))
-  
-  a_plus <- max(length(age)) 
-  
-  # Loop over all input values of mortality
-  for(f in 1:length(fmort)) {
-    
-    # Initialize matrix
-    lx[f,1] <- 1  
-    
-    for(a in 2:(a_plus-1)) {
-      lx[f,a] <- lx[f,a-1] * exp(-mort[a-1] - fmort[f] * sel[a-1]) }
-    
-    # Plus group
-    lx[f,a_plus] <- (lx[f,a_plus-1] * exp(- mort[a_plus-1] - fmort[f] * sel[a_plus-1])) / (1 - exp(- mort[a_plus] - fmort[f] * sel[a_plus]))    
-  }
-  return(lx)
-}
-
-# Yield-per-recruit (note that ypr = phi_q * fmort in Martell et al. 2009)
-get_ypr <- function(fmort, lx) { 
-  
-  ypr <- matrix(ncol = length(unique(age)), 
-                nrow = length(unique(fmort))) 
-  
-  # Loop over all input values of mortality
-  for(f in 1:length(fmort)) {
-    for(a in 1:length(age)) {
-      ypr[f,a] <- wa[a] * (fmort[f] * sel[a]) / (fmort[f] * sel[a] + mort[a]) * 
-        lx[f,a] * (1 - exp(-(fmort[f] * sel[a] + mort[a]))) 
-    }
-  }
-  
-  # Sum across ages for each F value
-  ypr <- rowSums(ypr) 
-  return(ypr)
-}
-
-# Vulnerable biomass-per-recruit (phi_b in Martell et al. 2009)
-get_bpr <- function(fmort, lx) {
-  
-  bpr <- matrix(ncol = length(unique(age)), 
-                nrow = length(unique(fmort)))
-  
-  for(f in 1:length(fmort)) {
-    for(a in 1:length(age)) {
-      bpr[f,a] <- lx[f,a] * wa[a] * sel[a]
-    }
-  }
-  # Sum across ages for each F value
-  bpr <- rowSums(bpr)
-  return(bpr)
-}
-
-# Function to get spawner-per-recruit (phi_e in Martell et al. 2009)
-get_spr <- function(fmort, lx) { 
-    
-    # spr matrix of same dimensions as N matrix
-    spr <- matrix(ncol = length(unique(age)), 
-                  nrow = length(unique(fmort)))
-    
-    # Loop over all input values of fishing mortality
-    for(f in 1:length(fmort)) {
-      for(a in 1:length(unique(age))){
-        spr[f,a] <- wa[a] * mat[a] * lx[f,a] }}
-    
-    # Sum across ages for each F value
-    spr <- rowSums(spr) 
-    return(spr)
-  }
-
-# Derive stock-recruitment parameters 
-get_recruit_pars <- function() {
-  
-  # Ricker model
-  if(rec_mod == 1) {
-    alpha <- exp(log(5*h)/0.8)/spr0
-    beta <- log(5*h)/(0.8*spr0*r0) }
-  
-  # Beverton-Holt model
-  if(rec_mod == 2) {
-    alpha <- spr0*(1-h)/(4*h)
-    beta <- (5*h-1)/(4*h*r0) }
-  
-  recruit_params <- list(alpha, beta)
-  return(recruit_params)
-}
-
-# Get recruitment conditioned on alpha/beta and spr
-get_recruitment <- function(spr) { 
-    # Ricker model (Eqn 10a, put in terms of spr)
-  if(rec_mod == 1) {
-    r <- log(alpha*spr)/(beta*spr) }
-  
-  # Beverton-Holt model (Eqn 9)
-  if(rec_mod == 2) {
-    r <- (spr-alpha)/(beta*spr) }
-  
-  return(r)
-}
-
-# Get equilibrium conditions
-get_equilibrium <- function(ff) {
-  
-  lx_e <- get_survivorship(fmort = ff)  
-  ypr_e <- get_ypr(fmort = ff, lx = lx_e)
-  spr_e <- get_spr(fmort = ff, lx = lx_e) 
-  bpr_e <- get_bpr(fmort = ff, lx = lx_e)
-  r_e <- get_recruitment(spr = spr_e)
-  
-  out <- NULL
-  out$ypr <- ypr_e
-  out$spr <- spr_e
-  out$r <- r_e
-  out$bpr <- bpr_e
-  out$b <- bpr_e * r_e
-  out$s <- spr_e * r_e
-  out$s_ratio <- (spr_e * r_e) / s0 # Express spawners as a proportion of unfished spawners
-  out$y <- ypr_e * r_e
-
-  return(out)
-}
-
-# Derivative of ypr with respect to F (use uniroot() to solve for dY(F)/df=0)
-dfx.dx <- function(ff, delta) {
-  y1 <- get_equilibrium(ff = ff-delta/2)$y
-  y2 <- get_equilibrium(ff = ff+delta/2)$y
-  approx.gradient <- (y2-y1)/delta
-  return(approx.gradient)
-}
-
-# Get F crash (where F is minimized and S ~ 0 using the bisection method - MK helped me with this.
-bisect <- function(Fmin = 1, Fmax = 100){
-  for(b in 1:100000){
-    F_tst <- (Fmin + Fmax)/2 # update
-    s_tmp <- get_equilibrium(ff = F_tst)$s
-    if(round(s_tmp,0) == 0 & (Fmax - Fmin) > 0.0001){ return(F_tst)
-    } else if(round(s_tmp,4) > 0) { Fmin <- F_tst 
-    } else if(round(s_tmp,4) < 0) { Fmax <- F_tst }
-  }
-  print('max iter')
-}
 
 # Run analyis ----
 # Model names (currently only uses Ricker)
@@ -394,6 +261,85 @@ brps <- data.table(brps)
 brp_sum <- data.table(brp_sum)
 output <- data.table(output)
 
+# MLE estimates ----
+names(D)
+
+
+mat <- read_D("mat")
+# mat <- LS_byage %>%
+#   select(Age, maturity) %>%
+#   group_by(Age) %>%
+#   dplyr::summarize(out = mean(maturity)) %>%
+#   pull(out)
+# 
+# sel <- LS_byage %>%
+#   select(Age, maturity) %>%
+#   group_by(Age) %>%
+#   dplyr::summarize(out = mean(maturity)) %>%
+#   pull(out)
+  
+sel <- read_D("Sij")
+mort <- read_D("Mij")
+r0 <- exp(D[["theta"]][4])
+reck <- exp(D[["theta"]][5]) + 1 # FLAG - in her.tpl, he adds 1. Assuming we should do the same.
+
+h <- get_steepness(rec_mod = rec_mod)
+
+# Unfished survival, spawning biomass per recruit, and unfished spawning biomass
+lx0 <- get_survivorship(fmort = 0)
+spr0 <- get_spr(fmort = 0, lx = lx0)
+bpr0 <- get_bpr(fmort = 0, lx = lx0)
+s0 <- r0 * spr0
+
+# Get BRPs
+out <- get_equilibrium(ff = fmort)
+
+# Recruitment parameters
+alpha <- get_recruit_pars()[[1]]
+beta <- get_recruit_pars()[[2]]
+
+# uniroot will only take one value at a time, it will pick values on the interval and feed them as FF's to dfx.dx
+Fmsy <- uniroot(f = dfx.dx, interval = c(0.01,100), tol = 0.000001, 
+                delta = 0.0001)$root[1]
+msy <- get_equilibrium(ff = Fmsy)$y
+# Fcrash <- bisect()
+
+# Get components of B0
+lx_Fmsy <- get_survivorship(fmort = Fmsy)
+ypr_Fmsy <- get_ypr(fmort = Fmsy, lx = lx_Fmsy) # Fmsy * phi_q evaluated at Fmsy
+spr_Fmsy <- get_spr(fmort = Fmsy, lx = lx_Fmsy) # phi_e evaluated at Fmsy
+r_Fmsy <- get_recruitment(spr = spr_Fmsy)
+
+bmsy <- r_Fmsy * spr_Fmsy  # Equilibrium spawning biomass at Fmsy
+b0 <- r0 * spr0
+
+notransformation <- b0*.907
+transformreck <- b0*.907
+.25*b0*.907
+
+spb_sum <- ps_byyear(save = FALSE, fn = "sp_B", unit_conv = 0.90718)
+spb_sum %>% 
+  mutate(Year = as.numeric(as.character(Year))) %>% 
+  distinct(Year, mean, q025, q975, q250, q750, q475, q525) -> df
+
+axisx <- tickr(df, Year, 5)
+ggplot(data = df, aes(x = Year)) +  
+  geom_ribbon(aes(x = Year, ymin = q025, ymax = q975),
+              alpha = 0.6, fill = "grey70") +
+  geom_ribbon(aes(x = Year, ymin = q250, ymax = q750),
+              alpha = 0.6, fill = "grey40") +
+  geom_ribbon(aes(x = Year, ymin = q475, ymax = q525),
+              alpha = 0.6, fill = "black") +
+  geom_point(data = LS_byyear, aes(x = year, y = surv_est_spB, shape = "Historical estimates from survey")) +
+  scale_colour_grey() +
+  geom_hline(yintercept = transformreck, lty = 2, col = "red") +
+  geom_hline(yintercept = notransformation, lty = 2, col = "blue") +
+  scale_shape_manual(values = 1) +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  scale_y_continuous(limits = c(0, max(LS_byyear$surv_est_spB)), labels = scales::comma) +
+  labs(x = NULL, y = "Spawning biomass (tons)\n", shape = NULL) +
+  theme(legend.position = c(0.25, 0.8))
+
 # Graphics ----
 y <- output[variable == "y", ]
 
@@ -473,3 +419,22 @@ plot(fmort, out$y, type = "l", xlab = "F", ylab = "Y(F)",
 #   b0 <- (msy * bpr0 * (reck - 1)) / (ypr_Fmsy * (reck - spr0/spr_Fmsy))
 # }
 
+P <- read_fit("her")
+
+obj_fn <- P[["nlogl"]]
+
+data.frame(like = c("sp_comp", "cm_comp", "egg_dep", 
+                    "milt", "sr", "catch",
+                    "rinit", "rbar", "fbar", "mdevs",
+                    "prior_logM", "prior_logrinit", "prior_logrbar",
+                    "prior_logro", "prior_logreck", "prior_precr"), 
+           nll = c(D[["nll"]], D[["penll"]], D[["calcPriors()"]])) %>% 
+  # mutate(ll = -1*nll,
+  #        like = round(exp(-1*nll),0))
+  mutate(perc = nll/obj_fn) %>% 
+  summarise(sum(perc))
+
+sum(c(D[["nll"]], D[["penll"]], D[["calcPriors()"]]))
+sum(D)
+names(D)
+D[["calcPriors()"]]

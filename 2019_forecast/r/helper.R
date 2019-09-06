@@ -550,3 +550,177 @@ mcmc_plot <- function(df = srv_sum,
   }
   
 }
+
+# Functions for getting BRPs  ----
+
+# Derive steepness (h) from compensation ratio (reck)
+get_steepness <- function(rec_mod) {
+  
+  # Ricker
+  if(rec_mod == 1) { h <- reck / (4 + reck) }
+  
+  # Beverton-Holt
+  if(rec_mod == 2) { h <- 0.2 * reck ^ (4 / 5) }
+  
+  return(h)
+}
+
+# Survivorship
+get_survivorship <- function(fmort) {
+  
+  lx <- matrix(ncol = length(unique(age)), 
+               nrow = length(unique(fmort)))
+  
+  a_plus <- max(length(age)) 
+  
+  # Loop over all input values of mortality
+  for(f in 1:length(fmort)) {
+    
+    # Initialize matrix
+    lx[f,1] <- 1  
+    
+    for(a in 2:(a_plus-1)) {
+      lx[f,a] <- lx[f,a-1] * exp(-mort[a-1] - fmort[f] * sel[a-1]) }
+    
+    # Plus group
+    lx[f,a_plus] <- (lx[f,a_plus-1] * exp(- mort[a_plus-1] - fmort[f] * sel[a_plus-1])) / (1 - exp(- mort[a_plus] - fmort[f] * sel[a_plus]))    
+  }
+  return(lx)
+}
+
+# Yield-per-recruit (note that ypr = phi_q * fmort in Martell et al. 2009)
+get_ypr <- function(fmort, lx) { 
+  
+  ypr <- matrix(ncol = length(unique(age)), 
+                nrow = length(unique(fmort))) 
+  
+  # Loop over all input values of mortality
+  for(f in 1:length(fmort)) {
+    for(a in 1:length(age)) {
+      ypr[f,a] <- wa[a] * (fmort[f] * sel[a]) / (fmort[f] * sel[a] + mort[a]) * 
+        lx[f,a] * (1 - exp(-(fmort[f] * sel[a] + mort[a]))) 
+    }
+  }
+  
+  # Sum across ages for each F value
+  ypr <- rowSums(ypr) 
+  return(ypr)
+}
+
+# Vulnerable biomass-per-recruit (phi_b in Martell et al. 2009)
+get_bpr <- function(fmort, lx) {
+  
+  bpr <- matrix(ncol = length(unique(age)), 
+                nrow = length(unique(fmort)))
+  
+  for(f in 1:length(fmort)) {
+    for(a in 1:length(age)) {
+      bpr[f,a] <- lx[f,a] * wa[a] * sel[a]
+    }
+  }
+  # Sum across ages for each F value
+  bpr <- rowSums(bpr)
+  return(bpr)
+}
+
+# Function to get spawner-per-recruit (phi_e in Martell et al. 2009)
+get_spr <- function(fmort, lx) { 
+  
+  # spr matrix of same dimensions as N matrix
+  spr <- matrix(ncol = length(unique(age)), 
+                nrow = length(unique(fmort)))
+  
+  # Loop over all input values of fishing mortality
+  for(f in 1:length(fmort)) {
+    for(a in 1:length(unique(age))){
+      spr[f,a] <- wa[a] * mat[a] * lx[f,a] }}
+  
+  # Sum across ages for each F value
+  spr <- rowSums(spr) 
+  return(spr)
+}
+
+# Derive stock-recruitment parameters 
+get_recruit_pars <- function() {
+  
+  # Ricker model
+  if(rec_mod == 1) {
+    alpha <- exp(log(5*h)/0.8)/spr0
+    beta <- log(5*h)/(0.8*spr0*r0) }
+  
+  # Beverton-Holt model
+  if(rec_mod == 2) {
+    alpha <- spr0*(1-h)/(4*h)
+    beta <- (5*h-1)/(4*h*r0) }
+  
+  recruit_params <- list(alpha, beta)
+  return(recruit_params)
+}
+
+# Get recruitment conditioned on alpha/beta and spr
+get_recruitment <- function(spr) { 
+  # Ricker model (Eqn 10a, put in terms of spr)
+  if(rec_mod == 1) {
+    r <- log(alpha*spr)/(beta*spr) }
+  
+  # Beverton-Holt model (Eqn 9)
+  if(rec_mod == 2) {
+    r <- (spr-alpha)/(beta*spr) }
+  
+  return(r)
+}
+
+# Get equilibrium conditions
+get_equilibrium <- function(ff) {
+  
+  lx_e <- get_survivorship(fmort = ff)  
+  ypr_e <- get_ypr(fmort = ff, lx = lx_e)
+  spr_e <- get_spr(fmort = ff, lx = lx_e)
+  spr0 <- spr_e[1]
+  bpr_e <- get_bpr(fmort = ff, lx = lx_e)
+  r_e <- get_recruitment(spr = spr_e)
+  
+  out <- NULL
+  out$ypr <- ypr_e
+  out$spr <- spr_e
+  out$r <- r_e
+  out$bpr <- bpr_e
+  out$b <- bpr_e * r_e
+  out$s <- spr_e * r_e
+  out$s_ratio <- (spr_e * r_e) / s0 # Express spawners as a proportion of unfished spawners
+  out$y <- ypr_e * r_e
+  
+  return(out)
+}
+
+# Derivative of ypr with respect to F (use uniroot() to solve for dY(F)/df=0)
+dfx.dx <- function(ff, delta) {
+  y1 <- get_equilibrium(ff = ff-delta/2)$y
+  y2 <- get_equilibrium(ff = ff+delta/2)$y
+  approx.gradient <- (y2-y1)/delta
+  return(approx.gradient)
+}
+
+# Get F crash (where F is minimized and S ~ 0 using the bisection method - MK helped me with this.
+bisect <- function(Fmin = 1, Fmax = 100){
+  for(b in 1:100000){
+    F_tst <- (Fmin + Fmax)/2 # update
+    s_tmp <- get_equilibrium(ff = F_tst)$s
+    if(round(s_tmp,0) == 0 & (Fmax - Fmin) > 0.0001){ return(F_tst)
+    } else if(round(s_tmp,4) > 0) { Fmin <- F_tst 
+    } else if(round(s_tmp,4) < 0) { Fmax <- F_tst }
+  }
+  print('max iter')
+}
+
+# Read model results and get mean
+read_D <- function(name = "Sij") {
+  df <- as.data.frame(D[[name]])
+  colnames(df) <- paste(sage:nage)
+  df <- melt(df, id.vars = NULL) %>% 
+    filter(value != 0) %>% 
+    group_by(variable) %>% 
+    dplyr::summarise(out = mean(value)) %>% 
+    pull(out)
+  return(df)
+}

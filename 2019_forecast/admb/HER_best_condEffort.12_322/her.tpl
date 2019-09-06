@@ -162,12 +162,6 @@ DATA_SECTION
   vector avg_sp_waa(sage,nage);
  LOCAL_CALCS
     int n = data_sp_waa.rowmax() - data_sp_waa.rowmin() + 1;
-    // int n = 0;
-    // for(int i = dat_syr; i <= dat_nyr; i++) {
-    //     if(data_cm_waa(i)(sage) > 0 ) {
-    //       n += 1;
-    //     }
-    // }
     avg_sp_waa = colsum(data_sp_waa)(sage,nage) / n;
  END_CALCS
 
@@ -529,8 +523,7 @@ PARAMETER_SECTION
 // |---------------------------------------------------------------------------|
 // | OBJECTIVE FUNCTION VALUE
 // |---------------------------------------------------------------------------|
-  // *FLAG* only 6 terms added, but 7th should be zero using .initialize()
-  vector nll(1,7); // likelihood components 
+  vector nll(1,6); // likelihood components 
   vector penll(1,4); // moved from declaring 'penll' as dvar_vector within PROCEDURE_SECTION to declaring within PARAMETER_SECTION
   objective_function_value nll_total; // sum of likelihood components
 
@@ -1478,7 +1471,8 @@ FUNCTION void calcObjectiveFunction()
 
   // Negative loglikelihood for milt mile day
   dvector std_mileday = TINY + column(data_mileday,3)(t1,t2);
-  nll(4) = dnorm(resd_mileday,std_mileday);
+  // nll(4) = dnorm(resd_mileday,std_mileday);
+  nll(4) = 0.0;
 
   // Negative loglikelihood for stock-recruitment data
   dvariable std_rec = log_sigma_r;
@@ -1837,6 +1831,8 @@ REPORT_SECTION
   REPORT(mod_nyr);
   REPORT(sage);
   REPORT(nage);
+  double threshold = dMiscCont(3); 
+  REPORT(threshold); 
   REPORT(nFecBlocks);
   REPORT(nFecBlockYears);
   REPORT(fec_slope);
@@ -1853,6 +1849,9 @@ REPORT_SECTION
   
 // Negative loglikelihoods
   REPORT(nll);
+  REPORT(penll);
+  REPORT(calcPriors());
+  REPORT(fpen);
 
 // Vectors of years.
   ivector year(mod_syr,mod_nyr);

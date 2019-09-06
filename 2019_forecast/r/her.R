@@ -19,10 +19,10 @@ library(BayesianTools) # more mcmc diagnostics
 
 # IMPORTANT: User inputs model version name. This will create a subdirectory and
 # allow you to run multiple model versions for comparison.
-MODEL_VERSION <- "HER_bestLS_321"
+# MODEL_VERSION <- "HER_bestLS_321"C
 # MODEL_VERSION <- "HER_best_condEffort.12_322"   # HER with best HER parameterization by AIC, conditioned on effort
 # MODEL_VERSION <- "HER_best_condCatch.12_322"   # HER with best HER parameterization by AIC, conditioned on catch
-
+MODEL_VERSION <- "HER_condEffort_fixedmat.4_3"
 
 # Forecast year
 YEAR <- 2019
@@ -1256,7 +1256,7 @@ df2 %>% mutate(param = "Selectivity") %>%
   bind_rows(df) -> df
 
 df %>% 
-  gather("Age", "proportion", -c(Year, param)) %>% 
+  tidyr::gather("Age", "proportion", -c(Year, param)) %>% 
   mutate(Age = factor(Age, levels = c("3", "4", "5", "6", "7", "8"),
                       labels = c("3", "4", "5", "6", "7", "8+"))) %>% #,
          # To make sure selectivity is differentiable, it was scaled to have a
@@ -1277,7 +1277,7 @@ df %>%
 LS_byage %>% 
   select(Year, Age, Maturity = maturity, Selectivity = gear_select) %>% 
   mutate(Model = "LS") %>% 
-  gather("param", "proportion", -c(Year, Age, Model)) %>% 
+  tidyr::gather("param", "proportion", -c(Year, Age, Model)) %>% 
   group_by(Age, param, proportion) %>% 
   mutate(min = min(Year),
          max = max(Year),
