@@ -300,7 +300,7 @@ for(i in 1:length(converged$retro)){
   # D <- read_rep(name)
   
   SSB_ls[[i]] <- data.frame(Year = D[["year"]], 
-                         spB = D[["sp_B"]] / 0.90718, # convert to short tons
+                         matB = D[["mat_B"]] / 0.90718, # convert to short tons
                          retro = paste0("retro_", j)) 
 }
 
@@ -308,13 +308,34 @@ for(i in 1:length(converged$retro)){
 SSB <- do.call(rbind, SSB_ls)
 
 axisx <- tickr(SSB, Year, 5)
+
+pal <- colorRampPalette(c("#edf8b1","#7fcdbb", "#2c7fb8"))
+retro_cols <- pal(length(unique(SSB$retro)))
+library(ggthemr)
+
+my_cols <- c('#555555', '#008080', '#DAA520', '#330000') # first col is placeholder
+ggthemr_reset() # remove previous effects
+# Define colours for your figures with define_palette
+tableau <- define_palette(
+  swatch = my_cols, # colours for plotting points and bars
+  gradient = c(lower = my_cols[1L], upper = my_cols[2L]), #upper and lower colours for continuous colours
+  background =  "#f8f8f8" # "#F6F9FB"  #defining a grey-ish background 
+)
+# set the theme for your figures:
+ggthemr(tableau, layout = "clean", type = "outer", text_size = 18)
+# ggthemr(palette = "earth", spacing = 1, type = "outer", text_size = 20)
+
+
 # Generic retrospective plot
-ggplot(SSB, aes(x = Year, y = spB, colour = retro, group = retro)) +
+ggplot(SSB, aes(x = Year, y = matB, colour = retro, group = retro)) +
   geom_line(size = 1) +
-  scale_color_grey(guide = FALSE) +
-  labs(x = NULL, y = "Spawning biomass (tons)\n") +
+  # scale_color_grey(guide = FALSE) +
+  scale_color_manual(values = rev(retro_cols), guide = FALSE) +
+  labs(x = NULL, y = NULL) + #, y = "Mature biomass (tons)\n") +
+  ggtitle("Mature biomass (tons)")+
   scale_y_continuous(label = comma) +
-  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) -> retro1
+  scale_x_continuous(limits = c(1980, 2020), labels = seq(1980, 2020, 5), breaks = seq(1980, 2020, 5)) -> retro1
+  # scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) 
 
 # Per Clark et al 2012, also show relative percent difference between peel and
 # terminal year estimates
@@ -322,23 +343,27 @@ SSB %>%
   group_by(retro) %>% 
   full_join(SSB %>% 
               filter(retro == "retro_0") %>% 
-              select(Year, term_spB = spB),
+              select(Year, term_matB = matB),
             by = "Year") %>% 
-  mutate(perc_diff = ((term_spB - spB) / term_spB) * 100) -> SSB
+  mutate(perc_diff = ((term_matB - matB) / term_matB) * 100) -> SSB
 
 ggplot(data = SSB) +
   geom_hline(yintercept = 0, linetype = 2, size = 1) +
   geom_line(data = filter(SSB, retro != "retro_0"), 
             aes(x = Year, y = perc_diff, colour = retro, group = retro), size = 1) +
-  scale_color_grey(guide = FALSE) +
-  labs(x = NULL, y = "Percent difference\nfrom terminal year\n") +
+  # scale_color_grey(guide = FALSE) +
+  scale_color_manual(values = rev(retro_cols), guide = FALSE) +
+  labs(x = NULL, y = NULL) + 
+  ggtitle("Percent difference from 2018") +
   scale_y_continuous(limits = c(-50, 50)) +
-  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels)-> retro2
+  scale_x_continuous(limits = c(1980, 2020), labels = seq(1980, 2020, 5), breaks = seq(1980, 2020, 5)) -> retro2
+  # scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels)
 
 cowplot::plot_grid(retro1, retro2, align = "hv", nrow = 2) -> retro_plot
 retro_plot
 
-ggsave(paste0(run_dir, "/retro_", MODEL_VERSION, ".png"), plot = retro_plot, dpi = 300, height = 6, width = 6, units = "in")
+# ggsave(paste0(run_dir, "/retro_", MODEL_VERSION, ".png"), plot = retro_plot, dpi = 300, height = 6, width = 6, units = "in")
+ggsave(paste0(run_dir, "/retro_", MODEL_VERSION, ".png"), plot = retro_plot, dpi = 300, height = 6, width = 10, units = "in")
 
 # Mohn's Rho ----
 

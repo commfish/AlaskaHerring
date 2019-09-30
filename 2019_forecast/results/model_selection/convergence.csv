@@ -1,0 +1,5 @@
+Model,Folder_name,Structure,Survival,Convergence
+1,HER_condEffort_fixedmat.1_1,Surv(1),1980-2018,1
+2,HER_condEffort_fixedmat.2_2,Surv(2),1980-1998; 1999-2018,1
+3,HER_condEffort_fixedmat.3_2,Surv(2),1980-2014; 2015-2018,1
+4,HER_condEffort_fixedmat.4_3,Surv(3),1980-1998; 1999-2014; 2015-2018,1

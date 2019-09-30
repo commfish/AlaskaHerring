@@ -22,7 +22,8 @@ library(BayesianTools) # more mcmc diagnostics
 # MODEL_VERSION <- "HER_bestLS_321"C
 # MODEL_VERSION <- "HER_best_condEffort.12_322"   # HER with best HER parameterization by AIC, conditioned on effort
 # MODEL_VERSION <- "HER_best_condCatch.12_322"   # HER with best HER parameterization by AIC, conditioned on catch
-MODEL_VERSION <- "HER_condEffort_fixedmat.4_3"
+# MODEL_VERSION <- "HER_condEffort_fixedmat.4_3"
+MODEL_VERSION <- "HER_mature_catch"
 
 # Forecast year
 YEAR <- 2019

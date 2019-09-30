@@ -1202,9 +1202,15 @@ FUNCTION void updateStateVariables()
 
   for(int i = mod_syr; i <= mod_nyr; i++){
 
+    //mature numbers-at-age before the fishery
+    mat_Nij(i) = elem_prod(mat(i),Nij(i));
+
+    // Mature biomass-at-age and tot biomass before the fishery
+    mat_Bij(i) = elem_prod(mat_Nij(i), data_sp_waa(i)(sage,nage));
+    mat_B(i) = sum(mat_Bij(i));
 
     // step 1. vulnerable numbers at age
-    vj = elem_prod(Nij(i),Sij(i));
+    vj = elem_prod(mat_Nij(i),Sij(i));
 
     // step 2. proportion of vulnernable numbers at age
     Qij(i) = vj / sum(vj);
@@ -1218,31 +1224,31 @@ FUNCTION void updateStateVariables()
       // step 4. catch numbers-at-age
       Cij(i) = data_catch(i,2) / wbar * Qij(i);
       // should use posfun here -- abundance in the water after catch
-      Pij(i) = posfun(Nij(i) - Cij(i),0.01,fpen); 
+      Pij(i) = posfun(mat_Nij(i) - Cij(i),0.01,fpen); 
       
       // step 6. update numbers at age    
       sj = mfexp(-Mij(i)); // natural survival at age
       // abundance at age next year = proportion surviving harvest this year * natural survival
       // *FLAG* Assumes pulse fishery occurs at beginning of the year and then natural mortality occurs afterwards
-      Nij(i+1)(sage+1,nage) =++ elem_prod(Pij(i)(sage,nage-1),
+      mat_Nij(i+1)(sage+1,nage) =++ elem_prod(Pij(i)(sage,nage-1),
                                           sj(sage,nage-1));
       //plus group
-      Nij(i+1)(nage) += Pij(i,nage) * sj(nage);       
+      mat_Nij(i+1)(nage) += Pij(i,nage) * sj(nage);       
     } 
     // step 5.
     // Condition on Ft
     else { 
       // *FLAG* add flexibility here for Popes approx, or different seasons      
       // total abundance multiplied by survival of fishing (not harvested)         
-      Pij(i) = elem_prod( Nij(i), exp(-Fij(i)) );
+      Pij(i) = elem_prod( mat_Nij(i), exp(-Fij(i)) );
       // total abundance multiplied by mortality by fishing
-      Cij(i) = elem_prod( Nij(i), 1.-exp(-Fij(i)));
+      Cij(i) = elem_prod( mat_Nij(i), 1.-exp(-Fij(i)));
       
       // the following assumes fishery is at the start of the year.
       dvar_vector zi = Mij(i) + Fij(i); // total mortality
-      Nij(i+1)(sage+1,nage) = ++ elem_prod(Nij(i)(sage,nage-1),
+      mat_Nij(i+1)(sage+1,nage) = ++ elem_prod(mat_Nij(i)(sage,nage-1),
                                            mfexp(-zi(sage,nage-1)));
-      Nij(i+1)(nage) += Nij(i,nage) * mfexp(-zi(nage));
+      mat_Nij(i+1)(nage) += mat_Nij(i,nage) * mfexp(-zi(nage));
     }
   }
 
@@ -1278,23 +1284,16 @@ FUNCTION void calcSpawningStockRecruitment()
   */
   for(int i = mod_syr; i <= mod_nyr; i++){
 
-    //mature numbers-at-age before the fishery
-    mat_Nij(i) = elem_prod(mat(i),Nij(i));
-
-    // Mature biomass-at-age and tot biomass before the fishery
-    mat_Bij(i) = elem_prod(mat_Nij(i), data_sp_waa(i)(sage,nage));
-    mat_B(i) = sum(mat_Bij(i));
-
     // Alternative assumptions about catch and maturity:
 
     // 1. Assume catch is 100% mature (like LS)
     // mature numbers at age post fishery
-    // sp_Nij(i) = mat_Nij(i) - Cij(i);
+    sp_Nij(i) = mat_Nij(i) - Cij(i);
 
     
     // 2. Assume catch is only partially mature by applying maturity curve
     //mature numbers-at-age after the fishery (spawning population)
-     sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
+    // sp_Nij(i) = elem_prod(mat(i),Nij(i)-Cij(i));
 
 
     // spawning biomass after the fishery

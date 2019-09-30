@@ -281,10 +281,11 @@ mat <- read_D("mat")
 sel <- read_D("Sij")
 mort <- read_D("Mij")
 r0 <- exp(D[["theta"]][4])
+D <- read_admb("her")
 reck <- exp(D[["theta"]][5]) + 1 # FLAG - in her.tpl, he adds 1. Assuming we should do the same.
 
 h <- get_steepness(rec_mod = rec_mod)
-
+h
 # Unfished survival, spawning biomass per recruit, and unfished spawning biomass
 lx0 <- get_survivorship(fmort = 0)
 spr0 <- get_spr(fmort = 0, lx = lx0)

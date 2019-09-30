@@ -392,6 +392,9 @@ ggplot(df %>%
          color = guide_legend(order = 1)) +
   ggtitle("Age-3+ abundance (millions)") ->  n
 
+n
+D[["ghl"]]
+D[["Sij"]]
 ggsave(paste0(fig_dir, "/abundance.png"), plot = n, dpi = 300, height = 5, width = 10, units = "in")
 
 # Fishing mortality ----
