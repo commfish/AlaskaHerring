@@ -1,3 +1,12 @@
+# Sensitivity analysis for maturity
+# Aug 2020
+
+# Results in 2019_forecast/results/sensitivity_maturity/figures:
+
+# For figure comparisons: the "reference model" was the best fitting HER from
+# the model selection loop code, which had two selectivities (3 survivals, 2
+# maturities), compared with the sensitivities, which had 3 survivals, 1
+# selectivity, and 1 fixed maturity)
 
 # User inputs ----
 YEAR <- 2019 # forecast year

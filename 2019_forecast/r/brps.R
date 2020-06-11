@@ -263,7 +263,6 @@ brps <- data.table(brps)
 brp_sum <- data.table(brp_sum)
 output <- data.table(output)
 
-
 # MLE estimates ----
 
 # Used MLE estimates from her to get BRPs
