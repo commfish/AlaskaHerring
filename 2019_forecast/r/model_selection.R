@@ -27,8 +27,8 @@ YEAR <- 2019
 # IMPORTANT: this will create a subdirectory in results/model_selection/ and allow you to run a
 # model selection on multiple model versions for comparison. User must update
 # write_ctl() function below to match MODEL_VERSION ctl!!!
-# MODEL_VERSION <- "HER_condEffort"   # HER conditioned on effort
-MODEL_VERSION <- "HER_condEffort_1929"   # HER starting in 1929
+MODEL_VERSION <- "HER_condEffort"   # HER conditioned on effort
+# MODEL_VERSION <- "HER_condEffort_1929"   # HER starting in 1929
 
 # location of tpl (note that tpl sould be the same regardless of MODEL_VERSION)
 root_dir <- getwd() # project root
@@ -39,14 +39,14 @@ source(paste0(YEAR, "_forecast/r/helper.r"))
 source(paste0(YEAR, "_forecast/r/figure_fxns.r"))
 
 # Start year, last year, and breaks - FOR MODERN TIME SERIES 1980-present
-# syr <- 1980
-# lyr <- YEAR - 1
-# breaks <- c(1998, 2014) # last year of time block, defined by PDO or other method
+syr <- 1980
+lyr <- YEAR - 1
+breaks <- c(1998, 2014) # last year of time block, defined by PDO or other method
 
 # Start year, last year, and breaks - FOR FULL HISTORICAL TIME SERIES 1929-present
-syr <- 1929
-lyr <- YEAR-1
-breaks <- c(1944, 1976, 2007, 2014)
+# syr <- 1929
+# lyr <- YEAR-1
+# breaks <- c(1944, 1976, 2007, 2014)
 
 # 1. Time block combos ----
 

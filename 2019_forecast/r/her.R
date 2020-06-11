@@ -1,7 +1,7 @@
 # Run HER, including Bayesian analysis, and compare results to LS
 # Author: Jane Sullivan
 # Contact: jane.sullivan1@alaska.gov
-# Last edited: 2019-07-15
+# Last edited: June 2020
 
 # HER - ADFG's new herring model. Original ADMB code written by SJD Martell. Helper
 # files and documentation contributed by M. Rudd.
@@ -58,7 +58,7 @@ source(paste0(YEAR, "_forecast/r/helper.r"))
 
 # LS YEAR forecast results
 LS_forec <- read_csv(paste0(YEAR, "_forecast/data/LS_", YEAR, "forec_results.csv"))
-LS_byage <- read_csv(paste0(YEAR, "_forecast/data/LS_", YEAR, "forec_results_byage.csv"))
+HLS_byage <- read_csv(paste0(YEAR, "_forecast/data/LS_", YEAR, "forec_results_byage.csv"))
 LS_byyear <- read_csv(paste0(YEAR, "_forecast/data/LS_", YEAR, "forec_results_byyear.csv"))
 
 # Recruitment (age-3 abundance) and associated residuals in LS_byyear. Should be

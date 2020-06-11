@@ -11,7 +11,7 @@
 ##  init  lower   upper    est  prior                                         ##
 ## value  bound   bound    phz   type     p1    p2   # PARAMETER              ##
 ## —————————————————————————————————————————————————————————————————————————— ##
--1.05   -6.79    1.00      2      0  -1.05  0.05  # log_natural_mortality 
+-1.05   -6.79    1.00      -2      0  -1.05  0.05  # log_natural_mortality 
 4.60   -6.00   12.00      1      0      0     0   # log_rinit
 ## 5.60   -6.00   12.00      1      0      0     0   # log_rbar
 ## 6.00   -6.00   12.00      2      0      0     0   # log_ro
@@ -41,11 +41,13 @@
 ## Type
 1
 ## Phase for estimation if nMortBlocks > 1
-2
+-2
 ## nMortBlocks, or Nodes in the case of cubic spline interpolation
-3
+1 
+# 3
 ## The terminal year of each block
-1998 2014 2018
+2018
+# 1998 2014 2018
 ## ————————————————————————————————————————————————————————————————————————— ##
 
 ## —————————————————————————————————————————————————————————————————————————— ##

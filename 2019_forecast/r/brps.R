@@ -133,7 +133,10 @@ wa <-	wa %>%
   dplyr::summarise(weight = mean(weight)) %>% 
   pull(weight)
 
-# Run analyis ----
+# Bayesian estimates ----
+
+# Uses posterior samples from Bayesian HER to estimate range of reference points
+
 # Model names (currently only uses Ricker)
 mod_names <- c("Ricker", "Beverton-Holt")
 
@@ -253,7 +256,6 @@ write_csv(brps, paste0(brp_dir, "/raw_brps.csv"))
 write_csv(brp_sum, paste0(brp_dir, "/brps_sum.csv"))
 write_csv(output, paste0(brp_dir, "/raw_output.csv"))
 
-# ---
 brps <- read_csv(paste0(brp_dir, "/raw_brps.csv"))
 brp_sum <- read_csv(paste0(brp_dir, "/brps_sum.csv"))
 output <- read_csv(paste0(brp_dir, "/raw_output.csv"))
@@ -261,9 +263,12 @@ brps <- data.table(brps)
 brp_sum <- data.table(brp_sum)
 output <- data.table(output)
 
-# MLE estimates ----
-names(D)
 
+# MLE estimates ----
+
+# Used MLE estimates from her to get BRPs
+
+names(D)
 
 mat <- read_D("mat")
 # mat <- LS_byage %>%
@@ -282,7 +287,7 @@ sel <- read_D("Sij")
 mort <- read_D("Mij")
 r0 <- exp(D[["theta"]][4])
 D <- read_admb("her")
-reck <- exp(D[["theta"]][5]) + 1 # FLAG - in her.tpl, he adds 1. Assuming we should do the same.
+reck <- exp(D[["theta"]][5]) + 1 # FLAG - in her.tpl, SM adds 1. Assuming we should do the same.
 
 h <- get_steepness(rec_mod = rec_mod)
 h
@@ -314,9 +319,8 @@ r_Fmsy <- get_recruitment(spr = spr_Fmsy)
 bmsy <- r_Fmsy * spr_Fmsy  # Equilibrium spawning biomass at Fmsy
 b0 <- r0 * spr0
 
-notransformation <- b0*.907
-transformreck <- b0*.907
-.25*b0*.907
+b0_st <- b0 *.907
+.25*b0*.907 # 25% b0
 
 spb_sum <- ps_byyear(save = FALSE, fn = "sp_B", unit_conv = 0.90718)
 spb_sum %>% 
@@ -333,8 +337,7 @@ ggplot(data = df, aes(x = Year)) +
               alpha = 0.6, fill = "black") +
   geom_point(data = LS_byyear, aes(x = year, y = surv_est_spB, shape = "Historical estimates from survey")) +
   scale_colour_grey() +
-  geom_hline(yintercept = transformreck, lty = 2, col = "red") +
-  geom_hline(yintercept = notransformation, lty = 2, col = "blue") +
+  geom_hline(yintercept = b0_st, lty = 2) +
   scale_shape_manual(values = 1) +
   scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
   scale_y_continuous(limits = c(0, max(LS_byyear$surv_est_spB)), labels = scales::comma) +
@@ -342,15 +345,41 @@ ggplot(data = df, aes(x = Year)) +
   theme(legend.position = c(0.25, 0.8))
 
 # Graphics ----
-y <- output[variable == "y", ]
+
+unique(brp_sum$variable)
+
+b0 <- brp_sum[variable == "B0", ] # B0
+
+ggplot(data = df, aes(x = Year)) +  
+  geom_ribbon(aes(x = Year, ymin = q025, ymax = q975),
+              alpha = 0.6, fill = "grey70") +
+  geom_ribbon(aes(x = Year, ymin = q250, ymax = q750),
+              alpha = 0.6, fill = "grey40") +
+  geom_ribbon(aes(x = Year, ymin = q475, ymax = q525),
+              alpha = 0.6, fill = "black") +
+  geom_point(data = LS_byyear, aes(x = year, y = surv_est_spB, shape = "Historical estimates from survey")) +
+  scale_colour_grey() +
+  # MLE estimate
+  geom_hline(yintercept = b0_st, lty = 5, col = "green") +
+  geom_hline(yintercept = pull(b0, q025) * 0.90718, lty = 2, col = "red") +
+  geom_hline(yintercept = pull(b0, median) * 0.90718, lty = 1, col = "red") +
+  geom_hline(yintercept = pull(b0, q975) * 0.90718, lty = 2, col = "red") +
+  scale_shape_manual(values = 1) +
+  scale_x_continuous(breaks = axisx$breaks, labels = axisx$labels) +
+  scale_y_continuous(limits = c(0, max(LS_byyear$surv_est_spB)), labels = scales::comma) +
+  labs(x = NULL, y = "Spawning biomass (tons)\n", shape = NULL) +
+  theme(legend.position = c(0.25, 0.8))
+
+y <- output[variable == "y", ] # Yield
 
 ggplot(y) +
-  geom_line(aes(x = fmort, y = mean)) +
-  geom_line(aes(x = fmort, y = median), col = "red") +
+  geom_line(aes(x = fmort, y = mean)) + # Mean in black
+  geom_line(aes(x = fmort, y = median), col = "red") + # Median in red
   geom_ribbon(aes(x = fmort, ymin = q025, ymax = q975),
               alpha = 0.4, fill = "grey80") +
   geom_ribbon(aes(x = fmort, ymin = q250, ymax = q750),
               alpha = 0.4, fill = "grey60") +
+  # Maximum Sustainable Yield
   geom_hline(yintercept = c(brp_sum[variable == "MSY",]$median)) +
   coord_cartesian(ylim = c(0, max(y$q975)), xlim = c(0, 7)) +
   labs(x = "Fishing mortality", y = "Yield")
@@ -360,15 +389,8 @@ brps[variable == "Bmsy"]
 brps[variable == "Fmsy"]
 (15234 / 0.90718) / 2
 
-
-ggplot(output, aes)
-
-
-# 
-
-
 refs <- brps[rec_mod,]
-refs <- brps[[i]]
+# refs <- brps[[i]]
 
 par(mar=c(4,4,3,3), mfrow = c(2,2))
 plot(fmort, out$s, type = "l")
@@ -398,7 +420,7 @@ plot(out$s_ratio, out$y, type = "l", xlab = "S(F)", ylab = "Y(F)",
 #      line2user(line=2, side=3), mod_names[rec_mod], xpd=NA, cex=2, font=2)
 #
 plot(fmort, out$y, type = "l", xlab = "F", ylab = "Y(F)",
-     xlim = c(0, 30), ylim = c(0, max(out$y)*1.1))
+     xlim = c(0, 5), ylim = c(0, max(out$y)*1.1))
 # abline(h = refs$MSY, col = "grey", lty = 2)
 # abline(v = refs$Fmsy, col = "grey", lty = 2)
 # abline(v = refs$Fcrash, col = "grey", lty = 2)
@@ -436,6 +458,5 @@ data.frame(like = c("sp_comp", "cm_comp", "egg_dep",
   summarise(sum(perc))
 
 sum(c(D[["nll"]], D[["penll"]], D[["calcPriors()"]]))
-sum(D)
 names(D)
 D[["calcPriors()"]]
