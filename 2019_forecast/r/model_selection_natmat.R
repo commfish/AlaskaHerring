@@ -180,8 +180,8 @@ write.table(ctl, file = "sitka.ctl", sep=",", quote = FALSE, row.names = FALSE, 
 
 # 4. Directory setup ----
 results_dir <- file.path(root_dir, paste0(YEAR, "_forecast/results")) # results
-dir.create(paste0(results_dir, "/model_selection")) # new folder for model selection
-modsel_dir <- file.path(results_dir, "model_selection")
+dir.create(paste0(results_dir, "/model_selection_natmat")) # new folder for model selection
+modsel_dir <- file.path(results_dir, "model_selection_natmat")
 dir.create(paste0(modsel_dir, "/", MODEL_VERSION))
 modsel_dir <- file.path(modsel_dir, MODEL_VERSION)
 files <- list.files(file.path(tpl_dir)) # searchable file list

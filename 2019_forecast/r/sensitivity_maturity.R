@@ -138,21 +138,25 @@ BRF_ex <- Plot_taxa(
 a50 <- exp(BRF_ex[[1]]$Mean_pred[5]+diag(BRF_ex[[1]]$Cov_pred/2)[5])
 a95 <- a50 * mat_ratio
 
+# One potential option for looking at ranges of a50 is to use the estimated
+# variance from FishLife. Would need to dig into the documentation of FishLife
+# object more to figure out how to do that
+
 # Option 1 ----
 # # Curves to explore for a sensitivity analysis
 # a50_vec <- seq(3.0, 4.0, 0.1)
 # 
 # for(i in 1:length(a50_vec)) {
 #   for (j in 1:length(ratio)) {
-#     
+# 
 #     a50 <- a50_vec[i]
 #     rat <- ratio[j]
 #     k <- 1/ (a50 / rat)
-#     
+# 
 #     col <- ifelse(j == 1, "grey", "grey")
-#     
+# 
 #     add <- if(i == 1 & j == 1) FALSE else TRUE
-#     
+# 
 #     # curve(1 / (1 + exp(-1.0*k * (x - a50))),
 #     curve(1 / (1 + exp(-1.0* (x - a50) / k)),
 #           ylim = c(0,1), from = 3, to = 8, add = add, col = col)
@@ -217,6 +221,9 @@ a95 <- 4.48 # from Sherri's regression
 # Example of a central tendancy curve
 curve(1.0 / (1.0 + exp(-log(19)*(x-a50)/(a95-a50))), 
       ylim = c(0,1), from = 3, to = 8, add = TRUE, col = "blue")
+
+# Potentially the range of a50s could be revisited, or to include the ranges of
+# a50 from other herring stocks or bookending values from North Pacific stocks.
 
 # Reference model ----
 setwd(run_dir)
@@ -474,10 +481,17 @@ natmat %>% filter(!fn %in% high_maxgrad) -> natmat
 matsel %>% filter(!fn %in% high_maxgrad) -> matsel
 
 # Reference model results ----
+
+# For figure comparisons: the "reference model" was the best fitting HER from
+# the model selection loop code, which had two selectivities (3 survivals, 2
+# maturities), compared with the sensitivities, which had 3 survivals, 1
+# selectivity, and 1 fixed maturity)
+
 setwd(tpl_dir)
 compile_admb(name, verbose = TRUE)
 run_admb(name, verbose = TRUE)
 D <- read_admb(name)
+
 ref_diags <- data.frame(a50_1 = D[["mat_a50"]][1],
                         a50_2 = D[["mat_a50"]][2],
                         a95_1 = D[["mat_a95"]][1],
@@ -505,8 +519,8 @@ ref_natmat <- df %>%
          a50_1 = D[["mat_a50"]][1],
          a50_2 = D[["mat_a50"]][2],
          a95_1 = D[["mat_a95"]][1],
-         a95_2 = D[["mat_a95"]][2],
-         fn = fn) %>%
+         a95_2 = D[["mat_a95"]][2]) %>%
+         #fn = fn) %>%
   filter(Year %in% c(1998, 2014, 2018)) %>% # Predefined time blocks *FLAG* this is hard coded
   mutate(`Time blocks` = c("1980-1998", "1999-2014", "2015-2018"),
          `Time blocks` = factor(`Time blocks`, ordered = TRUE))
